@@ -7,7 +7,7 @@ services:
       - "8283:8283"
     environment:
       - LETTA_DEBUG=False
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=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
       - GEMINI_API_KEY=AIzaSyAZRFSJHuja7iV3Hyzg5ZOQSP1Vi3YzKUU
       - FIRECRAWL_API_KEY=fc-ffe89bf27e9a43eeaee0ac76340cec7c
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
@@ -76,7 +76,7 @@ services:
       neo4j:
         condition: service_healthy
     environment:
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=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
       - MODEL_NAME=gpt-4.1-mini
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=neo4j
@@ -96,7 +96,7 @@ services:
     environment:
       - CHROMA_CLIENT_TYPE=persistent
       - CHROMA_DATA_DIR=/data
-      - CHROMA_OPENAI_API_KEY=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
+      - CHROMA_OPENAI_API_KEY=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
     command: >
       --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
     restart: unless-stopped
