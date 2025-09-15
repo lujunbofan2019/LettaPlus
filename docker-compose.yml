@@ -1,0 +1,103 @@
+services:
+  letta:
+    image: letta/letta:latest
+    entrypoint: ["/entrypoint.sh"]
+    command: ["./letta/server/startup.sh"]
+    ports:
+      - "8283:8283"
+    environment:
+      - LETTA_DEBUG=False
+      - OPENAI_API_KEY=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
+      - GEMINI_API_KEY=AIzaSyAZRFSJHuja7iV3Hyzg5ZOQSP1Vi3YzKUU
+      - FIRECRAWL_API_KEY=fc-ffe89bf27e9a43eeaee0ac76340cec7c
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - ./requirements.txt:/app/requirements.txt
+      - ./entrypoint.sh:/entrypoint.sh
+      - ~/.letta+/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8283/v1/health/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  shim:
+    build:
+      context: ./shim
+      dockerfile: Dockerfile.proxy
+    environment:
+      PYTHONUNBUFFERED: "1"
+      UPSTREAM_BASE: http://letta:8283
+      ADE_ORIGINS: https://app.letta.com,http://localhost
+      ENABLE_RUNTIME_IDENTITY_INJECTION: "true"
+      LOG_LEVEL: INFO
+      WIRE_DEBUG: "false"
+    command: >
+      uvicorn proxy:app --host 0.0.0.0 --port 9283 --log-level info --no-access-log
+    ports: ["9283:9283"]
+    depends_on:
+      letta:
+        condition: service_healthy
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - ~/.letta+/redis-data:/data
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.26.9
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/demodemo
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
+      - NEO4J_server_memory_pagecache_size=512m
+    volumes:
+      - ~/.letta+/neo4j_data:/data
+      - ~/.letta+/neo4j_logs:/logs
+    healthcheck:
+      test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:7474" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  graphiti-mcp:
+    build:
+      context: ./graphiti
+      dockerfile: Dockerfile
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      - OPENAI_API_KEY=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
+      - MODEL_NAME=gpt-4.1-mini
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=demodemo
+    ports:
+      - "8000:8000"
+    command: [ "uv", "run", "graphiti_mcp_server_v2.py", "--transport", "sse", "--host", "0.0.0.0" ]
+
+  chroma-mcp:
+    build:
+      context: ./chroma
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    volumes:
+      - ~/.letta+/chroma:/data
+    environment:
+      - CHROMA_CLIENT_TYPE=persistent
+      - CHROMA_DATA_DIR=/data
+      - CHROMA_OPENAI_API_KEY=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
+    command: >
+      --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
+    restart: unless-stopped
+
