@@ -80,7 +80,7 @@ json_read("doc:onboarding:001", "events")
 ## Turn 2 — Append first event
 
 **User → Agent**
-> Record that a new onboarding event started at `2025-09-04T09:00:00Z`.
+> Append a new onboarding event started at `2025-09-04T09:00:00Z`.
 
 **Expected tool call**
 ```python
