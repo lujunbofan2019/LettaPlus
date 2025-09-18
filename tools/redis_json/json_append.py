@@ -22,11 +22,10 @@ def json_append(
     Returns:
         dict: { "success": bool, "error": str|None, "redis_key": str, "doc_json": str|None }
     """
-    # --- 1) Parse value_json robustly ---
+    # --- 1) Parse value_json robustly (JSON -> ast.literal_eval -> raw string) ---
     try:
         if isinstance(value_json, str):
             s = value_json.strip()
-            # Strip accidental code fences
             if s.startswith("```"):
                 newline = s.find("\n")
                 if newline != -1:
@@ -35,16 +34,18 @@ def json_append(
                     s = s[:-3]
                 s = s.strip()
             if s == "":
-                parsed_value = None  # append JSON null
+                parsed_value = None
             else:
                 try:
                     parsed_value = json.loads(s)
                 except json.JSONDecodeError:
-                    parsed_value = ast.literal_eval(s)
+                    try:
+                        parsed_value = ast.literal_eval(s)
+                    except Exception:
+                        parsed_value = s  # final fallback: treat token as raw string
         else:
-            parsed_value = value_json  # already a dict/list/...
-        # Normalize to pure JSON types
-        parsed_value = json.loads(json.dumps(parsed_value))
+            parsed_value = value_json
+        parsed_value = json.loads(json.dumps(parsed_value))  # normalize to pure JSON types
     except Exception as e:
         return {"success": False, "error": f"value_json is not valid or JSON-serializable: {e}", "redis_key": redis_key, "doc_json": None}
 
@@ -60,7 +61,7 @@ def json_append(
         p = p_raw
     if "[" in p or "]" in p or p == "" or p.startswith(".") or p.endswith(".") or ".." in p:
         return {"success": False, "error": "Invalid path; use dot paths like 'a.b' (no brackets/indices).", "redis_key": redis_key, "doc_json": None}
-    redis_path = "$." + p  # RedisJSON JSONPath
+    redis_path = "$." + p
 
     rc = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
 
@@ -69,15 +70,13 @@ def json_append(
     try:
         rc.json().arrappend(redis_key, redis_path, *items)
     except redis.exceptions.ResponseError:
-        # Likely: path missing or not array; create parents+array client-side, then append.
-        # Load or initialize root
+        # Fallback: create parents + array client-side, then write once
         doc = rc.json().get(redis_key, "$")
         if isinstance(doc, list) and doc:
             doc = doc[0]
         if doc is None:
             doc = {}
 
-        # Build parent chain as objects; ensure leaf is array
         cur = doc
         parts = p.split(".")
         for seg in parts[:-1]:
@@ -94,13 +93,11 @@ def json_append(
         if not isinstance(cur[leaf], list):
             return {"success": False, "error": "Target is not an array.", "redis_key": redis_key, "doc_json": None}
 
-        # Extend/append
         if isinstance(parsed_value, list):
             cur[leaf].extend(parsed_value)
         else:
             cur[leaf].append(parsed_value)
 
-        # Persist whole doc (one-time fix-up)
         rc.json().set(redis_key, "$", doc)
 
     # --- 4) Return final doc ---

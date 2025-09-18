@@ -1,4 +1,5 @@
 import os
+import json  # <-- missing import
 import redis
 
 def json_delete(
@@ -47,7 +48,7 @@ def json_delete(
     try:
         rc.json().delete(redis_key, redis_path)
     except redis.exceptions.ResponseError as e:
-        # Treat structural issues as no-op for simplicity/compatibility
+        # Treat structural issues as a clear error (keeps behavior explicit)
         return {"success": False, "error": f"Delete failed: {e}", "redis_key": redis_key, "doc_json": None}
 
     # Return final doc

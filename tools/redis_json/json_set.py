@@ -42,12 +42,20 @@ def json_set(
                 parsed_value = None
             else:
                 try:
-                    parsed_value = json.loads(s)  # proper JSON
+                    # Proper JSON first (handles "null", "true", numbers, quoted strings, arrays, objects)
+                    parsed_value = json.loads(s)
                 except json.JSONDecodeError:
-                    parsed_value = ast.literal_eval(s)  # Python-literal fallback
+                    try:
+                        # Python-literal fallback (handles 1_000, {'a': 1}, etc.)
+                        parsed_value = ast.literal_eval(s)
+                    except Exception:
+                        # Final fallback: treat as a raw string token (e.g., completed -> "completed")
+                        parsed_value = s
         else:
-            parsed_value = value_json  # some runners pass an object directly
-        # Normalize to pure JSON types
+            # Some runners pass objects directly despite the str signature
+            parsed_value = value_json
+
+        # Normalize to pure JSON types (e.g., convert tuples to lists)
         parsed_value = json.loads(json.dumps(parsed_value))
     except Exception as e:
         return {"success": False, "error": f"value_json is not valid or JSON-serializable: {e}", "redis_key": redis_key, "doc_json": None}
