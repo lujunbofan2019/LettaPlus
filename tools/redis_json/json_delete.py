@@ -4,7 +4,6 @@ import redis
 def json_delete(
     key: str,
     path: str,
-    *,
     redis_url: str = ""
 ) -> dict:
     """

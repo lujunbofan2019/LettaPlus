@@ -6,7 +6,6 @@ def json_set(
     key: str,
     path: str,
     value_json: str,
-    *,
     redis_url: str = ""
 ) -> dict:
     """

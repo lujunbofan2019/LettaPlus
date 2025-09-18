@@ -6,7 +6,6 @@ def json_copy(
     key: str,
     from_path: str,
     to_path: str,
-    *,
     overwrite: bool = True,
     redis_url: str = ""
 ) -> dict:

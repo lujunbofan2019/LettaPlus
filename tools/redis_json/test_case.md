@@ -22,7 +22,7 @@
 ## Turn 0 — Initialize document (use `json_create`)
 
 **User → Agent**
-> Start a fresh onboarding document with `status:"pending"`, empty `meta`, and `steps:{}`. Use the key `doc:onboarding:001` and overwrite anything that exists.
+> Create a fresh json document with `status:"pending"`, empty `meta`, and `steps:{}`. Use the key `doc:onboarding:001` and overwrite anything that exists.
 
 **Expected tool call**
 ```python

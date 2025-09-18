@@ -6,7 +6,6 @@ def json_ensure(
     key: str,
     path: str,
     default_json: str,
-    *,
     redis_url: str = ""
 ) -> dict:
     """

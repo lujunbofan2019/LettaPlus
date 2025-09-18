@@ -4,9 +4,8 @@ import redis
 import uuid
 
 def json_create(
-    key: str,
+    key: str = "",
     initial_json: str = "{}",
-    *,
     key_prefix: str = "doc:",
     overwrite: bool = False,
     redis_url: str = ""

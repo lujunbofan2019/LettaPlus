@@ -5,7 +5,6 @@ import redis
 def json_read(
     key: str,
     path: str = "$",
-    *,
     pretty: bool = False,
     redis_url: str = ""
 ) -> dict:

@@ -5,7 +5,6 @@ def json_increment(
     key: str,
     path: str,
     delta: float,
-    *,
     redis_url: str = ""
 ) -> dict:
     """

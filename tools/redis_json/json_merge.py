@@ -6,7 +6,6 @@ def json_merge(
     key: str,
     path: str,
     patch_json: str,
-    *,
     redis_url: str = ""
 ) -> dict:
     """
