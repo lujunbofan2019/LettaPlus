@@ -4,108 +4,71 @@ import redis
 
 def json_read(
     key: str,
-    path: str,
+    path: str = "$",
     *,
-    redis_url: str = "",
-    require_exists: bool = True,
-    pretty: bool = False
+    pretty: bool = False,
+    redis_url: str = ""
 ) -> dict:
     """
-    Read a JSON value from a RedisJSON document at the given path.
+    Read a JSON value from a RedisJSON document.
 
-    Supported paths: object-style keys only (e.g., $.a.b or $["a"]["b"]).
-    Numeric array indices/selectors are NOT supported in this function.
+    Behavior:
+      - Returns the value at `path` as a JSON string in `value_json`.
+      - If the document exists but the dot-path does not, returns `"null"` (success=True).
+      - If the Redis key does not exist, returns success=False with an error.
+      - Pretty printing is opt-in via `pretty=True`.
+
+    Path rules:
+      - Accepts "$" (root), "$.a.b", or "a.b".
+      - Dot-paths only; **no** bracket selectors (`$["a"]`) and **no** array indices.
 
     Args:
-        key (str): Redis key where the JSON document is stored.
-        path (str): JSONPath to read. `$` returns the whole document.
-        redis_url (str): Redis connection URL. If empty, uses REDIS_URL env var or 'redis://redis:6379/0'.
-        require_exists (bool): If True, error when the key or the path does not exist. If False, returns exists=False and value_json="null".
-        pretty (bool): If True, pretty-print returned JSON string.
+        key (str): Redis key of the JSON document.
+        path (str): Target path to read. Use "$" for the whole document. Default "$".
+        pretty (bool): If True, return indented JSON in `value_json`. Default False.
+        redis_url (str): Optional Redis connection URL. If empty, uses the REDIS_URL env var or "redis://redis:6379/0".
 
     Returns:
         dict: {
-          "success": bool,
-          "error": str | None,
-          "exists": bool,           # whether the requested path existed
-          "value_json": str | None  # JSON-encoded string of the value (or "null" when missing and require_exists=False)
+            "success": bool,           # False only if the key is missing or parameters are invalid
+            "error": str | None,       # Error message when success=False
+            "key": str,                # The Redis key used
+            "value_json": str | None   # JSON string of the value, or "null" if the path is absent
         }
-    """
-    rc = redis.Redis.from_url(
-        redis_url or os.getenv("REDIS_URL", "redis://redis:6379/0"),
-        decode_responses=True
-    )
 
-    # 1) Read full document
+    Examples:
+        # Read the entire document
+        json_read("doc:123", "$", pretty=True)
+
+        # Read a nested field (returns "null" if absent)
+        json_read("doc:123", "profile.name")
+
+        # Dollar-prefixed dot-path also works
+        json_read("doc:123", "$.steps.verify_identity.status")
+    """
+    rc = redis.Redis.from_url(redis_url or os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
     doc = rc.json().get(key, "$")
     if isinstance(doc, list) and doc:
         doc = doc[0]
-
     if doc is None:
-        if require_exists:
-            return {"success": False, "error": f"Key '{key}' not found.", "exists": False, "value_json": None}
-        # Treat as empty document
-        if pretty:
-            return {"success": True, "error": None, "exists": False, "value_json": "null"}
-        else:
-            return {"success": True, "error": None, "exists": False, "value_json": "null"}
+        return {"success": False, "error": f"Key not found: {key}", "key": key, "value_json": None}
 
-    # 2) Parse object-style path into keys (supports $.a.b and $["a"]["b"])
     p = path.strip()
-    if not p.startswith("$"):
-        return {"success": False, "error": f"Path must start with $: {path}", "exists": False, "value_json": None}
+    if p == "$" or p == "":
+        return {"success": True, "error": None, "key": key, "value_json": json.dumps(doc, indent=2 if pretty else None)}
+    if p.startswith("$."):
+        p = p[2:]
+    elif p.startswith("$"):
+        p = p[1:]
+    if "[" in p or "]" in p:
+        return {"success": False, "error": "Bracketed selectors are not supported in simple tools.", "key": key, "value_json": None}
 
-    # Root path: return whole doc
-    if p == "$":
-        try:
-            s = json.dumps(doc, indent=2 if pretty else None)
-        except Exception as e:
-            return {"success": False, "error": f"JSON encode error: {e}", "exists": True, "value_json": None}
-        return {"success": True, "error": None, "exists": True, "value_json": s}
-
-    keys = []
-    i = 1
-    L = len(p)
-    while i < L:
-        ch = p[i]
-        if ch == ".":
-            i += 1
-            j = i
-            while j < L and p[j] not in ".[":
-                j += 1
-            if j > i:
-                keys.append(p[i:j])
-            i = j
-        elif ch == "[":
-            i += 1
-            if i < L and p[i] in "\"'":
-                quote = p[i]; i += 1
-                j = p.find(quote, i)
-                if j == -1:
-                    return {"success": False, "error": f"Bad path (unterminated quote): {path}", "exists": False, "value_json": None}
-                keys.append(p[i:j])
-                i = j + 1
-                if i >= L or p[i] != "]":
-                    return {"success": False, "error": f"Bad path (missing ]): {path}", "exists": False, "value_json": None}
-                i += 1
-            else:
-                return {"success": False, "error": f"Array indices not supported in this function: {path}", "exists": False, "value_json": None}
-        else:
-            i += 1
-
-    # 3) Traverse
     cur = doc
-    for k in keys:
-        if not isinstance(cur, dict) or k not in cur:
-            if require_exists:
-                return {"success": False, "error": f"path not found: {path}", "exists": False, "value_json": None}
-            return {"success": True, "error": None, "exists": False, "value_json": "null"}
-        cur = cur[k]
+    if p != "":
+        parts = p.split(".")
+        for part in parts:
+            if not isinstance(cur, dict) or part not in cur:
+                return {"success": True, "error": None, "key": key, "value_json": "null"}
+            cur = cur[part]
 
-    # 4) Return value as JSON string
-    try:
-        s = json.dumps(cur, indent=2 if pretty else None)
-    except Exception as e:
-        return {"success": False, "error": f"JSON encode error: {e}", "exists": True, "value_json": None}
-
-    return {"success": True, "error": None, "exists": True, "value_json": s}
+    return {"success": True, "error": None, "key": key, "value_json": json.dumps(cur, indent=2 if pretty else None)}

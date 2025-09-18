@@ -1,38 +1,39 @@
-# AI Agent RedisJSON Tools — End-to-End Conversation Test Plan
+# AI Agent RedisJSON Tools — Simple Suite Conversation Test Plan (v2)
 
-**Key under test:** `doc:onboarding:001`  
-**Audit log path:** `$.logs`  
-**Tools under test:** `json_set`, `json_ensure`, `json_append`, `json_increment`, `json_merge`, `json_move`, `json_copy`, `json_delete`, **`json_read`**
+**Key under test (explicit):** `doc:onboarding:001`  
+**Alternative:** Use auto-generated keys via `json_create("", "{}")` (see Turn 0 note).  
+**Tools under test:** `json_create`, `json_set`, `json_ensure`, `json_append`, `json_increment`, `json_merge`, `json_move`, `json_copy`, `json_delete`, `json_read`
 
----
-
-## How to use this plan
-
-- Run this as a natural conversation with your agent. The agent should call the Python tools to satisfy each user turn.
-- After *each* mutation, verify state using **`json_read`** with the provided paths.
-- All schemas are JSON strings. Paths are object-style only (e.g., `$.a.b`, `$["a"]["b"]`).
-
-> Tip: Keep Redis empty or delete the key before starting to ensure deterministic results.
+**Path rules:** dot paths only — `"$"`, `"$.a.b"`, or `"a.b"`. **No** bracket selectors and **no** array indices.
 
 ---
 
-## Turn 0 — Initialize document
+## How to run this plan
+
+- Speak each **User → Agent** instruction to your agent.
+- After every mutation, verify with **`json_read`**.
+- This plan assumes you are using the *simplified* function signatures (no schemas, no audit logs).
+- If you prefer an auto-generated key, replace `doc:onboarding:001` with the key returned by `json_create("", initial_json)`.
+
+> Tip: To ensure deterministic results, start by resetting the key (Turn 0 uses `overwrite=True`).
+
+---
+
+## Turn 0 — Initialize document (use `json_create`)
 
 **User → Agent**
-> Start a fresh document for my onboarding workflow. Include a `status:"pending"`, empty `meta`, and `steps:{}`.
+> Start a fresh onboarding document with `status:"pending"`, empty `meta`, and `steps:{}`. Use the key `doc:onboarding:001` and overwrite anything that exists.
 
 **Expected tool call**
 ```python
-json_set(
+json_create(
   key="doc:onboarding:001",
-  path="$",
-  value_json='{"status":"pending","meta":{},"steps":{}}',
-  validation_scope="document",
-  global_schema_json='{"type":"object","required":["status","meta","steps"]}'
+  initial_json='{"status":"pending","meta":{},"steps":{}}',
+  overwrite=True
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
 json_read("doc:onboarding:001", "$", pretty=True)
 ```
@@ -45,23 +46,29 @@ json_read("doc:onboarding:001", "$", pretty=True)
 }
 ```
 
+**Auto-key variant (optional):**
+```python
+res = json_create("", '{"status":"pending","meta":{},"steps":{}}')
+# Use res["key"] for all subsequent calls in place of "doc:onboarding:001"
+```
+
 ---
 
 ## Turn 1 — Ensure `logs` and `events` arrays
 
 **User → Agent**
-> Make sure I have a `logs` array and an `events` array.
+> Make sure I have both a `logs` array and an `events` array.
 
 **Expected tool calls**
 ```python
-json_ensure("doc:onboarding:001", "$.logs", "[]")
-json_ensure("doc:onboarding:001", "$.events", "[]")
+json_ensure("doc:onboarding:001", "logs", "[]")
+json_ensure("doc:onboarding:001", "events", "[]")
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.logs")
-json_read("doc:onboarding:001", "$.events")
+json_read("doc:onboarding:001", "logs")
+json_read("doc:onboarding:001", "events")
 ```
 **Expected JSON (each):**
 ```json
@@ -79,18 +86,14 @@ json_read("doc:onboarding:001", "$.events")
 ```python
 json_append(
   key="doc:onboarding:001",
-  path="$.events",
-  value_json='{"ts":"2025-09-04T09:00:00Z","type":"start"}',
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"array"}',
-  audit_log_path="$.logs"
+  path="events",
+  value_json='{"ts":"2025-09-04T09:00:00Z","type":"start"}'
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.events", pretty=True)
-json_read("doc:onboarding:001", "$.logs")  # should include an 'append' audit entry
+json_read("doc:onboarding:001", "events", pretty=True)
 ```
 **Expected `events`:**
 ```json
@@ -101,7 +104,7 @@ json_read("doc:onboarding:001", "$.logs")  # should include an 'append' audit en
 
 ---
 
-## Turn 3 — Set `meta.started_at` with validation
+## Turn 3 — Set `meta.started_at`
 
 **User → Agent**
 > Set `meta.started_at` to the same ISO timestamp.
@@ -110,18 +113,14 @@ json_read("doc:onboarding:001", "$.logs")  # should include an 'append' audit en
 ```python
 json_set(
   key="doc:onboarding:001",
-  path="$.meta",
-  value_json='{"started_at":"2025-09-04T09:00:00Z"}',
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"object","properties":{"started_at":{"type":"string","format":"date-time"}},"required":["started_at"]}',
-  audit_log_path="$.logs"
+  path="meta",
+  value_json='{"started_at":"2025-09-04T09:00:00Z"}'
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.meta", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "meta", pretty=True)
 ```
 **Expected `meta`:**
 ```json
@@ -141,17 +140,14 @@ json_read("doc:onboarding:001", "$.logs")
 ```python
 json_increment(
   key="doc:onboarding:001",
-  path="$.counters.starts",
-  delta=1.0,
-  initialize_missing_to_zero=True,
-  audit_log_path="$.logs"
+  path="counters.starts",
+  delta=1.0
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.counters", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "counters", pretty=True)
 ```
 **Expected `counters`:**
 ```json
@@ -160,7 +156,7 @@ json_read("doc:onboarding:001", "$.logs")
 
 ---
 
-## Turn 5 — Merge step details (deep merge with deletion)
+## Turn 5 — Merge step details (deep merge with deletion via null)
 
 **User → Agent**
 > Merge a new step `id="verify_identity"` with a status, add a nested `inputs` object, and delete any obsolete field.
@@ -169,18 +165,14 @@ json_read("doc:onboarding:001", "$.logs")
 ```python
 json_merge(
   key="doc:onboarding:001",
-  path="$.steps.verify_identity",
-  patch_json='{"status":"in_progress","inputs":{"id_type":"passport","country":"GB"},"obsolete":null}',
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"object","properties":{"status":{"type":"string"},"inputs":{"type":"object"}},"required":["status"]}',
-  audit_log_path="$.logs"
+  path="steps.verify_identity",
+  patch_json='{"status":"in_progress","inputs":{"id_type":"passport","country":"GB"},"obsolete":null}'
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.steps.verify_identity", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "steps.verify_identity", pretty=True)
 ```
 **Expected `steps.verify_identity`:**
 ```json
@@ -201,20 +193,14 @@ json_read("doc:onboarding:001", "$.logs")
 ```python
 json_ensure(
   key="doc:onboarding:001",
-  path="$.steps.verify_identity.result",
-  default_json='{"approved": false}',
-  treat_null_as_missing=True,
-  overwrite_if_type_mismatch=True,
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"object","properties":{"approved":{"type":"boolean"}},"required":["approved"]}',
-  audit_log_path="$.logs"
+  path="steps.verify_identity.result",
+  default_json='{"approved": false}'
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.steps.verify_identity.result", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "steps.verify_identity.result", pretty=True)
 ```
 **Expected `result`:**
 ```json
@@ -226,22 +212,20 @@ json_read("doc:onboarding:001", "$.logs")
 ## Turn 7 — Append another event
 
 **User → Agent**
-> Add an `event` that the ID scan finished at `2025-09-04T09:10:00Z`.
+> Add an event that the ID scan finished at `2025-09-04T09:10:00Z`.
 
 **Expected tool call**
 ```python
 json_append(
   key="doc:onboarding:001",
-  path="$.events",
-  value_json='{"ts":"2025-09-04T09:10:00Z","type":"id_scan_complete"}',
-  audit_log_path="$.logs"
+  path="events",
+  value_json='{"ts":"2025-09-04T09:10:00Z","type":"id_scan_complete"}'
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.events", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "events", pretty=True)
 ```
 **Expected `events`:**
 ```json
@@ -256,24 +240,22 @@ json_read("doc:onboarding:001", "$.logs")
 ## Turn 8 — Move legacy info to canonical field
 
 **User → Agent**
-> Suppose a broker sent legacy data at `legacy.info`. Move it to `info` and overwrite anything there.
+> If there is legacy data at `legacy.info`, move it to `info` and overwrite anything there.
 
 **Expected tool call**
 ```python
 json_move(
   key="doc:onboarding:001",
-  from_path="$.legacy.info",
-  to_path="$.info",
-  overwrite_if_exists=True,
-  audit_log_path="$.logs"
+  from_path="legacy.info",
+  to_path="info",
+  overwrite=True
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.info", pretty=True)
-json_read("doc:onboarding:001", "$.legacy", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "info", pretty=True)
+json_read("doc:onboarding:001", "legacy", pretty=True)
 ```
 **Expected:** If `legacy.info` existed, its contents appear under `info` and are removed from `legacy`.
 
@@ -288,19 +270,15 @@ json_read("doc:onboarding:001", "$.logs")
 ```python
 json_copy(
   key="doc:onboarding:001",
-  from_path="$.steps.verify_identity",
-  to_path="$.snapshots.verify_identity_latest",
-  overwrite_if_exists=True,
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"object","properties":{"status":{"type":"string"}},"required":["status"]}',
-  audit_log_path="$.logs"
+  from_path="steps.verify_identity",
+  to_path="snapshots.verify_identity_latest",
+  overwrite=True
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.snapshots.verify_identity_latest", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "snapshots.verify_identity_latest", pretty=True)
 ```
 **Expected snapshot:**
 ```json
@@ -322,47 +300,37 @@ json_read("doc:onboarding:001", "$.logs")
 ```python
 json_delete(
   key="doc:onboarding:001",
-  path="$.steps.verify_identity.obsolete",
-  require_exists=False,
-  validation_scope="subtree",
-  subtree_schema_json='{"type":"object"}',
-  audit_log_path="$.logs"
+  path="steps.verify_identity.obsolete"
 )
 ```
 
-**Verify with reader**
+**Verify**
 ```python
-json_read("doc:onboarding:001", "$.steps.verify_identity", pretty=True)
-json_read("doc:onboarding:001", "$.logs")
+json_read("doc:onboarding:001", "steps.verify_identity", pretty=True)
 ```
 **Expected:** The `obsolete` field should not exist.
 
 ---
 
-## Turn 11 — Finalize: set status and whole-doc validation
+## Turn 11 — Finalize: set status
 
 **User → Agent**
-> Mark the workflow `status:"completed"` and validate the whole document.
+> Mark the workflow `status:"completed"`.
 
 **Expected tool call**
 ```python
 json_set(
   key="doc:onboarding:001",
-  path="$.status",
-  value_json='"completed"',
-  validation_scope="document",
-  global_schema_json='{"type":"object","properties":{"status":{"enum":["pending","in_progress","completed","failed","cancelled","skipped"]}},"required":["status"]}',
-  audit_log_path="$.logs"
+  path="status",
+  value_json='"completed"'
 )
 ```
 
-**Verify with reader**
+**Verify (final)**
 ```python
-json_read("doc:onboarding:001", "$.status")
 json_read("doc:onboarding:001", "$", pretty=True)
-json_read("doc:onboarding:001", "$.logs", pretty=True)
 ```
-**Expected final state (top-level excerpt):**
+**Expected top-level excerpt:**
 ```json
 {
   "status": "completed",
@@ -385,19 +353,7 @@ json_read("doc:onboarding:001", "$.logs", pretty=True)
       "result": { "approved": false }
     }
   },
-  "counters": { "starts": 1 },
-  "logs": [
-    {"ts":"<iso8601>", "op":"append",   "path":"$.events"},
-    {"ts":"<iso8601>", "op":"set",      "path":"$.meta"},
-    {"ts":"<iso8601>", "op":"increment","path":"$.counters.starts","delta":1.0},
-    {"ts":"<iso8601>", "op":"merge",    "path":"$.steps.verify_identity"},
-    {"ts":"<iso8601>", "op":"ensure",   "path":"$.steps.verify_identity.result"},
-    {"ts":"<iso8601>", "op":"append",   "path":"$.events"},
-    {"ts":"<iso8601>", "op":"move",     "from":"$.legacy.info","to":"$.info"},
-    {"ts":"<iso8601>", "op":"copy",     "from":"$.steps.verify_identity","to":"$.snapshots.verify_identity_latest"},
-    {"ts":"<iso8601>", "op":"delete",   "path":"$.steps.verify_identity.obsolete"},
-    {"ts":"<iso8601>", "op":"set",      "path":"$.status"}
-  ]
+  "counters": { "starts": 1 }
 }
 ```
 
@@ -405,7 +361,7 @@ json_read("doc:onboarding:001", "$.logs", pretty=True)
 
 ## Optional: Clean-up / Reset
 
-To reset the test key to an empty object:
+Reset the test key to an empty object:
 ```python
-json_set("doc:onboarding:001", "$", "{}")
+json_delete("doc:onboarding:001", "$")
 ```
