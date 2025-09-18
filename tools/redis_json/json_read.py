@@ -28,28 +28,65 @@ def json_read(
         }
     """
     rc = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
-    doc = rc.json().get(redis_key, "$")
-    if isinstance(doc, list) and doc:
-        doc = doc[0]
-    if doc is None:
-        return {"success": False, "error": f"Key not found: {redis_key}", "redis_key": redis_key, "value_json": None}
 
-    p = path.strip()
-    if p == "$" or p == "":
-        return {"success": True, "error": None, "redis_key": redis_key, "value_json": json.dumps(doc, indent=2 if pretty else None)}
-    if p.startswith("$."):
-        p = p[2:]
-    elif p.startswith("$"):
-        p = p[1:]
-    if "[" in p or "]" in p:
-        return {"success": False, "error": "Bracketed selectors are not supported in simple tools.", "redis_key": redis_key, "value_json": None}
+    # Normalize and validate path
+    p_raw = (path or "").strip()
+    if p_raw in ("", "$"):
+        # Root read
+        doc = rc.json().get(redis_key, "$")
+        if isinstance(doc, list) and doc:
+            doc = doc[0]
+        if doc is None:
+            # Distinguish missing key vs. empty doc
+            if not rc.exists(redis_key):
+                return {"success": False, "error": f"Key not found: {redis_key}", "redis_key": redis_key, "value_json": None}
+            # If key exists but root is somehow nil, normalize to {}
+            doc = {}
+        return {
+            "success": True,
+            "error": None,
+            "redis_key": redis_key,
+            "value_json": json.dumps(doc, indent=2 if pretty else None),
+        }
 
-    cur = doc
-    if p != "":
-        parts = p.split(".")
-        for part in parts:
-            if not isinstance(cur, dict) or part not in cur:
-                return {"success": True, "error": None, "redis_key": redis_key, "value_json": "null"}
-            cur = cur[part]
+    if p_raw.startswith("$."):
+        p = p_raw[2:]
+    elif p_raw.startswith("$"):
+        p = p_raw[1:]
+    else:
+        p = p_raw
 
-    return {"success": True, "error": None, "redis_key": redis_key, "value_json": json.dumps(cur, indent=2 if pretty else None)}
+    # Simple dot-path validation (no brackets/indices/wildcards)
+    if "[" in p or "]" in p or p == "" or p.startswith(".") or p.endswith(".") or ".." in p:
+        return {"success": False, "error": "Invalid path; use '$' or dot paths like 'a.b' (no brackets/indices).", "redis_key": redis_key, "value_json": None}
+
+    redis_path = "$." + p
+
+    # Server-side subpath read
+    try:
+        res = rc.json().get(redis_key, redis_path)
+    except redis.exceptions.ResponseError:
+        # Invalid/absent path or missing key; disambiguate
+        if not rc.exists(redis_key):
+            return {"success": False, "error": f"Key not found: {redis_key}", "redis_key": redis_key, "value_json": None}
+        # Treat as missing path
+        return {"success": True, "error": None, "redis_key": redis_key, "value_json": "null"}
+    except Exception as e:
+        return {"success": False, "error": f"Read error: {e}", "redis_key": redis_key, "value_json": None}
+
+    # RedisJSON returns a list for JSONPath; unwrap single match
+    if isinstance(res, list):
+        res = res[0] if res else None
+
+    if res is None:
+        # Path absent — success with "null" if key exists, else error
+        if not rc.exists(redis_key):
+            return {"success": False, "error": f"Key not found: {redis_key}", "redis_key": redis_key, "value_json": None}
+        return {"success": True, "error": None, "redis_key": redis_key, "value_json": "null"}
+
+    return {
+        "success": True,
+        "error": None,
+        "redis_key": redis_key,
+        "value_json": json.dumps(res, indent=2 if pretty else None),
+    }

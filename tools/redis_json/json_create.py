@@ -2,6 +2,7 @@ import os
 import json
 import redis
 import uuid
+import ast
 
 def json_create(
     redis_key: str = "",
@@ -29,11 +30,45 @@ def json_create(
             - doc_json (str): JSON string of the root document after creation.
         }
     """
+    # 1) Coerce initial_json into a Python value (dict/list/…)
     try:
-        doc = json.loads(initial_json)
-    except json.JSONDecodeError as e:
-        return {"success": False, "error": f"initial_json is not valid JSON: {e}", "redis_key": redis_key, "doc_json": None}
+        if isinstance(initial_json, str):
+            s = initial_json.strip()
 
+            # Strip optional code fences
+            if s.startswith("```"):
+                newline = s.find("\n")
+                if newline != -1:
+                    s = s[newline + 1 :]
+                if s.endswith("```"):
+                    s = s[: -3]
+                s = s.strip()
+
+            if s == "":
+                s = "{}"
+
+            try:
+                doc = json.loads(s)  # proper JSON
+            except json.JSONDecodeError:
+                # Fallback: parse Python-literal style (single quotes, True/False/None, etc.)
+                # ast.literal_eval is safe and handles dict/list/str/num/bool/None
+                doc = ast.literal_eval(s)
+        else:
+            # Runner may pass a dict/list directly; accept it
+            doc = initial_json
+
+        # Ensure JSON-serializable
+        doc_json = json.dumps(doc)
+        doc = json.loads(doc_json)  # normalize (e.g., convert tuples, ensure pure JSON types)
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"initial_json is not valid or JSON-serializable: {e}",
+            "redis_key": redis_key,
+            "doc_json": None,
+        }
+
+    # 2) Compute key and write
     actual_key = redis_key if redis_key else f"{key_prefix}{uuid.uuid4().hex}"
     rc = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
 

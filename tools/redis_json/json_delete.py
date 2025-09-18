@@ -19,35 +19,43 @@ def json_delete(
         dict: { "success": bool, "error": str|None, "redis_key": str, "doc_json": str|None }
     """
     rc = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
-    doc = rc.json().get(redis_key, "$")
-    if isinstance(doc, list) and doc:
-        doc = doc[0]
-    if doc is None:
-        doc = {}
 
-    p = path.strip()
-    if p == "$" or p == "":
-        if isinstance(doc, dict):
-            doc.clear()
-        rc.json().set(redis_key, "$", doc)
-        return {"success": True, "error": None, "redis_key": redis_key, "doc_json": "{}"}
+    # Root reset
+    p_raw = (path or "").strip()
+    if p_raw in ("", "$"):
+        rc.json().set(redis_key, "$", {})  # write empty object
+        final_doc = rc.json().get(redis_key, "$")
+        if isinstance(final_doc, list) and final_doc:
+            final_doc = final_doc[0]
+        return {"success": True, "error": None, "redis_key": redis_key, "doc_json": json.dumps(final_doc)}
 
-    if p.startswith("$."):
-        p = p[2:]
-    elif p.startswith("$"):
-        p = p[1:]
-    if "[" in p or "]" in p:
-        return {"success": False, "error": "Bracketed selectors are not supported.", "redis_key": redis_key, "doc_json": None}
+    # Normalize path
+    if p_raw.startswith("$."):
+        p = p_raw[2:]
+    elif p_raw.startswith("$"):
+        p = p_raw[1:]
+    else:
+        p = p_raw
 
-    cur = doc
-    parts = p.split(".") if p else []
-    for part in parts[:-1]:
-        if not isinstance(cur, dict) or part not in cur:
-            rc.json().set(redis_key, "$", doc)
-            return {"success": True, "error": None, "redis_key": redis_key, "doc_json": json.dumps(doc)}
-        cur = cur[part]
-    if isinstance(cur, dict):
-        cur.pop(parts[-1], None)
+    # Validate path syntax
+    if "[" in p or "]" in p or p == "" or p.startswith(".") or p.endswith(".") or ".." in p:
+        return {"success": False, "error": "Invalid path; use dot paths like 'a.b' (no brackets/indices).", "redis_key": redis_key, "doc_json": None}
 
-    rc.json().set(redis_key, "$", doc)
-    return {"success": True, "error": None, "redis_key": redis_key, "doc_json": json.dumps(doc)}
+    redis_path = "$." + p
+
+    # Server-side delete; JSON.DEL returns count (0 if nothing deleted)
+    try:
+        rc.json().delete(redis_key, redis_path)
+    except redis.exceptions.ResponseError as e:
+        # Treat structural issues as no-op for simplicity/compatibility
+        return {"success": False, "error": f"Delete failed: {e}", "redis_key": redis_key, "doc_json": None}
+
+    # Return final doc
+    final_doc = rc.json().get(redis_key, "$")
+    if isinstance(final_doc, list) and final_doc:
+        final_doc = final_doc[0]
+    if final_doc is None:
+        # If key did not exist previously, make it consistent with "{}"
+        final_doc = {}
+        rc.json().set(redis_key, "$", final_doc)
+    return {"success": True, "error": None, "redis_key": redis_key, "doc_json": json.dumps(final_doc)}
