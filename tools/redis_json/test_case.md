@@ -22,7 +22,7 @@
 ## Turn 0 — Initialize document (use `json_create`)
 
 **User → Agent**
-> Create a fresh json document with `status:"pending"`, empty `meta`, and `steps:{}`. Use the key `doc:onboarding:001` and overwrite anything that exists.
+> Create a fresh json document for onboarding with `'{"status":"pending"}'`, empty `"meta"`, and `"steps":{}`. Use the key `"doc:onboarding:001"`, and overwrite anything that exists.
 
 **Expected tool call**
 ```python
@@ -80,7 +80,7 @@ json_read("doc:onboarding:001", "events")
 ## Turn 2 — Append first event
 
 **User → Agent**
-> Record that onboarding started at `2025-09-04T09:00:00Z`.
+> Record that a new onboarding event started at `2025-09-04T09:00:00Z`.
 
 **Expected tool call**
 ```python
