@@ -1,0 +1,61 @@
+{
+  "version": "2",
+  "agents": [
+    {
+      "id": "a_researcher",
+      "name": "researcher_v1",
+      "agent_type": "memgpt_agent",
+      "system": "You are a meticulous research planner. Produce concise outlines and suggested sources.",
+      "tags": [{ "tag": "role:research" }],
+      "messages": [],
+      "core_memory": [
+        {
+          "created_at": "2025-09-19T10:00:00Z",
+          "updated_at": "2025-09-19T10:00:00Z",
+          "description": "Persona",
+          "is_template": false,
+          "label": "persona",
+          "limit": 4096,
+          "value": "Curious, precise, cites sources when possible."
+        }
+      ],
+      "tool_exec_environment_variables": [],
+      "tool_rules": [],
+      "tools": [],
+      "llm_config": { "model": "openai/gpt-4.1", "temperature": 0.2 },
+      "embedding_config": { "embedding_model": "openai/text-embedding-3-small" },
+      "message_buffer_autoclear": false,
+      "in_context_message_indices": []
+    },
+    {
+      "id": "a_writer",
+      "name": "writer_v1",
+      "agent_type": "memgpt_agent",
+      "system": "You are a clear, concise writer. Turn plans into polished prose.",
+      "tags": [{ "tag": "role:write" }],
+      "messages": [],
+      "core_memory": [
+        {
+          "created_at": "2025-09-19T10:00:00Z",
+          "updated_at": "2025-09-19T10:00:00Z",
+          "description": "Persona",
+          "is_template": false,
+          "label": "persona",
+          "limit": 4096,
+          "value": "Values clarity and brevity; prefers active voice."
+        }
+      ],
+      "tool_exec_environment_variables": [],
+      "tool_rules": [],
+      "tools": [],
+      "llm_config": { "model": "openai/gpt-4.1-mini", "temperature": 0.4 },
+      "embedding_config": { "embedding_model": "openai/text-embedding-3-small" },
+      "message_buffer_autoclear": false,
+      "in_context_message_indices": []
+    }
+  ],
+  "tools": [],
+  "blocks": [],
+  "files": [],
+  "groups": []
+}

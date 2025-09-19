@@ -1,0 +1,421 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selinafinance.co.uk/schemas/letta-asl-workflow-v2.1.0.json",
+  "title": "Letta–ASL Workflow (v2.1.0)",
+  "description": "Workflow schema for agentic execution aligned with AWS Step Functions semantics and Letta Agent File (.af) data models. Supports Letta .af v1 inline agents and .af v2 multi-entity references.",
+  "type": "object",
+  "properties": {
+    "workflow_schema_version": {
+      "description": "Version of this workflow schema (semver).",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "2.1.0"
+    },
+    "workflow_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this workflow instance."
+    },
+    "workflow_name": { "type": "string" },
+    "description": { "type": "string" },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of this workflow logic."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "author": { "type": "string" },
+    "tags": {
+      "description": "Optional tags for categorization.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/TagSchema" },
+      "default": []
+    },
+
+    "workflow_input_schema": {
+      "description": "JSON Schema describing initial inputs for the workflow.",
+      "type": "object"
+    },
+
+    "agents": {
+      "description": "Agents used by the workflow. Each item can inline a Letta .af v1 agent OR reference an .af v2 agent entity.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/AgentDefinition" },
+      "default": []
+    },
+
+    "shared_memory_blocks": {
+      "description": "Identifiers for shared memory blocks used across steps.",
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+
+    "start_step_id": { "type": "string", "description": "step_id of the first step." },
+    "stop_step_id": { "type": "string", "description": "step_id that marks termination." },
+
+    "steps": {
+      "description": "Ordered step list (SOP-style) while we converge on a final ASL state machine.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/WorkflowStep" }
+    },
+
+    "asl": {
+      "description": "Optional AWS Step Functions–style state machine for execution (author once, run many). If provided, takes precedence over 'steps'.",
+      "type": "object",
+      "properties": {
+        "Comment": { "type": "string" },
+        "StartAt": { "type": "string" },
+        "Version": { "type": "string", "default": "1.0" },
+        "TimeoutSeconds": { "type": "integer", "minimum": 1 },
+        "States": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/AslState" }
+        }
+      },
+      "required": ["StartAt", "States"],
+      "additionalProperties": false
+    },
+
+    "af_v2_entities": {
+      "description": "(Optional) Embedded Letta .af v2 multi-entity blocks to ensure exact compatibility. Use agent/tool/block IDs from here inside the workflow (e.g., AgentDefinition.agent_ref).",
+      "type": "object",
+      "properties": {
+        "version": { "type": "string", "enum": ["2"], "default": "2" },
+        "agents": { "type": "array", "items": { "$ref": "#/$defs/AfV2Agent" }, "default": [] },
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/AfTool" }, "default": [] },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/CoreMemoryBlockSchema" }, "default": [] },
+        "files": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "default": [] },
+        "groups": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "default": [] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "workflow_id",
+    "workflow_name",
+    "version",
+    "agents",
+    "start_step_id",
+    "stop_step_id",
+    "steps"
+  ],
+  "additionalProperties": false,
+
+  "$defs": {
+    "TagSchema": {
+      "type": "object",
+      "properties": { "tag": { "type": "string" } },
+      "required": ["tag"],
+      "additionalProperties": false
+    },
+
+    "AgentDefinition": {
+      "title": "Agent Definition (Letta-aligned)",
+      "type": "object",
+      "properties": {
+        "agent_name": { "type": "string" },
+        "agent_ref": {
+          "description": "Reference to an .af v2 agent entity (by id or name).",
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "agent_config": {
+          "description": "Inline agent config aligned to Letta .af (legacy v1 style).",
+          "$ref": "#/$defs/AfV1Agent"
+        }
+      },
+      "oneOf": [
+        { "required": ["agent_ref"] },
+        { "required": ["agent_config"] }
+      ],
+      "additionalProperties": false
+    },
+
+    "AfV1Agent": {
+      "title": "Agent (.af v1 inline)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "system": { "type": ["string", "null"] },
+        "agent_type": { "type": "string" },
+        "tags": { "type": "array", "items": { "$ref": "#/$defs/TagSchema" }, "default": [] },
+        "metadata_": { "type": ["object", "null"], "additionalProperties": true },
+        "llm_config": { "type": ["object", "null"], "additionalProperties": true },
+        "embedding_config": { "type": ["object", "null"], "additionalProperties": true },
+        "message_buffer_autoclear": { "type": "boolean", "default": false },
+        "in_context_message_indices": { "type": "array", "items": { "type": "integer" }, "default": [] },
+        "messages": { "type": "array", "items": { "$ref": "#/$defs/MessageSchema" }, "default": [] },
+        "core_memory": { "type": "array", "items": { "$ref": "#/$defs/CoreMemoryBlockSchema" }, "default": [] },
+        "tool_exec_environment_variables": { "type": "array", "items": { "$ref": "#/$defs/ToolEnvVarSchema" }, "default": [] },
+        "tool_rules": { "type": "array", "items": { "$ref": "#/$defs/ToolRuleSchema" }, "default": [] },
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/AfTool" }, "default": [] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["name", "agent_type"],
+      "additionalProperties": false
+    },
+
+    "AfV2Agent": {
+      "title": "Agent (.af v2 entity)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "system": { "type": ["string", "null"] },
+        "agent_type": { "type": "string" },
+        "tags": { "type": "array", "items": { "$ref": "#/$defs/TagSchema" }, "default": [] },
+        "metadata_": { "type": ["object", "null"], "additionalProperties": true },
+        "llm_config": { "type": ["object", "null"], "additionalProperties": true },
+        "embedding_config": { "type": ["object", "null"], "additionalProperties": true },
+        "message_buffer_autoclear": { "type": "boolean", "default": false },
+        "in_context_message_indices": { "type": "array", "items": { "type": "integer" }, "default": [] },
+        "messages": { "type": "array", "items": { "$ref": "#/$defs/MessageSchema" }, "default": [] },
+        "core_memory": { "type": "array", "items": { "$ref": "#/$defs/CoreMemoryBlockSchema" }, "default": [] },
+        "tool_exec_environment_variables": { "type": "array", "items": { "$ref": "#/$defs/ToolEnvVarSchema" }, "default": [] },
+        "tool_rules": { "type": "array", "items": { "$ref": "#/$defs/ToolRuleSchema" }, "default": [] },
+        "tool_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["id", "name", "agent_type"],
+      "additionalProperties": false
+    },
+
+    "MessageSchema": {
+      "type": "object",
+      "properties": {
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "group_id": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] },
+        "role": { "type": "string" },
+        "content": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "tool_call_id": { "type": ["string", "null"] },
+        "tool_calls": { "type": "array", "items": { "type": "object" }, "default": [] },
+        "tool_returns": { "type": "array", "items": { "type": "object" }, "default": [] }
+      },
+      "required": ["created_at", "updated_at", "role", "content"],
+      "additionalProperties": false
+    },
+
+    "CoreMemoryBlockSchema": {
+      "title": "Core Memory Block (.af aligned)",
+      "type": "object",
+      "properties": {
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "is_template": { "type": "boolean" },
+        "label": { "type": "string" },
+        "limit": { "type": "integer" },
+        "metadata_": { "type": ["object", "null"], "additionalProperties": true },
+        "template_name": { "type": ["string", "null"] },
+        "value": { "type": "string" }
+      },
+      "required": ["created_at", "updated_at", "is_template", "label", "limit", "value"],
+      "additionalProperties": false
+    },
+
+    "ToolEnvVarSchema": {
+      "type": "object",
+      "properties": {
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["created_at", "updated_at", "key", "value"],
+      "additionalProperties": false
+    },
+
+    "ToolRuleSchema": {
+      "description": "Union of tool rule types used by Letta (.af).",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "type": { "const": "child" }, "tool_name": { "type": "string" }, "children": { "type": "array", "items": { "type": "string" } } },
+          "required": ["type", "tool_name", "children"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "type": { "const": "max_count_per_step" }, "tool_name": { "type": "string" }, "max_count_limit": { "type": "integer", "minimum": 1 } },
+          "required": ["type", "tool_name", "max_count_limit"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "conditional" },
+            "tool_name": { "type": "string" },
+            "default_child": { "type": ["string", "null"] },
+            "child_output_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+            "require_output_mapping": { "type": "boolean" }
+          },
+          "required": ["type", "tool_name", "child_output_mapping", "require_output_mapping"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "type": { "type": "string" }, "tool_name": { "type": "string" } },
+          "required": ["type", "tool_name"],
+          "additionalProperties": true
+        }
+      ]
+    },
+
+    "ToolJSONSchema": {
+      "title": "Tool JSON Schema (OpenAI tool schema compatible)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "type": { "type": ["string", "null"], "default": "object" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "description": { "type": ["string", "null"] }
+                },
+                "required": ["type"],
+                "additionalProperties": true
+              }
+            },
+            "required": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "required": ["properties"],
+          "additionalProperties": true
+        },
+        "type": { "type": ["string", "null"] },
+        "required": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "required": ["name", "description", "parameters"],
+      "additionalProperties": false
+    },
+
+    "AfTool": {
+      "title": "Tool (.af aligned)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "json_schema": { "$ref": "#/$defs/ToolJSONSchema" },
+        "args_json_schema": { "type": ["object", "null"], "additionalProperties": true },
+        "tool_type": { "type": ["string", "null"] },
+        "source_type": { "type": ["string", "null"] },
+        "source_code": { "type": ["string", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "return_char_limit": { "type": ["integer", "null"] },
+        "metadata_": { "type": ["object", "null"], "additionalProperties": true },
+        "created_at": { "type": ["string", "null"] },
+        "updated_at": { "type": ["string", "null"] }
+      },
+      "required": ["name", "json_schema"],
+      "additionalProperties": true
+    },
+
+    "WorkflowStep": {
+      "title": "Workflow Step",
+      "type": "object",
+      "properties": {
+        "step_id": { "type": "string" },
+        "step_name": { "type": "string" },
+        "description": { "type": "string" },
+        "invocation_type": { "type": "string", "enum": ["asynchronous", "synchronous", "multicast"] },
+        "agent_name": { "type": "string" },
+        "input_source": { "type": "string", "enum": ["workflow_initial", "previous_step", "shared_memory", "none"] },
+        "input_schema": { "type": "object" },
+        "instructions": { "type": "string" },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/StepAction" }, "default": [] },
+        "output_schema": { "type": "object" },
+        "output_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+        "shared_memory_mapping": { "type": "object", "additionalProperties": { "type": "string" } },
+        "next_step_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "on_error": { "$ref": "#/$defs/ErrorHandling" }
+      },
+      "required": ["step_id", "invocation_type", "agent_name", "input_source", "instructions"],
+      "additionalProperties": false
+    },
+
+    "StepAction": {
+      "title": "Step Action",
+      "type": "object",
+      "properties": {
+        "action_id": { "type": "string" },
+        "tool_name": { "type": "string" },
+        "objective": { "type": "string" }
+      },
+      "required": ["action_id", "objective"],
+      "additionalProperties": false
+    },
+
+    "ErrorHandling": {
+      "title": "Error Handling",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "enum": ["stop_workflow", "go_to_step", "retry"] },
+        "target_step_id": { "type": "string" }
+      },
+      "required": ["action"],
+      "allOf": [
+        {
+          "if": { "properties": { "action": { "const": "go_to_step" } } },
+          "then": { "required": ["target_step_id"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+
+    "AslState": {
+      "description": "Subset of Amazon States Language for Task/Choice/Pass/Wait/Parallel/Map/Fail/Succeed with Letta agent bindings.",
+      "type": "object",
+      "properties": {
+        "Type": { "type": "string", "enum": ["Task", "Choice", "Pass", "Wait", "Parallel", "Map", "Fail", "Succeed"] },
+        "Comment": { "type": "string" },
+        "Resource": { "type": "string", "description": "When Type=Task and calling a tool or an agent entrypoint." },
+        "Parameters": { "type": "object" },
+        "ResultPath": { "type": "string" },
+        "Next": { "type": "string" },
+        "End": { "type": "boolean" },
+        "Choices": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "Default": { "type": "string" },
+        "Branches": { "type": "array", "items": { "type": "object", "properties": { "StartAt": { "type": "string" }, "States": { "type": "object", "additionalProperties": { "$ref": "#/$defs/AslState" } } }, "required": ["StartAt", "States"], "additionalProperties": false } },
+        "ItemsPath": { "type": "string" },
+        "ItemProcessor": { "type": "object", "additionalProperties": true },
+        "ResultSelector": { "type": "object" },
+        "Catch": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "Retry": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "AgentBinding": {
+          "description": "Bind a state to a Letta agent or tool.",
+          "type": "object",
+          "properties": {
+            "agent_ref": { "$ref": "#/$defs/AgentDefinition/properties/agent_ref" },
+            "tool_name": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["Type"],
+      "additionalProperties": true
+    }
+  }
+}
