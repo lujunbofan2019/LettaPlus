@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/shared-memory-block.json",
+  "title": "Shared Memory Block",
+  "description": "Schema for the shared memory block used during workflow execution.",
+  "type": "object",
+  "properties": {
+    "workflow_id": {
+      "type": "string",
+      "description": "Unique identifier for the workflow."
+    },
+    "workflow_name": {
+      "type": "string",
+      "description": "Name of the workflow."
+    },
+    "start_step_id": {
+      "type": "string",
+      "description": "Identifier of the starting step."
+    },
+    "stop_step_id": {
+      "type": "string",
+      "description": "Identifier of the stopping step."
+    },
+    "context": {
+      "type": "object",
+      "description": "Global context information for agents.",
+      "additionalProperties": true
+    },
+    "steps": {
+      "type": "object",
+      "description": "Detailed information and runtime status of each step.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "step_id": { "type": "string" },
+          "step_name": { "type": "string" },
+          "description": { "type": "string" },
+          "invocation_type": {
+            "type": "string",
+            "enum": ["asynchronous", "synchronous", "multicast"]
+          },
+          "agent_name": { "type": "string" },
+          "instructions": { "type": "string" },
+          "actions": {
+            "description": "High-level actions executed by this step.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "description": "Unique UUID for this action."
+                },
+                "tool_name": {
+                  "type": "string",
+                  "description": "Name of the tool to invoke (optional)."
+                },
+                "objective": {
+                  "type": "string",
+                  "description": "What the agent should achieve by invoking this tool."
+                }
+              },
+              "required": ["action_id", "objective"],
+              "additionalProperties": false
+            },
+            "default": []
+          },
+          "input_schema": { "type": "object" },
+          "input_source": {
+            "type": "string",
+            "enum": ["none","workflow_initial", "previous_step", "shared_memory"]
+          },
+          "output_schema": { "type": "object" },
+          "output_mapping": { "type": "object" },
+          "shared_memory_mapping": { "type": "object" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "output": { "type": "object" },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "timestamp": { "type": "string", "format": "date-time" },
+                "message": { "type": "string" },
+                "details": { "type": "object" }
+              },
+              "required": ["timestamp", "message"]
+            }
+          },
+          "started_at": { "type": ["string", "null"], "format": "date-time" },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["step_id", "step_name", "invocation_type", "agent_name", "instructions", "status"]
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Maps step IDs to lists of their direct input dependencies.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "logs": {
+      "type": "array",
+      "description": "Chronological audit log entries for workflow execution.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "message": { "type": "string" },
+          "step_id": { "type": ["string", "null"] },
+          "level": { "type": "string", "enum": ["info", "warning", "error"] }
+        },
+        "required": ["timestamp", "message", "level"]
+      }
+    }
+  },
+  "required": ["workflow_id", "workflow_name", "start_step_id", "stop_step_id", "steps", "dependencies", "logs"]
+}

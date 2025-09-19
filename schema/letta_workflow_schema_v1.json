@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selinafinance.co.uk/schemas/letta-agent-workflow.json",
+  "title": "Letta Agent Workflow",
+  "description": "A schema for defining workflows executed by multiple Letta AI agents.",
+  "type": "object",
+  "properties": {
+    "workflow_schema_version": {
+      "description": "Version of the workflow schema itself.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "workflow_id": {
+      "description": "Unique identifier for this specific workflow instance.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflow_name": {
+      "description": "Human-readable name for the workflow.",
+      "type": "string"
+    },
+    "description": {
+      "description": "A detailed explanation of the workflow's purpose.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Semantic version of this workflow's logic (e.g., 1.0.0).",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created_at": {
+      "description": "Timestamp when the workflow definition was created (ISO 8601 format).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "description": "Timestamp when the workflow definition was last updated (ISO 8601 format).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "description": "Name or identifier of the workflow author or team.",
+      "type": "string"
+    },
+    "tags": {
+      "description": "Optional tags for categorizing the workflow.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "workflow_input_schema": {
+      "description": "A JSON Schema defining the expected structure for the workflow's initial input data. Optional but recommended.",
+      "type": "object"
+    },
+    "agents": {
+      "description": "Definitions of agents to be instantiated for the workflow.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agentDefinition"
+      }
+    },
+    "shared_memory_blocks": {
+      "description": "Identifiers for shared memory blocks used in the workflow.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "start_step_id": {
+      "description": "The step_id of the first step to be executed in the workflow.",
+      "type": "string"
+    },
+    "stop_step_id": {
+      "description": "The step_id of the final step in the workflow, marking its termination point.",
+      "type": "string"
+    },
+    "steps": {
+      "description": "An array defining the sequence of steps in the workflow.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/workflowStep"
+      }
+    }
+  },
+  "required": [
+    "workflow_id",
+    "workflow_name",
+    "version",
+    "agents",
+    "start_step_id",
+    "stop_step_id",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "agentDefinition": {
+      "title": "Agent Definition",
+      "description": "Defines an agent to be instantiated for the workflow, aligning with Letta's agent configuration schema.",
+      "type": "object",
+      "properties": {
+        "agent_name": {
+          "description": "Human-readable name for the agent.",
+          "type": "string"
+        },
+        "agent_config": {
+          "description": "Configuration object for creating the agent, adhering to Letta's agent creation schema.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name of the agent (must match agent_name).",
+              "type": "string"
+            },
+            "description": {
+              "description": "The description of the agent.",
+              "type": ["string", "null"]
+            },
+            "system": {
+              "description": "The system prompt used by the agent.",
+              "type": ["string", "null"]
+            },
+            "agent_type": {
+              "description": "The type of agent.",
+              "type": "string",
+              "enum": ["memgpt_agent", "split_thread_agent", "offline_memory_agent"]
+            },
+            "tags": {
+              "description": "The tags associated with the agent.",
+              "type": "array",
+              "items": { "type": "string" },
+              "default": []
+            },
+            "tool_rules": {
+              "description": "The tool rules governing the agent.",
+              "type": "array",
+              "items": { "type": "object" },
+              "default": []
+            },
+            "metadata": {
+              "description": "The metadata of the agent.",
+              "type": ["object", "null"],
+              "additionalProperties": true
+            },
+            "llm_config": {
+              "description": "The LLM configuration used by the agent.",
+              "type": ["object", "null"],
+              "properties": {
+                "model": { "type": ["string", "null"] },
+                "model_endpoint_type": { "type": ["string", "null"] },
+                "model_endpoint": { "type": ["string", "null"] },
+                "model_wrapper": { "type": ["string", "null"] },
+                "context_window": { "type": ["integer", "null"] },
+                "put_inner_thoughts_in_kwargs": { "type": ["boolean", "null"] },
+                "handle": { "type": ["string", "null"] },
+                "temperature": { "type": ["number", "null"] },
+                "max_tokens": { "type": ["integer", "null"] },
+                "enable_reasoner": { "type": ["boolean", "null"] },
+                "max_reasoning_tokens": { "type": ["integer", "null"] }
+              },
+              "additionalProperties": true
+            },
+            "embedding_config": {
+              "description": "The embedding configuration used by the agent.",
+              "type": ["object", "null"],
+              "properties": {
+                "embedding_endpoint_type": { "type": ["string", "null"] },
+                "embedding_endpoint": { "type": ["string", "null"] },
+                "embedding_model": { "type": ["string", "null"] },
+                "embedding_dim": { "type": ["integer", "null"] },
+                "embedding_chunk_size": { "type": ["integer", "null"] },
+                "handle": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            },
+            "memory": {
+              "description": "Configuration for the agent's memory.",
+              "type": ["object", "null"],
+              "properties": {
+                "blocks": {
+                  "description": "Memory blocks (e.g., persona, human).",
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/memoryBlockDefinition" }
+                },
+                "prompt_template": {
+                  "description": "Template used for formatting memory blocks into prompts.",
+                  "type": ["string", "null"]
+                }
+              },
+              "additionalProperties": false
+            },
+            "tools": {
+              "description": "The detailed definitions of tools used by the agent.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/toolDefinition"
+              },
+              "default": []
+            },
+            "tool_ids": {
+              "description": "Optional convenience list of tool IDs used by the agent (derived from 'tools').",
+              "type": "array",
+              "items": { "type": "string" },
+              "default": []
+            },
+            "source_ids": {
+              "description": "The IDs of the sources used by the agent.",
+              "type": "array", "items": { "type": "string" }, "default": []
+            },
+            "block_ids": {
+              "description": "The IDs of the memory blocks used by the agent.",
+              "type": "array", "items": { "type": "string" }, "default": []
+            },
+            "include_base_tools": { "type": "boolean", "default": true },
+            "include_multi_agent_tools": { "type": "boolean", "default": false },
+            "include_base_tool_rules": { "type": "boolean", "default": true },
+            "tool_exec_environment_variables": { "type": ["object", "null"], "additionalProperties": { "type": "string" } },
+            "memory_variables": { "type": ["object", "null"], "additionalProperties": { "type": "string" } },
+            "project_id": { "type": ["string", "null"] },
+            "template_id": { "type": ["string", "null"] },
+            "base_template_id": { "type": ["string", "null"] },
+            "identity_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "message_buffer_autoclear": { "type": "boolean", "default": false }
+          },
+          "required": ["name"]
+        }
+      },
+      "required": ["agent_name", "agent_config"],
+      "additionalProperties": false
+    },
+    "workflowStep": {
+      "title": "Workflow Step",
+      "description": "Defines a single step within the workflow.",
+      "type": "object",
+      "properties": {
+        "step_id": {
+          "description": "Unique identifier for this step within the workflow.",
+          "type": "string"
+        },
+        "step_name": {
+          "description": "Human-readable name for the step.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Explanation of what this step achieves.",
+          "type": "string"
+        },
+        "invocation_type": {
+          "description": "Type of invocation for this step.",
+          "type": "string",
+          "enum": ["asynchronous", "synchronous", "multicast"]
+        },
+        "agent_name": {
+          "description": "Name of the agent responsible for executing this step.",
+          "type": "string"
+        },
+        "input_source": {
+          "description": "Specifies the source of input data for this step.",
+          "type": "string",
+          "enum": ["workflow_initial", "previous_step", "shared_memory", "none"]
+        },
+        "input_schema": {
+          "description": "Optional JSON Schema defining the expected input structure for this step.",
+          "type": "object"
+        },
+        "instructions": {
+          "description": "The prompt or task instructions for the agent. May contain placeholders like {input.key}.",
+          "type": "string"
+        },
+        "actions": {
+          "description": "Optional array of specific actions for the agent to perform.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stepAction"
+          },
+          "default": []
+        },
+        "output_schema": {
+          "description": "Optional JSON Schema defining the expected output structure from this step.",
+          "type": "object"
+        },
+        "output_mapping": {
+          "description": "Defines how to construct the step's output object using input, action results, or agent generation. Keys are output field names, values are mapping strings (e.g., '{input.key}', '{actions.action_id.result_variable}').",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "shared_memory_mapping": {
+          "description": "Explicit mapping between action result variables and shared memory keys. Each key is a result variable name, and each value is the corresponding shared memory identifier.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "next_step_ids": {
+          "description": "An array of step_ids for the next step(s) to execute. An empty array indicates this step is a terminal step (end of a path). For 'synchronous' or 'asynchronous' invocation types, this array should contain 0 or 1 element. For 'multicast', it can contain multiple elements representing the parallel branches initiated.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "on_error": {
+          "description": "Optional error handling configuration for this step.",
+          "$ref": "#/$defs/errorHandling"
+        }
+      },
+      "required": [
+        "step_id",
+        "invocation_type",
+        "agent_name",
+        "input_source",
+        "instructions"
+      ],
+      "additionalProperties": false
+    },
+    "stepAction": {
+      "title": "Step Action",
+      "description": "Defines a specific action to be performed within a workflow step.",
+      "type": "object",
+      "properties": {
+        "action_id": {
+          "description": "Unique identifier for the action within the step.",
+          "type": "string"
+        },
+        "tool_name": {
+          "description": "Identifier of the tool to call.",
+          "type": "string"
+        },
+        "objective": {
+          "description": "What the agent should achieve by calling this tool.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "objective"
+      ],
+      "additionalProperties": false
+    },
+    "toolDefinition": {
+      "title": "Tool Definition",
+      "description": "Mirrors the structure of a tool object from the Letta API.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "tool_type": { "type": ["string", "null"] },
+        "source_type": { "type": ["string", "null"] },
+        "organization_id": { "type": ["string", "null"] },
+        "source_code": { "type": ["string", "null"] },
+        "json_schema": {
+          "type": ["object", "null"],
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "parameters": { "type": "object" }
+          }
+        },
+        "args_json_schema": { "type": ["object", "null"] },
+        "return_char_limit": { "type": ["integer", "null"] },
+        "created_by_id": { "type": ["string", "null"] },
+        "last_updated_by_id": { "type": ["string", "null"] }
+      },
+      "required": ["id", "name", "json_schema"],
+      "additionalProperties": true
+    },
+    "memoryBlockDefinition": {
+      "title": "Memory Block Definition",
+      "description": "Mirrors the structure of a memory block object from the Letta API.",
+      "type": "object",
+      "properties": {
+        "id": { "type": ["string", "null"] },
+        "label": { "type": "string" },
+        "value": { "type": "string" },
+        "limit": { "type": ["integer", "null"] },
+        "name": { "type": ["string", "null"] },
+        "is_template": { "type": ["boolean", "null"] },
+        "description": { "type": ["string", "null"] },
+        "metadata": { "type": "object", "additionalProperties": true },
+        "organization_id": { "type": ["string", "null"] },
+        "created_by_id": { "type": ["string", "null"] },
+        "last_updated_by_id": { "type": ["string", "null"] }
+      },
+      "required": ["label", "value"],
+      "additionalProperties": false
+    },
+    "errorHandling": {
+      "title": "Error Handling",
+      "description": "Defines behavior when a step encounters an error.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "Action to take on error.",
+          "type": "string",
+          "enum": ["stop_workflow", "go_to_step", "retry"]
+        },
+        "target_step_id": {
+          "description": "The step_id to transition to if action is 'go_to_step'.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "if": {
+        "properties": {
+          "action": { "const": "go_to_step" }
+        }
+      },
+      "then": {
+        "required": ["target_step_id"]
+      },
+      "additionalProperties": false
+    }
+  }
+}
