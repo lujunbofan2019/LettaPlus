@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selinafinance.co.uk/schemas/skill-manifest-v2.0.0.json",
+  "title": "Skill Manifest v2.0.0",
+  "description": "Defines a reusable Skill Package: directives, tools, and data sources that can be loaded into a Letta agent at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "manifestApiVersion": { "type": "string", "enum": ["v2.0.0"] },
+    "skillPackageId":     { "type": "string", "format": "uuid" },
+    "manifestId":         { "type": "string", "format": "uuid" },
+    "skillName":          { "type": "string", "minLength": 1 },
+    "skillVersion":       { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z-.]+)?$" },
+    "description":        { "type": "string" },
+    "tags":               { "type": "array", "items": { "type": "string" }, "default": [] },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secrets": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "egress":  { "type": "string", "enum": ["none", "intranet", "internet"], "default": "none" }
+      },
+      "default": {}
+    },
+
+    "skillDirectives": { "type": "string", "minLength": 1 },
+
+    "requiredTools": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ToolRequirement" },
+      "default": []
+    },
+
+    "requiredDataSources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DataSource" },
+      "default": []
+    }
+  },
+  "required": [
+    "manifestApiVersion",
+    "skillPackageId",
+    "manifestId",
+    "skillName",
+    "skillVersion",
+    "skillDirectives"
+  ],
+
+  "$defs": {
+    "ToolRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "toolName":   { "type": "string", "minLength": 1 },
+        "description":{ "type": "string", "minLength": 1 },
+        "json_schema":{ "$ref": "#/$defs/ToolJSONSchema" },
+        "definition": {
+          "oneOf": [
+            { "$ref": "#/$defs/ToolDefPython" },
+            { "$ref": "#/$defs/ToolDefRegistered" },
+            { "$ref": "#/$defs/ToolDefMcp" }
+          ]
+        }
+      },
+      "required": ["toolName", "description", "definition"]
+    },
+
+    "ToolJSONSchema": {
+      "title": "Tool JSON Schema (OpenAI/Letta-compatible)",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "type": { "type": ["string", "null"], "default": "object" },
+            "properties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "type": { "type": "string" },
+                  "description": { "type": ["string", "null"] }
+                },
+                "required": ["type"]
+              }
+            },
+            "required": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "required": ["properties"]
+        },
+        "type": { "type": ["string", "null"] },
+        "required": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "required": ["name", "description", "parameters"]
+    },
+
+    "ToolDefPython": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "python_source" },
+        "sourceCode": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "sourceCode"]
+    },
+
+    "ToolDefRegistered": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "registered" },
+        "platformToolId": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "platformToolId"]
+    },
+
+    "ToolDefMcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "mcp_server" },
+        "endpointUrl": { "type": "string", "format": "uri" },
+        "operationId": { "type": "string", "minLength": 1 },
+        "openApiSpecUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["type", "endpointUrl", "operationId"]
+    },
+
+    "DataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dataSourceId": { "type": "string", "format": "uuid" },
+        "description": { "type": "string" },
+        "destination": { "type": "string", "enum": ["archival_memory"], "default": "archival_memory" },
+        "content": {
+          "oneOf": [ { "$ref": "#/$defs/DS_TextContent" } ]
+        }
+      },
+      "required": ["dataSourceId", "destination", "content"]
+    },
+
+    "DS_TextContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "text_content" },
+        "text": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "text"]
+    }
+  }
+}

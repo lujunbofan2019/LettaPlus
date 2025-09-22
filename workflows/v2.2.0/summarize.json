@@ -1,0 +1,19 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "skillPackageId": "fdeef0ad-fc00-4ec4-9c61-837df32cb184",
+  "manifestId": "a4cbfca5-efa5-42fc-8076-0df19ce73d11",
+  "skillName": "summarize",
+  "skillVersion": "1.0.0",
+  "description": "Summarize an input set of sources into a concise, citation-aware memo.",
+  "tags": [
+    "summarization",
+    "writing"
+  ],
+  "permissions": {
+    "secrets": [],
+    "egress": "none"
+  },
+  "skillDirectives": "You are the Summarization skill. Given an array of source items with title, url, and snippet or content,\nproduce a short memo (120\u2013180 words) with:\n  - A one-sentence takeaway,\n  - 2\u20134 bullet insights,\n  - Inline source markers like [1], [2] that map to a References list at the end.\nReturn JSON:\n  { \"memo\": \"<markdown string>\", \"references\": [ {\"title\":\"...\",\"url\":\"...\"} ] }\nIf input is empty, return { \"memo\": \"No sources to summarize.\", \"references\": [] }.",
+  "requiredTools": [],
+  "requiredDataSources": []
+}
