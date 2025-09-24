@@ -90,8 +90,11 @@ project/
 ├─ workflows/
 │  └─ example_workflow_v220.json
 └─ tools/
-   ├─ workflow_validator_v220.py
-   ├─ skill_discovery_tool.py
+   ├─ validate_workflow.py
+   ├─ validate_skill_manifest.py
+   ├─ get_skill_set.py
+   ├─ load_skill.py
+   ├─ unload_skill.py
    ├─ create_worker_agents.py
    ├─ create_workflow_control_plane.py
    ├─ notify_next_worker_agent.py
