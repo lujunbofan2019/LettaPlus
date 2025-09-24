@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/notification-payload-1.0.0.json",
+  "title": "Workflow Notification Payload v1.0.0",
+  "type": "object",
+  "properties": {
+    "workflow_event": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "notify_start"
+          ]
+        },
+        "workflow_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "initial",
+            "upstream_done"
+          ]
+        },
+        "nudge_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "type",
+        "workflow_id",
+        "state",
+        "reason",
+        "nudge_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "workflow_event"
+  ],
+  "additionalProperties": false
+}

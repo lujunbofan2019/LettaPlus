@@ -1,126 +1,87 @@
 # Letta–ASL Workflows + Skills (DAG + Ephemeral Workers)
 
-> **Goal**: Plan, validate, and execute multi-step workflows using AWS Step Functions–style (ASL) state machines and **ephemeral Letta agents** equipped with **dynamically loadable skills**.
+**Purpose:** A practical kit for planning and executing multi-step workflows with:
+- **AWS Step Functions–style (ASL)** state machines,
+- **ephemeral Letta agents** spawned from **.af v2** templates,
+- **dynamically loadable skills** (skill manifests).
 
-This project provides:
-- **Workflow Schema** — `letta_asl_workflow_schema_v2.2.0`
-- **Skill Manifest Schema** — `skill_manifest_schema_v2.0.0`
-- Tools (single-function, Letta-friendly):
-  1) `validate_workflow`
-  2) `validate_skill_manifest`
-  3) `get_skillset`
-  4) `load_skill`
-  5) `unload_skill`
-
-Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining.
+Everything is **composition-first**: workflows import `.af v2` bundles and **skill manifests** via filesystem paths (`file://` allowed). No HTTP imports.
 
 ---
 
-## Architecture Overview
+## Background
 
-### Conversational Planning → ASL Workflow
-A planning agent converses with the user to clarify intent and success criteria, then drafts an **ASL** state machine. Each `Task` state binds to an **ephemeral worker**:
-
-- `agent_template_ref` → a Letta **.af v2 template** for spawning the worker.
-- `skills` → a list of **skill IDs** (skill manifests) to load before the task runs.
-- Optional `lifecycle` → defaults to `{"mode":"ephemeral","destroy_on_end":true}`.
-
-The workflow can start as SOP-style `steps[]` and compile to `asl` once stabilized.
-
-### Skills as Reusable Building Blocks
-A **skill manifest** packages:
-- **Directives** (LLM instructions)
-- **Required tools** (registered tools by default; `python_source`/`mcp_server` feature-gated)
-- **Required data sources** (attached to archival memory, chunked)
-- **Permissions** (egress level, secrets)
-
-### Execution (DAG + Ephemeral Workers)
-At runtime, for each `Task`:
-1. Spawn worker from `.af v2` template.
-2. Load skills.
-3. Execute task logic (tools/prompts/Parameters).
-4. Unload skills and destroy worker.
-5. Pass results via ASL `ResultPath`/`ResultSelector`.
-
-Per-agent bookkeeping is stored in a `dcf_active_skills` state block, enabling clean unloads.
+- **Choreography, not orchestration** — Workers coordinate themselves through a small **control-plane** persisted in Redis. This cuts single points of failure, scales horizontally, and keeps Planner logic simple.
+- **Ephemeral workers** — Each `Task` spawns a short-lived agent from a `.af v2` template, loads only the needed **skills**, runs, then tears down. Clean resource usage and fewer long-lived side effects.
+- **Skills as modular capabilities** — A skill manifest bundles LLM directives, required tools, data sources, and permissions, making capabilities portable across agents and workflows.
+- **Knowledge Graph for reuse** — Recording edges like `TaskState —uses→ Skill`, `Skill —requires→ Tool`, `State —produced→ Output`, `TaskState —executed_by→ AgentTemplate` enables planning-time retrieval of proven tactics, provenance, and post-mortems. The KG is implementation-agnostic (graph DB or document index).
 
 ---
 
-## Schemas
+## What’s in this project
 
-### Workflow Schema — `letta_asl_workflow_schema_v2.2.0`
-- **ASL required** (`asl.StartAt`, `asl.States`).
-- `af_imports[]` — file paths/`file://` to `.af v2` bundles (agents/tools).
-- `skill_imports[]` — file paths/`file://` to skill manifests (single or `{ "skills": [...] }` bundle).
-- Every `Task` requires an `AgentBinding` with:
-  - `agent_template_ref` *or* `agent_ref`
-  - `skills` (list of skill IDs)
-  - optional `lifecycle`, `tool_name`
+### Schemas
+- **Workflow (planning)** — `schemas/letta-asl-workflow-2.2.0.json`
+- **Skill Manifest (planning)** — `schemas/skill-manifest-v2.0.0.json`
+- **Control-plane (execution)**
+  - Workflow Meta — `schemas/control-plane-meta-1.0.0.json`
+  - State Record — `schemas/control-plane-state-1.0.0.json`
+  - Notification Payload — `schemas/notification-payload-1.0.0.json`
+- **Data-plane (execution)**
+  - Output Envelope — `schemas/data-plane-output-1.0.0.json`
 
-**Skill ID aliases** supported:
-- `skill://{skillName}@{version}`
-- `{skillName}@{version}`
-- `skill://{skillPackageId}@{version}`
-- `{manifestId}`
+### Planning tools
+- `validate_workflow` — validate against `v2.2.0`, resolve imports, check ASL graph.
+- `validate_skill_manifest` — validate a single skill manifest against `v2.0.0`.
+- `get_skillset` — scan a directory of skills; optional previews for LLM selection.
+- `load_skill` / `unload_skill` — attach/detach a skill to an agent (directives, tools, data sources).
 
-**File:** `schemas/letta-asl-workflow-2.2.0.json` (also provided below for download)
+### Execution tools (choreography)
+- `create_worker_agents` — create one worker agent **per Task state** from `.af v2` templates.
+- `create_workflow_control_plane` — seed Redis **control-plane** keys for DAG coordination.
+- `notify_next_worker_agent` — send start nudges to source or downstream states.
+- `read_workflow_control_plane` — worker reads meta/state and determines **readiness**.
+- `acquire_state_lease` — worker acquires a lease (avoid duplicate runs).
+- `update_workflow_control_plane` — write `running/done/failed`, timestamps; write output to **data-plane**.
+- `finalize_workflow` *(optional)* — verify completion, aggregate outputs, cleanup.
 
-### Skill Manifest Schema — `skill_manifest_schema_v2.0.0`
-- `manifestApiVersion: "v2"`
-- `skillName`, `skillVersion` (semver), `description`, optional `tags`
-- `skillDirectives` (core behavior)
-- `requiredTools[]` (registered tools by default; others feature-gated)
-- `requiredDataSources[]` (e.g., inline text)
-- `permissions` (`egress: none|intranet|internet`, `secrets: []`)
-
-**File (recommended path):** `schemas/skill-manifest-v2.0.0.json` (ask me to generate if you want it created here)
-
----
-
-## Tools
-
-### `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None) -> dict`
-- JSON Schema validation against workflow v2.2.0
-- Loads `.af` and skills, indexes agents/skills, resolves every `Task`’s `AgentBinding` and skills
-- ASL graph checks (StartAt, transitions, branches, terminals)
-
-**File:** `tools/workflow_validator_v220.py` (download link below)
-
-### `validate_skill_manifest(manifest_json, schema_path) -> dict`
-- Validate one skill manifest against `skill_manifest_schema_v2.0.0` + static checks (unique tool names, permissions)
-
-### `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None) -> dict`
-- Scan a directory for skills, optionally validate, return a catalog with aliases and directive previews
-- **File:** `tools/skill_discovery_tool.py`
-
-### `load_skill(manifest_id, agent_id) -> dict`
-- Load directives, attach tools, attach data sources, update `dcf_active_skills` state; feature gates for `python_source`/`mcp_server`
-
-### `unload_skill(manifest_id, agent_id) -> dict`
-- Idempotent teardown; detaches tools/blocks, removes or empties state block
+> All tools: single-function, Google-style docstrings, stdlib-only signatures, `file://` allowed, **no HTTP**.
 
 ---
 
-## Example
+## How it fits together
 
-**Workflow:** `workflows/example_workflow_v220.json`  
-- Imports `.af` bundle `af/agent_templates.json` (expects `agent_template_worker@1.0.0`)
-- Imports two skills: `skills/web.search.json`, `skills/summarize.json`
-- Two tasks: **Research → Summarize**, each spawns a worker and loads appropriate skills
+### 1) Plan
+1. Planner chats with the user and drafts an ASL workflow.
+2. Run **`validate_workflow`**. Fix issues until it passes.
 
-**Skills:**  
-- `skills/web.search.json` (uses a registered web search tool; replace placeholder `platformToolId`)  
-- `skills/summarize.json` (pure LLM directive skill)
+### 2) Execute (choreography)
+1. **`create_worker_agents`** → one agent per `Task` from `.af v2`.
+2. **`create_workflow_control_plane`** → write:
+  - `cp:wf:{workflow_id}:meta` (see `schemas/control-plane-meta-1.0.0.json`)
+  - `cp:wf:{workflow_id}:state:{state}` (see `schemas/control-plane-state-1.0.0.json`)
+3. **`notify_next_worker_agent`** → nudge **source** states using `schemas/notification-payload-1.0.0.json`.
+4. Each worker:
+  - **`read_workflow_control_plane`** → ready when *all upstream are `done`*.
+  - **`acquire_state_lease`** → **`load_skill`** → run task → **`unload_skill`**.
+  - **`update_workflow_control_plane`** (`running/done/failed`) and write output to:
+    - `dp:wf:{id}:output:{state}` (see `schemas/data-plane-output-1.0.0.json`)
+  - **`notify_next_worker_agent`** for downstream neighbors.
+5. **`finalize_workflow`** (optional): confirm terminal states `done`, aggregate outputs, cleanup.
 
 ---
 
-## Suggested Layout
+## Suggested layout
 
 ```
 project/
 ├─ schemas/
 │  ├─ letta-asl-workflow-2.2.0.json
-│  └─ skill-manifest-v2.0.0.json
+│  ├─ skill-manifest-v2.0.0.json
+│  ├─ control-plane-meta-1.0.0.json
+│  ├─ control-plane-state-1.0.0.json
+│  ├─ notification-payload-1.0.0.json
+│  └─ data-plane-output-1.0.0.json
 ├─ af/
 │  └─ agent_templates.json
 ├─ skills/
@@ -130,5 +91,21 @@ project/
 │  └─ example_workflow_v220.json
 └─ tools/
    ├─ workflow_validator_v220.py
-   └─ skill_discovery_tool.py
+   ├─ skill_discovery_tool.py
+   ├─ create_worker_agents.py
+   ├─ create_workflow_control_plane.py
+   ├─ notify_next_worker_agent.py
+   ├─ read_workflow_control_plane.py
+   ├─ acquire_state_lease.py
+   ├─ update_workflow_control_plane.py
+   └─ finalize_workflow.py
 ```
+
+---
+
+## Notes & guardrails
+
+- **Idempotency**: notifications can duplicate; updates must verify lease token.
+- **Security**: enforce `permissions` at skill load; restrict Redis write access.
+- **Observability**: log control-plane transitions and skill (un)loads; optional event stream.
+- **Portability**: `.af v2` + ASL keep definitions reusable; no HTTP imports. KG is optional and storage-agnostic.

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/control-plane-meta-1.0.0.json",
+  "title": "Control Plane: Workflow Meta v1.0.0",
+  "type": "object",
+  "properties": {
+    "workflow_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflow_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "start_at": {
+      "type": "string"
+    },
+    "terminal_states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "deps": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "upstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "downstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        },
+        "required": [
+          "upstream",
+          "downstream"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "workflow_id",
+    "start_at",
+    "states",
+    "deps"
+  ],
+  "additionalProperties": false
+}
