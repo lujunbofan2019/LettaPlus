@@ -9,13 +9,13 @@ This project provides:
     - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
     - `schemas/control-plane-meta.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
     - `schemas/control-plane-state.json` — *Documented shape* of per-state docs
-- **Planning tools (single-function, Letta-friendly)**
+- **Planning tools**
     1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
     2) `validate_skill_manifest(manifest_json, schema_path)`
     3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
     4) `load_skill(manifest_id, agent_id)`
     5) `unload_skill(manifest_id, agent_id)`
-- **Execution tools (single-function, Letta-friendly)**
+- **Execution tools**
     6) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
     7) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
     8) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
@@ -299,7 +299,7 @@ This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overa
 
 ---
 
-## Background Notes (why this design works well)
+## Background Notes - why this works
 
 - **ASL semantics** give a well-understood contract for branching, retries, and data paths. Our JSON schema keeps a strict subset and adds `AgentBinding` to bind states to Letta agents/skills.
 - **DAG + choreography** avoids a single orchestrator bottleneck. Each worker owns its lifecycle, which scales naturally and tolerates partial failures.
@@ -315,10 +315,10 @@ project/
 ├─ schemas/
 │  ├─ letta-asl-workflow-2.2.0.json
 │  ├─ skill-manifest-v2.0.0.json
-│  ├─ control-plane-meta.json            # documented reference shape
-│  └─ control-plane-state.json           # documented reference shape
+│  ├─ control-plane-meta.json
+│  └─ control-plane-state.json
 ├─ af/
-│  └─ agent_templates.json               # .af v2 bundle inc. agent_template_worker@1.0.0
+│  └─ agent_templates.json
 ├─ skills/
 │  ├─ web.search.json
 │  └─ summarize.json
