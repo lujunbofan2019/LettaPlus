@@ -1,114 +1,360 @@
 # Letta–ASL Workflows + Skills (DAG + Ephemeral Workers)
 
-**Purpose:** A practical kit for planning and executing multi-step workflows with:
-- **AWS Step Functions–style (ASL)** state machines,
-- **ephemeral Letta agents** spawned from **.af v2** templates,
-- **dynamically loadable skills** (skill manifests).
+> **Goal**: Plan, validate, and execute multi-step workflows using AWS Step Functions–style (ASL) state machines and **ephemeral Letta agents** equipped with **dynamically loadable skills**. Execution is **choreography-first**: workers self-coordinate via a RedisJSON control-plane—no central orchestrator loop.
 
-Everything is **composition-first**: workflows import `.af v2` bundles and **skill manifests** via filesystem paths (`file://` allowed). No HTTP imports.
+This project provides:
 
----
+- **Schemas**
+    - `schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
+    - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
+    - `schemas/control-plane-meta.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
+    - `schemas/control-plane-state.json` — *Documented shape* of per-state docs
+- **Planning tools (single-function, Letta-friendly)**
+    1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
+    2) `validate_skill_manifest(manifest_json, schema_path)`
+    3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
+    4) `load_skill(manifest_id, agent_id)`
+    5) `unload_skill(manifest_id, agent_id)`
+- **Execution tools (single-function, Letta-friendly)**
+    6) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
+    7) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
+    8) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
+    9) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
+    10) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
+    11) `renew_state_lease(workflow_id, state, lease_token, ...)`
+    12) `release_state_lease(workflow_id, state, lease_token, ...)`
+    13) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
+    14) `notify_if_ready(workflow_id, state, ...)`
+    15) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
 
-## Background
-
-- **Choreography, not orchestration** — Workers coordinate themselves through a small **control-plane** persisted in Redis. This cuts single points of failure, scales horizontally, and keeps Planner logic simple.
-- **Ephemeral workers** — Each `Task` spawns a short-lived agent from a `.af v2` template, loads only the needed **skills**, runs, then tears down. Clean resource usage and fewer long-lived side effects.
-- **Skills as modular capabilities** — A skill manifest bundles LLM directives, required tools, data sources, and permissions, making capabilities portable across agents and workflows.
-- **Knowledge Graph for reuse** — Recording edges like `TaskState —uses→ Skill`, `Skill —requires→ Tool`, `State —produced→ Output`, `TaskState —executed_by→ AgentTemplate` enables planning-time retrieval of proven tactics, provenance, and post-mortems. The KG is implementation-agnostic (graph DB or document index).
-
----
-
-## What’s in this project
-
-### Schemas
-- **Workflow (planning)** — `schemas/letta-asl-workflow-2.2.0.json`
-- **Skill Manifest (planning)** — `schemas/skill-manifest-v2.0.0.json`
-- **Control-plane (execution)**
-  - Workflow Meta — `schemas/control-plane-meta-1.0.0.json`
-  - State Record — `schemas/control-plane-state-1.0.0.json`
-  - Notification Payload — `schemas/notification-payload-1.0.0.json`
-- **Data-plane (execution)**
-  - Output Envelope — `schemas/data-plane-output-1.0.0.json`
-
-### Planning tools
-- `validate_workflow` — validate against `v2.2.0`, resolve imports, check ASL graph.
-- `validate_skill_manifest` — validate a single skill manifest against `v2.0.0`.
-- `get_skillset` — scan a directory of skills; optional previews for LLM selection.
-- `load_skill` / `unload_skill` — attach/detach a skill to an agent (directives, tools, data sources).
-
-### Execution tools (choreography)
-- `create_worker_agents` — create one worker agent **per Task state** from `.af v2` templates.
-- `create_workflow_control_plane` — seed Redis **control-plane** keys for DAG coordination.
-- `notify_next_worker_agent` — send start nudges to source or downstream states.
-- `read_workflow_control_plane` — worker reads meta/state and determines **readiness**.
-- `acquire_state_lease` — worker acquires a lease (avoid duplicate runs).
-- `update_workflow_control_plane` — write `running/done/failed`, timestamps; write output to **data-plane**.
-- `finalize_workflow` *(optional)* — verify completion, aggregate outputs, cleanup.
-
-> All tools: single-function, Google-style docstrings, stdlib-only signatures, `file://` allowed, **no HTTP**.
+Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining. Skills are loaded/unloaded dynamically per worker.
 
 ---
 
-## How it fits together
+## Architectural Overview
 
-### 1) Plan
-1. Planner chats with the user and drafts an ASL workflow.
-2. Run **`validate_workflow`**. Fix issues until it passes.
+### Key concepts
+- **Planner agent**: converses with the user, gathers intent and constraints, proposes & iterates the plan, then compiles SOP steps into an **ASL** state machine inside the workflow JSON (validated against `letta-asl-workflow-2.2.0.json`). The Planner never micromanages workers—workers run autonomously.
+- **Ephemeral workers**: short-lived Letta agents instantiated from a shared **.af v2 template** (e.g., `agent_template_worker@1.0.0`). Before each Task, the worker **loads skills** relevant to that Task and **unloads** them after.
+- **Skills**: packaged capabilities described by `skill-manifest-v2.0.0.json` (directives, required tools, required data sources, permissions). Reusable across workflows.
+- **Choreography**: workers coordinate via messages and a **RedisJSON control-plane**. Each worker checks readiness (all upstream `done`), acquires a lease, runs, writes output, releases lease, and notifies downstream.
+- **Knowledge graph** *(optional but recommended)*: the skill catalog (from `get_skillset`) can be ingested into a lightweight KG (tags → tools → capabilities → success metrics). The Planner queries it to select candidate skills and to justify the plan (traceability).
 
-### 2) Execute (choreography)
-1. **`create_worker_agents`** → one agent per `Task` from `.af v2`.
-2. **`create_workflow_control_plane`** → write:
-  - `cp:wf:{workflow_id}:meta` (see `schemas/control-plane-meta-1.0.0.json`)
-  - `cp:wf:{workflow_id}:state:{state}` (see `schemas/control-plane-state-1.0.0.json`)
-3. **`notify_next_worker_agent`** → nudge **source** states using `schemas/notification-payload-1.0.0.json`.
-4. Each worker:
-  - **`read_workflow_control_plane`** → ready when *all upstream are `done`*.
-  - **`acquire_state_lease`** → **`load_skill`** → run task → **`unload_skill`**.
-  - **`update_workflow_control_plane`** (`running/done/failed`) and write output to:
-    - `dp:wf:{id}:output:{state}` (see `schemas/data-plane-output-1.0.0.json`)
-  - **`notify_next_worker_agent`** for downstream neighbors.
-5. **`finalize_workflow`** (optional): confirm terminal states `done`, aggregate outputs, cleanup.
+### Control Plane & Data Plane (RedisJSON)
+We keep two logical spaces in Redis:
+
+- **Control-plane meta** — `cp:wf:{workflow_id}:meta`  
+  Minimal JSON document with:
+  ```jsonc
+  {
+    "workflow_id": "…",
+    "states": ["Research", "Summarize", "..."],
+    "deps": {
+      "Research":   { "upstream": [],           "downstream": ["Summarize"] },
+      "Summarize":  { "upstream": ["Research"], "downstream": [] }
+    },
+    "agents": { "Research": "agent_id_…", "Summarize": "agent_id_…" },
+    "planner_agent_id": "agent_id_planner",
+    "created_at": "ISO-8601",
+    "finalized_at": null,
+    "status": "active" // updates to succeeded|failed|partial|cancelled on finalize
+  }
+  ```
+
+- **Per-state doc** — `cp:wf:{workflow_id}:state:{state}`
+  ```jsonc
+  {
+    "state": "Research",
+    "status": "pending", // -> running|done|failed|cancelled
+    "attempts": 0,
+    "lease": { "token": null, "owner_agent_id": null, "ts": null, "ttl_s": 300 },
+    "started_at": null,
+    "finished_at": null,
+    "errors": []
+  }
+  ```
+
+- **Data-plane outputs** — `dp:wf:{workflow_id}:output:{state}`  
+  Arbitrary JSON written by the worker for downstream consumption.  
+  Example: `{ "urls": [...], "notes": "…" }`
+
+> We **do not** delete control-plane/data-plane keys after execution (audit trail). `finalize_workflow` optionally deletes worker agents only.
+
+### Why leases?
+Multiple agents could race to run a state (retries, scaling). A soft **lease** (token + timestamp) in the state doc, updated atomically via Redis WATCH/MULTI, ensures only one active runner. If the runner dies, the lease **expires** and another agent can take over.
 
 ---
 
-## Suggested layout
+## Planner Flow (from intent to ASL)
 
+1. **Conversation**: collect objective, inputs, outputs, guardrails, budget/time, egress policy.
+2. **Skill discovery**: call `get_skillset(...)` (optionally with validation). Optionally enrich with a knowledge graph for better selection & justification.
+3. **Draft SOP**: a linear `steps[]` plan with step names, inputs/outputs, and candidate skills.
+4. **Compile to ASL**: transmute SOP → `asl` (`StartAt`, `States`), attach `AgentBinding` per Task:
+    - `agent_template_ref`: e.g., `"agent_template_worker@1.0.0"`
+    - `skills`: e.g., `["skill://web.search@1.0.0", "skill://summarize@1.0.0"]`
+5. **Validate**: `validate_workflow(workflow_json, schema_path, imports_base_dir, skills_base_dir)`.
+6. **Approval**: confirm with user; persist workflow JSON if desired.
+
+---
+
+## Worker Behavior (choreography)
+
+**At notification (from `notify_next_worker_agent` or `notify_if_ready`):**
+
+1. **Check readiness** (optional quick check): `notify_if_ready` already ensures upstream `done` when used.
+2. **Acquire lease**: `acquire_state_lease(wf_id, state, owner_agent_id)` → `lease.token`.
+3. **Load skills**: for this Task’s `AgentBinding.skills`, call `load_skill(manifest_id, agent_id)`.
+4. **Read inputs** (if needed): `read_workflow_control_plane(wf_id, upstream_state)` or read `dp:wf:{id}:output:{up}`.
+5. **Do the work**: run tools; follow directives.
+6. **Write output + status**: `update_workflow_control_plane(wf_id, state, status="done", output_json=...)`.
+7. **Unload skills**: `unload_skill(manifest_id, agent_id)` (best-effort; agent may also be ephemeral).
+8. **Release lease**: `release_state_lease(wf_id, state, lease_token)`.
+9. **Notify downstream**: `notify_next_worker_agent(wf_id, source_state=state, reason="upstream_done")`.
+
+**On long tasks**: periodically `renew_state_lease(...)` until done.
+
+**On errors**: `update_workflow_control_plane(..., status="failed", error_message=...)`, release lease, (optionally) notify downstream or planner for compensating logic.
+
+---
+
+## Tool Catalog (purpose & typical usage)
+
+> All tools are **single-function** for Letta compatibility. Return shape is `{status, error, ...}` where `error` is `None` on success.
+
+### Planning
+- **`validate_workflow`** — JSON Schema validation + import resolution + ASL graph checks.
+- **`validate_skill_manifest`** — Schema validation + static checks (unique tools, permissions).
+- **`get_skillset`** — Scan skills directory; returns catalog with aliases and optional directive previews.
+- **`load_skill` / `unload_skill`** — Attach/detach directives, tools, data sources to an agent; maintain state in a `dcf_active_skills` block on the agent.
+
+### Execution
+- **`create_workflow_control_plane`** — Seeds `meta`, builds `deps` from ASL, initializes per-state docs. Optionally accepts `agents_map_json` (state→agent id) if you pre-created workers.
+- **`create_worker_agents`** — Instantiates worker agents from a .af v2 template; updates `meta.agents`.
+- **`read_workflow_control_plane`** — Returns `meta`, per-state doc(s), and (optionally) outputs.
+- **`update_workflow_control_plane`** — Atomically updates a state’s `status`, `errors`, `finished_at`, and writes data-plane output JSON (`dp:...:output:{state}`). Optionally requires `lease_token`.
+- **`acquire_state_lease` / `renew_state_lease` / `release_state_lease`** — Lease lifecycle (WATCH/MULTI).
+- **`notify_next_worker_agent`** — Fan-out to downstream states’ agents (system-role Letta messages).
+- **`notify_if_ready`** — Notify a single state’s agent only when upstream are `done`.
+- **`finalize_workflow`** — Compute final status, optionally cancel open states, **delete worker agents**, and write an audit record. **Does not** remove Redis keys.
+
+---
+
+## Working Example (end-to-end)
+
+**Scenario**: “Research a topic and produce a concise summary.”
+
+### 1) Skills
+- `skills/web.search.json` — registered `web_search` tool, directives for querying and URL selection.
+- `skills/summarize.json` — pure LLM directive skill for concise summaries.  
+  Validate them:
+```python
+validate_skill_manifest(open("schemas/skill-manifest-v2.0.0.json").read(), "schemas/skill-manifest-v2.0.0.json")  # schema self-check (optional)
+# For each manifest file:
+validate_skill_manifest(open("skills/web.search.json").read(), "schemas/skill-manifest-v2.0.0.json")
+validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-manifest-v2.0.0.json")
+```
+
+### 2) Workflow (ASL + Letta bindings)
+`workflows/example_workflow_v220.json` (highlights):
+```jsonc
+{
+  "workflow_id": "58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+  "workflow_name": "Research & Summarize",
+  "version": "1.0.0",
+  "af_imports": ["file://af/agent_templates.json"],
+  "skill_imports": ["file://skills/web.search.json", "file://skills/summarize.json"],
+  "asl": {
+    "StartAt": "Research",
+    "States": {
+      "Research": {
+        "Type": "Task",
+        "Comment": "Find high-quality sources",
+        "Parameters": {"query.$": "$.topic"},
+        "ResultPath": "$.research",
+        "AgentBinding": {
+          "agent_template_ref": "agent_template_worker@1.0.0",
+          "skills": ["skill://web.search@1.0.0"]
+        },
+        "Next": "Summarize"
+      },
+      "Summarize": {
+        "Type": "Task",
+        "Comment": "Write a short synthesis",
+        "Parameters": {"max_words": 200, "sources.$": "$.research.urls"},
+        "ResultPath": "$.summary",
+        "AgentBinding": {
+          "agent_template_ref": "agent_template_worker@1.0.0",
+          "skills": ["skill://summarize@1.0.0"]
+        },
+        "End": true
+      }
+    }
+  }
+}
+```
+
+Validate:
+```python
+validate_workflow(open("workflows/example_workflow_v220.json").read(),
+                  "schemas/letta-asl-workflow-2.2.0.json",
+                  imports_base_dir=".", skills_base_dir="./skills")
+```
+
+### 3) Create control-plane + workers
+```python
+# Seed control-plane from ASL
+create_workflow_control_plane(
+  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+  asl_json=json.dumps(json.load(open("workflows/example_workflow_v220.json"))["asl"])
+)
+
+# Create workers from .af v2 template (planner can pass its own id)
+create_worker_agents(
+  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+  af_bundle_path="af/agent_templates.json",
+  agent_template_ref="agent_template_worker@1.0.0",
+  skills_dir="./skills"
+)
+```
+
+### 4) Kick off
+```python
+# Notify source states (no upstream) or call notify_if_ready for each start state:
+notify_next_worker_agent(
+  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+  reason="initial"
+)
+```
+
+### 5) Worker loop (Research)
+Inside the **Research** worker agent’s message handler (conceptual sequence):
+```python
+# 1) Ensure ready (if self-notified)
+notify_if_ready("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research")
+
+# 2) Acquire lease
+lease = acquire_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research", owner_agent_id=self.id)
+token = lease["lease"]["token"]
+
+# 3) Load skills
+load_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
+
+# 4) Do work (call registered web_search tool, etc.) and produce output JSON
+research_output = {"urls": ["https://example.com/a", "https://example.com/b"], "notes": "…"}
+
+# 5) Update control-plane + data-plane
+update_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research",
+                              status="done",
+                              output_json=json.dumps(research_output),
+                              lease_token=token)
+
+# 6) Unload skill (best-effort) + release lease
+unload_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
+release_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research", token)
+
+# 7) Notify downstream (Summarize)
+notify_next_worker_agent("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", source_state="Research", reason="upstream_done")
+```
+
+### 6) Worker loop (Summarize)
+```python
+# 1) Wait for notify, then (optionally) ensure ready
+notify_if_ready("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize")
+
+# 2) Acquire lease
+lease = acquire_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize", owner_agent_id=self.id)
+token = lease["lease"]["token"]
+
+# 3) Load skill
+load_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
+
+# 4) Read upstream output
+cp = read_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", state="Research")
+sources = cp.get("outputs", {}).get("Research", {}).get("urls", [])
+
+# 5) Summarize and produce output
+summary = {"text": "Here’s a 200-word synthesis...", "sources": sources}
+
+# 6) Update + release
+update_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize",
+                              status="done",
+                              output_json=json.dumps(summary),
+                              lease_token=token)
+unload_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
+release_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize", token)
+
+# 7) Since this is terminal, the Planner can call finalize_workflow
+```
+
+### 7) Finalize
+```python
+finalize_workflow("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+                  delete_worker_agents=True,
+                  preserve_planner=True,
+                  close_open_states=True,
+                  finalize_note="Completed successfully.")
+```
+This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overall status.
+
+---
+
+## Background Notes (why this design works well)
+
+- **ASL semantics** give a well-understood contract for branching, retries, and data paths. Our JSON schema keeps a strict subset and adds `AgentBinding` to bind states to Letta agents/skills.
+- **DAG + choreography** avoids a single orchestrator bottleneck. Each worker owns its lifecycle, which scales naturally and tolerates partial failures.
+- **RedisJSON** provides atomic, partial updates and fast reads for lots of small state docs. WATCH/MULTI gives optimistic concurrency for leases and status transitions.
+- **Skills as manifests** decouple “how to do things” (tools, prompts, data) from “when” (workflow). They can be versioned, discovered, and reasoned about (via a knowledge graph or tags).
+- **Auditability**: keeping control/data planes post-run enables traceability, benchmarking, and post-mortems.
+
+---
+
+## Suggested Project Layout
 ```
 project/
 ├─ schemas/
 │  ├─ letta-asl-workflow-2.2.0.json
 │  ├─ skill-manifest-v2.0.0.json
-│  ├─ control-plane-meta-1.0.0.json
-│  ├─ control-plane-state-1.0.0.json
-│  ├─ notification-payload-1.0.0.json
-│  └─ data-plane-output-1.0.0.json
+│  ├─ control-plane-meta.json            # documented reference shape
+│  └─ control-plane-state.json           # documented reference shape
 ├─ af/
-│  └─ agent_templates.json
+│  └─ agent_templates.json               # .af v2 bundle inc. agent_template_worker@1.0.0
 ├─ skills/
 │  ├─ web.search.json
 │  └─ summarize.json
 ├─ workflows/
 │  └─ example_workflow_v220.json
 └─ tools/
-   ├─ validate_workflow.py
-   ├─ validate_skill_manifest.py
-   ├─ get_skill_set.py
-   ├─ load_skill.py
-   ├─ unload_skill.py
-   ├─ create_worker_agents.py
+   ├─ workflow_validator_v220.py
+   ├─ skill_discovery_tool.py
    ├─ create_workflow_control_plane.py
-   ├─ notify_next_worker_agent.py
+   ├─ create_worker_agents.py
    ├─ read_workflow_control_plane.py
-   ├─ acquire_state_lease.py
    ├─ update_workflow_control_plane.py
+   ├─ acquire_state_lease.py
+   ├─ renew_state_lease.py
+   ├─ release_state_lease.py
+   ├─ notify_next_worker_agent.py
+   ├─ notify_if_ready.py
    └─ finalize_workflow.py
 ```
 
 ---
 
-## Notes & guardrails
+## Operational Tips & FAQ
 
-- **Idempotency**: notifications can duplicate; updates must verify lease token.
-- **Security**: enforce `permissions` at skill load; restrict Redis write access.
-- **Observability**: log control-plane transitions and skill (un)loads; optional event stream.
-- **Portability**: `.af v2` + ASL keep definitions reusable; no HTTP imports. KG is optional and storage-agnostic.
+- **Many workers from the same .af template?** No conflict: Letta de-duplicates registered tools by name/ID. If your template includes source-defined tools, our `load_skill` checks platform registry by name first.
+- **When to use `notify_if_ready` vs `notify_next_worker_agent`?**
+    - Use `notify_next_worker_agent` after a state completes to fan-out to neighbors.
+    - Use `notify_if_ready` as a guard when something “external” nudges a state early.
+- **Leases & TTLs**: pick TTL ≥ 2× your heartbeat; renew at 1/3 TTL. On long tool calls, renew between sub-steps.
+- **Error policy**: workers set `status="failed"` with `error_message` → Planner can decide to retry (re-notify), skip, or finalize as failed.
+- **Security**: skills can declare `permissions.egress` and `permissions.secrets`. Enforce on load or at tool boundary.
+- **Cleanup**: `finalize_workflow` deletes agents (optional) but preserves Redis keys for audits.
+
+---
+
+## Next steps
+- Add `notify_ready_states` (broadcast to all ready states).
+- Add metrics exporters (Prometheus gauges from control-plane docs).
+- Add a simple KG over skills (tags, tools, success metrics) to improve planning prompts.
