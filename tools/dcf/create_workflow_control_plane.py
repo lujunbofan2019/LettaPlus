@@ -2,46 +2,50 @@ import os
 import json
 from datetime import datetime, timezone
 
-def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=None, agents_map_json=None):
-    """
-    Create (idempotently) the RedisJSON control-plane for a workflow (choreography style).
+def create_workflow_control_plane(workflow_json: str,
+                                  redis_url: str = None,
+                                  expiry_secs: int = None,
+                                  agents_map_json: str = None) -> dict:
+    """Create (idempotently) the RedisJSON control-plane for a workflow (choreography style).
 
-    This seeds the following JSON keys (one top-level JSON document per key):
+    This seeds exactly one RedisJSON document for workflow metadata and one per state:
       - cp:wf:{workflow_id}:meta
-      - cp:wf:{workflow_id}:state:{state}
+      - cp:wf:{workflow_id}:state:{state_name}
 
-    The meta document aligns with `schemas/control-plane-meta-1.0.0.json`.
-    Each state document aligns with `schemas/control-plane-state-1.0.0.json`.
+    The meta document corresponds to `schemas/control-plane-meta-1.0.0.json`.
+    Each state document corresponds to `schemas/control-plane-state-1.0.0.json`.
 
     Redis requirements:
-      - Redis server with RedisJSON module enabled.
-      - redis-py with JSON command support (r.json().get / set).
+      * Redis server with the RedisJSON module enabled.
+      * redis-py that exposes `r.json()` with `.get()` / `.set()` and `nx=True`.
 
     Args:
       workflow_json (str):
-        JSON string of the workflow definition. Prefer the `asl` form with `StartAt` and `States`.
-        If only `steps` exist, a linear DAG is inferred in the given order.
+        JSON string of the workflow definition. Prefer the ASL form with
+        `asl.StartAt` and `asl.States`. If only `steps` exist, a linear DAG is
+        inferred in order.
       redis_url (str, optional):
-        Redis connection URL (e.g., "redis://localhost:6379/0"). If not provided, uses env `REDIS_URL`
-        or the default "redis://localhost:6379/0".
+        Redis connection URL (e.g., "redis://localhost:6379/0"). If not provided,
+        uses env `REDIS_URL` or "redis://localhost:6379/0".
       expiry_secs (int, optional):
-        TTL to apply to seeded keys via EXPIRE. Omit or set <=0 for no TTL (recommended during execution).
+        TTL to apply to seeded keys via EXPIRE. Omit or set <=0 for no TTL.
+        (Recommended: no TTL during execution.)
       agents_map_json (str, optional):
-        JSON string mapping state names to agent IDs. If provided and valid, stored into the meta document
-        under `agents` for quick lookup by workers. E.g. { "Research": "agent_abc123", "Summarize": "agent_def456" }
+        JSON string mapping state names to agent IDs. If provided and valid, it is
+        copied into meta under `"agents"` for quick worker lookup, e.g.:
+        {"Research": "agent_abc123", "Summarize": "agent_def456"}.
 
     Returns:
-      dict:
+      dict: Result object:
         {
           "status": str or None,
           "error": str or None,
-          "created_keys": list,     # keys created in this call
-          "existing_keys": list,    # keys detected as already present (left untouched)
-          "meta_sample": dict       # meta document that was written or fetched
+          "created_keys": [str],     # keys created in this call
+          "existing_keys": [str],    # keys that already existed (left untouched)
+          "meta_sample": dict        # meta JSON as persisted (round-tripped from Redis)
         }
     """
-
-    # --- 0) Lazy import redis and check JSON support ---
+    # --- 0) Lazy import redis and connect ---
     try:
         import redis  # type: ignore
     except Exception as e:
@@ -90,16 +94,16 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
     workflow_id = wf.get("workflow_id")
     workflow_name = wf.get("workflow_name") or wf.get("workflowName") or "unnamed-workflow"
     schema_version = wf.get("workflow_schema_version") or "unknown"
-    if not workflow_id:
+    if not isinstance(workflow_id, str) or not workflow_id:
         return {
             "status": None,
-            "error": "workflow_json missing required 'workflow_id' (uuid).",
+            "error": "workflow_json missing required 'workflow_id' (uuid string).",
             "created_keys": [],
             "existing_keys": [],
             "meta_sample": {}
         }
 
-    # --- 2) Build DAG from ASL or steps (top-level only) ---
+    # --- 2) Build DAG from ASL or steps ---
     states = []
     start_at = None
     edges = []  # list of (src, dst)
@@ -116,51 +120,57 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
             s_type = s_def.get("Type")
 
             # Common Next edge
-            if isinstance(s_def.get("Next"), str):
-                edges.append((s_name, s_def["Next"]))
+            nx = s_def.get("Next")
+            if isinstance(nx, str):
+                edges.append((s_name, nx))
 
             # Choice edges (Choices[].Next and Default)
             if s_type == "Choice":
-                for ch in s_def.get("Choices", []) or []:
-                    nx = ch.get("Next")
-                    if isinstance(nx, str):
-                        edges.append((s_name, nx))
+                for ch in (s_def.get("Choices") or []):
+                    nx2 = ch.get("Next")
+                    if isinstance(nx2, str):
+                        edges.append((s_name, nx2))
                 if isinstance(s_def.get("Default"), str):
                     edges.append((s_name, s_def["Default"]))
 
-            # Parallel/Map: branch internals are owned by the worker; downstream handled by 'Next'
-
+            # Parallel / Map internals are worker-owned; only honor top-level Next
     else:
         steps = wf.get("steps") or []
-        if not steps:
+        if not isinstance(steps, list) or not steps:
             return {
                 "status": None,
-                "error": "Workflow must include either 'asl' (preferred) or non-empty 'steps'.",
+                "error": "Workflow must include either 'asl' (preferred) or non-empty 'steps' (array).",
                 "created_keys": [],
                 "existing_keys": [],
                 "meta_sample": {}
             }
         prev = None
         for i, st in enumerate(steps):
-            s_name = st.get("step_id") or ("Step_%d" % (i + 1))
+            s_name = None
+            if isinstance(st, dict):
+                s_name = st.get("step_id")
+            if not isinstance(s_name, str) or not s_name:
+                s_name = "Step_%d" % (i + 1)
             states.append(s_name)
             if prev is not None:
                 edges.append((prev, s_name))
             prev = s_name
         start_at = states[0] if states else None
 
-    if not states or not start_at:
+    # Normalize/validate states
+    states = list(dict.fromkeys(states))  # dedupe, preserve order
+    if not states or not isinstance(start_at, str) or start_at not in states:
         return {
             "status": None,
-            "error": "Unable to determine states and StartAt.",
+            "error": "Unable to determine valid states and StartAt.",
             "created_keys": [],
             "existing_keys": [],
             "meta_sample": {}
         }
 
     # --- 3) Compute deps and terminal states ---
-    upstream = { s: [] for s in states }
-    downstream = { s: [] for s in states }
+    upstream = {s: [] for s in states}
+    downstream = {s: [] for s in states}
     for src, dst in edges:
         if dst in upstream and src not in upstream[dst]:
             upstream[dst].append(src)
@@ -178,30 +188,35 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
             terminal_candidates.add(s)
     terminal_states = sorted(list(terminal_candidates))
 
-    # --- 4) Optional agents map ---
+    # --- 4) Optional agents map (state_name -> agent_id) ---
     agents_map = {}
-    if agents_map_json:
+    if isinstance(agents_map_json, str) and agents_map_json.strip():
         try:
             tmp = json.loads(agents_map_json)
             if isinstance(tmp, dict):
                 for k, v in tmp.items():
-                    if k in upstream and isinstance(v, str):
+                    if isinstance(k, str) and k in upstream and isinstance(v, str):
                         agents_map[k] = v
         except Exception:
-            # Ignore malformed agents_map_json
+            # Ignore malformed map; keep empty
             pass
 
-    # --- 5) Construct meta document (aligned to schemas/control-plane-meta-1.0.0.json) ---
+    # --- 5) Construct meta document ---
+    now_iso = datetime.now(timezone.utc).isoformat()
     meta = {
         "workflow_id": workflow_id,
         "workflow_name": workflow_name,
         "schema_version": str(schema_version),
+        "created_at": now_iso,
         "start_at": start_at,
         "terminal_states": terminal_states,
         "states": states,
-        "agents": agents_map,     # optional, can be empty
-        "skills": {},             # optional, planner may fill later
-        "deps": { s: { "upstream": upstream.get(s, []), "downstream": downstream.get(s, []) } for s in states }
+        "agents": agents_map,  # optional, can be empty
+        "skills": {},          # optional, planner may fill later
+        "deps": {
+            s: {"upstream": upstream.get(s, []), "downstream": downstream.get(s, [])}
+            for s in states
+        }
     }
 
     # --- 6) Seed RedisJSON keys idempotently ---
@@ -209,11 +224,10 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
     existing_keys = []
 
     meta_key = "cp:wf:%s:meta" % workflow_id
-    # JSON root path for RedisJSON v2 is '$'
     try:
-        # Use NX to avoid overwriting an existing JSON key
+        # JSON root path for RedisJSON v2 is '$'; NX to avoid clobbering existing meta
         res = r.json().set(meta_key, '$', meta, nx=True)
-        if res:  # set returns True/OK-like value on success, None if NX failed
+        if res:
             created_keys.append(meta_key)
             if isinstance(expiry_secs, int) and expiry_secs > 0:
                 r.expire(meta_key, int(expiry_secs))
@@ -229,9 +243,9 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
         }
 
     default_state = {
-        "status": "pending",
+        "status": "pending",   # pending|running|succeeded|failed|skipped
         "attempts": 0,
-        "lease": { "token": None, "owner_agent_id": None, "ts": None, "ttl_s": None },
+        "lease": {"token": None, "owner_agent_id": None, "ts": None, "ttl_s": None},
         "started_at": None,
         "finished_at": None,
         "last_error": None
@@ -256,10 +270,9 @@ def create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=Non
                 "meta_sample": {}
             }
 
-    # Fetch meta_sample (from Redis) so caller sees the actual persisted value
+    # --- 7) Return meta round-tripped from Redis (for exact view) ---
     try:
         meta_sample = r.json().get(meta_key, '$')
-        # r.json().get returns a dict at root when path='$'; some deployments may return list with single element.
         if isinstance(meta_sample, list) and len(meta_sample) == 1:
             meta_sample = meta_sample[0]
         if not isinstance(meta_sample, dict):

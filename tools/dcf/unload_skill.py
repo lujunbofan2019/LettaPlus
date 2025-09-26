@@ -4,26 +4,39 @@ import json
 from letta_client import Letta
 
 # --- Constants ---
-DCF_STATE_BLOCK_LABEL = "dcf_active_skills"
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
+# Use the same env var name as the loader tool for consistency
+STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
 
 
-def skill_unloader(manifest_id, agent_id):
+def unload_skill(manifest_id: str, agent_id: str) -> dict:
     """Unload a previously loaded skill from a Letta agent.
+         - Idempotent: if the state block or manifest entry is missing, returns success with a descriptive status and no error.
+         - This expects the loader tool to have tracked resources in a JSON block labeled by SKILL_STATE_BLOCK_LABEL (default: "dcf_active_skills").
 
     Args:
-      manifest_id: The manifestId of the skill to unload.
-      agent_id: The target Letta agent id.
+        manifest_id (str):
+            The `manifestId` of the skill to unload (must match the key used in the
+            skill state block on the agent).
+        agent_id (str):
+            The target Letta agent ID.
 
     Returns:
-      dict: {
-        "status": str or None,   # Success summary (includes warning counts if any)
-        "error": str or None     # Error string on failure; None on success
-      }
+        dict: Result object:
+            {
+              "status": str or None,   # Success summary (includes warning counts if any)
+              "error": str or None     # Error string on failure; None on success
+            }
     """
     status = None
     error_message = None
     warnings = []
+
+    # Basic runtime type checks for clearer errors in tool-call contexts
+    if not isinstance(manifest_id, str) or not manifest_id.strip():
+        return {"status": None, "error": "TypeError: manifest_id must be a non-empty string"}
+    if not isinstance(agent_id, str) or not agent_id.strip():
+        return {"status": None, "error": "TypeError: agent_id must be a non-empty string"}
 
     try:
         # 0) Client + agent existence
@@ -36,7 +49,7 @@ def skill_unloader(manifest_id, agent_id):
 
         try:
             blocks = client.agents.blocks.list(agent_id=agent_id)
-            state_ref = next((b for b in blocks if getattr(b, "label", "") == DCF_STATE_BLOCK_LABEL), None)
+            state_ref = next((b for b in blocks if getattr(b, "label", "") == STATE_BLOCK_LABEL), None)
             if state_ref:
                 state_block_id = getattr(state_ref, "block_id", None) or getattr(state_ref, "id", None)
                 if state_block_id:
@@ -56,8 +69,8 @@ def skill_unloader(manifest_id, agent_id):
 
         if not state_block_id:
             # Idempotent: nothing to do
-            status = ("No skill state block found on agent '%s'. "
-                      "Assuming nothing to unload for manifest '%s'.") % (agent_id, manifest_id)
+            status = ("No skill state block ('%s') found on agent '%s'. "
+                      "Assuming nothing to unload for manifest '%s'.") % (STATE_BLOCK_LABEL, agent_id, manifest_id)
             return {"status": status, "error": None}
 
         entry = state.get(manifest_id)

@@ -1,68 +1,66 @@
 import os
 import json
 from datetime import datetime, timezone
-from uuid import uuid4
 
-def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status=None, lease_token=None, owner_agent_id=None, lease_ttl_s=None, attempts_increment=None, error_message=None, set_started_at=False, set_finished_at=False, output_json=None, output_ttl_secs=None):
-    """
-    Atomically update a state's control-plane JSON (and optionally write data-plane output).
+def update_workflow_control_plane(workflow_id: str,
+                                  state: str,
+                                  redis_url: str = None,
+                                  new_status: str = None,
+                                  lease_token: str = None,
+                                  owner_agent_id: str = None,
+                                  lease_ttl_s: int = None,
+                                  attempts_increment: int = None,
+                                  error_message: str = None,
+                                  set_started_at: bool = False,
+                                  set_finished_at: bool = False,
+                                  output_json: str = None,
+                                  output_ttl_secs: int = None) -> dict:
+    """Atomically update a state's control-plane JSON and optionally write data-plane output.
 
     Concurrency:
-      - Uses WATCH/MULTI/EXEC on 'cp:wf:{id}:state:{state}' to avoid races.
-      - If lease_token is provided, it must match the stored lease.token (or the stored token must be null).
-        This prevents unrelated agents from overwriting each other's updates.
+      * Uses WATCH/MULTI/EXEC on cp:wf:{workflow_id}:state:{state}.
+      * When `lease_token` is provided, the update is allowed only if the stored token
+        is null or matches `lease_token`. This prevents unrelated agents from clobbering
+        each other's updates.
 
-    Allowed patterns (examples):
-      - Transition to 'running' with lease:
-          new_status="running", lease_token="...", owner_agent_id="...", lease_ttl_s=300, set_started_at=True, attempts_increment=1
-      - Mark done + write output:
-          new_status="done", lease_token="...", set_finished_at=True, output_json='{"ok": true, "summary": "...", "data": {...}}'
-      - Mark failed with error:
-          new_status="failed", lease_token="...", set_finished_at=True, error_message="reason..."
+    Status normalization:
+      * Accepts synonyms and normalizes:
+        - "done", "success", "succeed", "succeeded" -> "succeeded"
+        - "fail", "failed", "error" -> "failed"
+      * Allowed canonical statuses: {"pending", "running", "succeeded", "failed", "skipped"}
+
+    Typical patterns:
+      * Move to running with lease:
+        new_status="running", lease_token="...", owner_agent_id="...", lease_ttl_s=300, set_started_at=True, attempts_increment=1
+      * Mark succeeded and write output:
+        new_status="succeeded", lease_token="...", set_finished_at=True, output_json='{"ok": true, ...}'
+      * Mark failed with error:
+        new_status="failed", lease_token="...", set_finished_at=True, error_message="..."
 
     Args:
-      workflow_id (str):
-        The workflow UUID.
-      state (str):
-        The state name to update (e.g., an ASL Task state).
-      redis_url (str, optional):
-        Redis connection URL (e.g., "redis://localhost:6379/0"). If not provided,
-        uses env REDIS_URL or "redis://localhost:6379/0".
-      new_status (str, optional):
-        One of {"pending", "running", "done", "failed"}. If omitted, status is left unchanged.
-      lease_token (str, optional):
-        Expected current lease token. If provided, the update will fail when the stored token
-        is non-null and different from this value. If the stored token is null, the provided token
-        is set together with owner_agent_id/ttl (when provided).
-      owner_agent_id (str, optional):
-        Owner ID to store into lease.owner_agent_id when setting or refreshing a lease.
-      lease_ttl_s (int, optional):
-        Lease TTL seconds stored in lease.ttl_s (informational; watchdog/renewal handled elsewhere).
-      attempts_increment (int, optional):
-        Number to add to 'attempts'. Use 1 when you move to 'running' for the first time.
-      error_message (str, optional):
-        Value for 'last_error'.
-      set_started_at (bool, optional):
-        If True, set 'started_at' to now (ISO-8601 UTC).
-      set_finished_at (bool, optional):
-        If True, set 'finished_at' to now (ISO-8601 UTC).
-      output_json (str, optional):
-        If provided, writes/overwrites data-plane key:
-          dp:wf:{workflow_id}:output:{state}
-        The JSON should conform to 'schemas/data-plane-output-1.0.0.json'.
-      output_ttl_secs (int, optional):
-        Optional TTL for the output key.
+      workflow_id: Workflow UUID.
+      state: State name to update.
+      redis_url: Optional Redis URL. Defaults to env REDIS_URL or "redis://localhost:6379/0".
+      new_status: Optional new status.
+      lease_token: Optional expected lease token (for ownership).
+      owner_agent_id: Optional owner to set on lease when setting/refreshing.
+      lease_ttl_s: Optional lease TTL seconds (informational).
+      attempts_increment: Optional integer to add to attempts counter.
+      error_message: Optional error string to set as last_error.
+      set_started_at: If True, set started_at=now (ISO-8601 UTC).
+      set_finished_at: If True, set finished_at=now (ISO-8601 UTC).
+      output_json: Optional JSON string to write to dp:wf:{workflow_id}:output:{state}.
+      output_ttl_secs: Optional TTL for the output key.
 
     Returns:
-      dict:
-        {
-          "status": str or None,
-          "error": str or None,
-          "workflow_id": str,
-          "state": str,
-          "updated_state": dict or None,
-          "output_written": bool
-        }
+      dict: {
+        "status": str or None,
+        "error": str or None,
+        "workflow_id": str,
+        "state": str,
+        "updated_state": dict or None,
+        "output_written": bool
+      }
     """
     try:
         import redis  # type: ignore
@@ -105,18 +103,26 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
     now_iso = datetime.now(timezone.utc).isoformat()
     output_written = False
 
-    # Validate new_status (if any)
-    if new_status is not None and new_status not in ("pending", "running", "done", "failed"):
-        return {
-            "status": None,
-            "error": "Invalid new_status '%s'." % new_status,
-            "workflow_id": workflow_id,
-            "state": state,
-            "updated_state": None,
-            "output_written": False
-        }
+    # Normalize/validate status (accept common synonyms)
+    canonical = None
+    if isinstance(new_status, str):
+        ns = new_status.strip().lower()
+        if ns in ("done", "success", "succeed", "succeeded"):
+            canonical = "succeeded"
+        elif ns in ("fail", "failed", "error"):
+            canonical = "failed"
+        elif ns in ("pending", "running", "skipped"):
+            canonical = ns
+        else:
+            return {
+                "status": None,
+                "error": "Invalid new_status '%s'." % new_status,
+                "workflow_id": workflow_id,
+                "state": state,
+                "updated_state": None,
+                "output_written": False
+            }
 
-    # WATCH loop (single attempt; the caller can retry on WatchError)
     pipe = r.pipeline()
     try:
         pipe.watch(state_key)
@@ -138,7 +144,6 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
         cur_lease = current.get("lease") or {}
         cur_token = cur_lease.get("token")
         if lease_token is not None:
-            # If there is a stored token different from the provided one -> reject
             if cur_token and cur_token != lease_token:
                 return {
                     "status": None,
@@ -148,31 +153,32 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
                     "updated_state": current,
                     "output_written": False
                 }
+
         # Prepare next state
         next_state = dict(current)
 
-        # Update attempts
+        # attempts
         if isinstance(attempts_increment, int) and attempts_increment != 0:
             try:
-                next_state["attempts"] = int(next_state.get("attempts", 0)) + attempts_increment
+                next_state["attempts"] = int(next_state.get("attempts", 0)) + int(attempts_increment)
             except Exception:
                 next_state["attempts"] = int(attempts_increment)
 
-        # Update status
-        if new_status is not None:
-            next_state["status"] = new_status
+        # status
+        if canonical is not None:
+            next_state["status"] = canonical
 
-        # Update timestamps
+        # timestamps
         if set_started_at:
             next_state["started_at"] = now_iso
         if set_finished_at:
             next_state["finished_at"] = now_iso
 
-        # Update error
+        # error
         if error_message is not None:
             next_state["last_error"] = error_message
 
-        # Update lease contents if a lease_token is provided (set or refresh)
+        # lease set/refresh
         if lease_token is not None:
             lease_obj = dict(next_state.get("lease") or {})
             lease_obj["token"] = lease_token
@@ -186,13 +192,13 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
                     lease_obj["ttl_s"] = None
             next_state["lease"] = lease_obj
 
-        # Begin transaction
+        # TX begin
         pipe.multi()
-        # JSON.SET state
+        # JSON.SET (use execute_command for compatibility inside pipeline)
         pipe.execute_command('JSON.SET', state_key, '$', json.dumps(next_state))
 
-        # Optional: write data-plane output
-        if output_json:
+        # Optional data-plane output
+        if isinstance(output_json, str) and output_json.strip():
             try:
                 out_doc = json.loads(output_json)
             except Exception as e:
@@ -211,10 +217,9 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
                 pipe.execute_command('EXPIRE', out_key, int(output_ttl_secs))
             output_written = True
 
-        # Commit
         pipe.execute()
 
-    except redis.exceptions.WatchError:  # type: ignore
+    except WatchError:
         return {
             "status": None,
             "error": "conflict: state modified concurrently; please retry.",
@@ -237,7 +242,7 @@ def update_workflow_control_plane(workflow_id, state, redis_url=None, new_status
             "output_written": False
         }
 
-    # Return latest state (post-commit)
+    # Read back final state for the caller
     try:
         updated = r.json().get(state_key, '$')
         if isinstance(updated, list) and len(updated) == 1:

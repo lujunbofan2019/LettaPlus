@@ -2,48 +2,48 @@ import os
 import json
 from datetime import datetime, timezone
 
-def release_state_lease(workflow_id,
-                        state,
-                        lease_token,
-                        owner_agent_id=None,
-                        redis_url=None,
-                        force=False,
-                        clear_owner=True):
+def release_state_lease(
+    workflow_id: str,
+    state: str,
+    lease_token: str,
+    owner_agent_id: str = None,
+    redis_url: str = None,
+    force: bool = False,
+    clear_owner: bool = True
+) -> dict:
     """
     Release a held lease on a workflow state in the RedisJSON control-plane.
 
     Concurrency:
       - Uses WATCH/MULTI/EXEC on "cp:wf:{workflow_id}:state:{state}" to avoid races.
-      - By default, requires that stored lease.token == lease_token (and, if provided,
-        lease.owner_agent_id == owner_agent_id). Set force=True to clear the lease even if tokens
-        or owner do not match (use sparingly; intended for administrative recovery).
+      - By default, requires stored lease.token == lease_token (and, if provided,
+        lease.owner_agent_id == owner_agent_id). Set force=True to clear the lease
+        even if tokens/owner do not match (admin recovery).
 
     Semantics:
       - Clears lease.token and updates lease.ts to now (ISO-8601 UTC).
-      - If clear_owner=True (default), also clears lease.owner_agent_id.
-      - Does NOT change the state's 'status'. Typically you call release AFTER marking state
-        'done' or 'failed'. If you need to revert, do so explicitly via update_workflow_control_plane.
-
-    Typical usage:
-      - A worker completes or aborts its task and releases its lease so others (or retries) may proceed.
+      - If clear_owner=True, also clears lease.owner_agent_id.
+      - Does NOT change the state's 'status'. Typically release AFTER marking
+        the state 'done' or 'failed'. If you need to revert, use
+        update_workflow_control_plane prior to release.
 
     Args:
       workflow_id (str): Workflow UUID.
       state (str): State name (ASL Task state).
       lease_token (str): The lease token currently held by the worker.
-      owner_agent_id (str, optional): If provided, must match stored lease.owner_agent_id unless force=True.
-      redis_url (str, optional): Redis URL (default env REDIS_URL or redis://localhost:6379/0).
-      force (bool, optional): If True, clear lease regardless of token/owner mismatch. Default False.
-      clear_owner (bool, optional): If True, set lease.owner_agent_id to null when releasing. Default True.
+      owner_agent_id (str): If provided, must match lease.owner_agent_id unless force=True.
+      redis_url (str): Redis URL (default env REDIS_URL or "redis://localhost:6379/0").
+      force (bool): If True, clear lease regardless of token/owner mismatch.
+      clear_owner (bool): If True, null out lease.owner_agent_id when releasing.
 
     Returns:
       dict: {
-        "status": str or None,            # "lease_released" on success
+        "status": "lease_released" | "lease_already_clear" | None,
         "error": str or None,
         "workflow_id": str,
         "state": str,
-        "lease": dict or None,            # Lease object after release
-        "updated_state": dict or None
+        "lease": dict or None,          # Lease object AFTER release (or current on failure)
+        "updated_state": dict or None   # State doc AFTER release (or current on failure)
       }
     """
     try:
@@ -52,7 +52,7 @@ def release_state_lease(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Missing dependency: install the `redis` package. ImportError: %s" % e,
+            "error": f"Missing dependency: install the `redis` package. ImportError: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
@@ -66,7 +66,7 @@ def release_state_lease(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Failed to connect to Redis at %s: %s: %s" % (r_url, e.__class__.__name__, e),
+            "error": f"Failed to connect to Redis at {r_url}: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
@@ -83,7 +83,7 @@ def release_state_lease(workflow_id,
             "updated_state": None
         }
 
-    state_key = "cp:wf:%s:state:%s" % (workflow_id, state)
+    state_key = f"cp:wf:{workflow_id}:state:{state}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
     pipe = r.pipeline()
@@ -107,10 +107,11 @@ def release_state_lease(workflow_id,
         cur_token = lease.get("token")
         cur_owner = lease.get("owner_agent_id")
 
+        # Idempotent: no lease to release
         if not cur_token:
             return {
-                "status": None,
-                "error": "no_lease: nothing to release.",
+                "status": "lease_already_clear",
+                "error": None,
                 "workflow_id": workflow_id,
                 "state": state,
                 "lease": lease,
@@ -130,7 +131,7 @@ def release_state_lease(workflow_id,
             if owner_agent_id is not None and cur_owner and cur_owner != owner_agent_id:
                 return {
                     "status": None,
-                    "error": "owner_mismatch: lease owner '%s' != '%s'." % (cur_owner, owner_agent_id),
+                    "error": f"owner_mismatch: lease owner '{cur_owner}' != '{owner_agent_id}'.",
                     "workflow_id": workflow_id,
                     "state": state,
                     "lease": lease,
@@ -143,10 +144,11 @@ def release_state_lease(workflow_id,
         if clear_owner:
             next_lease["owner_agent_id"] = None
         next_lease["ts"] = now_iso
-        # keep ttl_s as informational; expiry based on ts+ttl_s will read as expired anyway
+        # Keep ttl_s unchanged (informational)
         next_state["lease"] = next_lease
 
         pipe.multi()
+        # Use raw command to keep JSON op inside the transaction
         pipe.execute_command('JSON.SET', state_key, '$', json.dumps(next_state))
         pipe.execute()
 
@@ -170,14 +172,14 @@ def release_state_lease(workflow_id,
             pass
         return {
             "status": None,
-            "error": "release_failed: %s: %s" % (e.__class__.__name__, e),
+            "error": f"release_failed: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
             "updated_state": None
         }
 
-    # Read back
+    # Read back post-commit
     try:
         updated = r.json().get(state_key, '$')
         if isinstance(updated, list) and len(updated) == 1:

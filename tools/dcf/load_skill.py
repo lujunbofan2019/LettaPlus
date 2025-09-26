@@ -8,30 +8,51 @@ MAX_TEXT_CONTENT_CHUNK_SIZE = int(os.getenv("SKILL_MAX_TEXT_CHARS", "4900"))
 ALLOW_PYTHON_SOURCE = os.getenv("ALLOW_PYTHON_SOURCE_SKILLS", "0") == "1"
 ALLOW_MCP = os.getenv("ALLOW_MCP_SKILLS", "0") == "1"
 
-def load_skill(skill_json, agent_id):
+def load_skill(skill_json: str, agent_id: str) -> dict:
     """Load a skill into a Letta agent: attach directives, tools, and data sources.
 
+    This function assumes:
+      - the manifest is already validated against `skill-manifest-v2.0.0.json`.
+      - `python_source` and `mcp_server` tool definitions are feature-gated by environment flags ALLOW_PYTHON_SOURCE_SKILLS / ALLOW_MCP_SKILLS.
+      - Per-agent bookkeeping is stored in a block labeled by SKILL_STATE_BLOCK_LABEL (default: "dcf_active_skills").
+
     Args:
-      skill_json: String containing the validated skill manifest.
-      agent_id: Target Letta agent id to receive the skill.
+        skill_json (str):
+            JSON string containing a **validated** skill manifest (schema v2.0.0).
+        agent_id (str):
+            Target Letta agent ID that will receive the skill.
 
     Returns:
-      Dict with fields:
-        {
-          "ok": bool,
-          "exit_code": int,        # 0 ok, 4 error
-          "status": str|None,
-          "error": str|None,
-          "added": {
-            "memory_block_ids": [str],
-            "tool_ids": [str],
-            "data_block_ids": [str]
-          },
-          "warnings": [str]
-        }
+        dict: Result object with status and details:
+            {
+              "ok": bool,
+              "exit_code": int,         # 0 on success, 4 on error
+              "status": str or None,
+              "error": str or None,
+              "added": {
+                "memory_block_ids": list[str],
+                "tool_ids": list[str],
+                "data_block_ids": list[str]
+              },
+              "warnings": list[str]
+            }
     """
-    out = {"ok": False, "exit_code": 4, "status": None, "error": None,
-           "added": {"memory_block_ids": [], "tool_ids": [], "data_block_ids": []}, "warnings": []}
+    out = {
+        "ok": False,
+        "exit_code": 4,
+        "status": None,
+        "error": None,
+        "added": {"memory_block_ids": [], "tool_ids": [], "data_block_ids": []},
+        "warnings": []
+    }
+
+    # Basic runtime type checks for clearer errors in tool-call contexts
+    if not isinstance(skill_json, str):
+        out["error"] = "TypeError: skill_json must be a JSON string"
+        return out
+    if not isinstance(agent_id, str):
+        out["error"] = "TypeError: agent_id must be a string"
+        return out
 
     try:
         inst = json.loads(skill_json)
@@ -104,18 +125,18 @@ def load_skill(skill_json, agent_id):
                 if not ALLOW_PYTHON_SOURCE:
                     out["warnings"].append(f"python_source for '{tname}' skipped (feature disabled)")
                 else:
-                    # Placeholder: your environment should expose a helper to register tools from source
                     source = defi.get("sourceCode") or ""
                     if not source:
                         raise ValueError("python_source requires sourceCode")
-                    # Example (adjust to your SDK): tool = client.tools.create_from_source(...)
+                    # Implement environment-specific registration here:
+                    # e.g., reg = client.tools.create_from_source(name=tname, source_code=source)
                     raise NotImplementedError("Tool registration from python_source is environment-specific")
 
             elif ttype == "mcp_server":
                 if not ALLOW_MCP:
                     out["warnings"].append(f"mcp_server for '{tname}' skipped (feature disabled)")
                 else:
-                    # Placeholder: implement MCP server + tool registration according to your Letta version
+                    # Implement MCP server + tool registration for your Letta version:
                     raise NotImplementedError("MCP tool registration is environment-specific")
 
             else:

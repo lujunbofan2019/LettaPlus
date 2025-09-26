@@ -2,67 +2,41 @@ import os
 import json
 from datetime import datetime, timezone
 
-def finalize_workflow(workflow_id,
-                      redis_url=None,
-                      delete_worker_agents=True,
-                      preserve_planner=True,
-                      close_open_states=True,
-                      overall_status=None,
-                      finalize_note=None):
+def finalize_workflow(
+    workflow_id: str,
+    redis_url: str = None,
+    delete_worker_agents: bool = True,
+    preserve_planner: bool = True,
+    close_open_states: bool = True,
+    overall_status: str = None,
+    finalize_note: str = None
+) -> dict:
     """
-    Finalize a workflow execution: clean up worker agents (optional), close open states
-    to 'cancelled' (optional), and write final audit/summary metadata.
-
-    This preserves the Redis control-plane/data-plane keys for audit purposes.
-    No control-plane or data-plane keys are deleted.
+    Finalize a workflow execution: optionally delete worker agents, close open states, and write final audit/summary metadata.
+    Control-plane / data-plane keys are preserved for audit. No Redis keys are deleted.
 
     Args:
-      workflow_id (str):
-        Workflow UUID string.
-      redis_url (str, optional):
-        Redis URL, e.g. "redis://localhost:6379/0". Defaults to env REDIS_URL or local.
-      delete_worker_agents (bool, optional):
-        If True (default), delete all worker agents referenced in meta.agents.
-      preserve_planner (bool, optional):
-        If True (default), do NOT delete the planner agent even if recorded in meta.planner_agent_id.
-      close_open_states (bool, optional):
-        If True (default), set any 'pending' or 'running' states to 'cancelled' with 'finished_at' now.
-      overall_status (str, optional):
-        Force a top-level final status in meta.status (e.g., "succeeded", "failed", "cancelled", "finalized").
-        If omitted, status is derived from per-state statuses:
-          - if any state == "failed" -> "failed"
-          - elif any state in ("pending","running") -> "partial"
-          - else -> "succeeded"
-      finalize_note (str, optional):
-        Optional free-text note recorded into meta.finalize_note.
+      workflow_id: Workflow UUID string.
+      redis_url: Redis URL (e.g., "redis://localhost:6379/0"). Defaults to env REDIS_URL or localhost.
+      delete_worker_agents: If True, delete all worker agents referenced in meta.agents.
+      preserve_planner: If True, do NOT delete the planner agent (meta.planner_agent_id).
+      close_open_states: If True, set any 'pending'/'running' states to 'cancelled' and stamp 'finished_at'.
+      overall_status: Optional final meta.status override ("succeeded"|"failed"|"cancelled"|"finalized"|...).
+      finalize_note: Optional free-text note recorded into meta.finalize_note.
 
     Returns:
-      dict:
-        {
-          "status": str or None,              # "finalized"
-          "error": str or None,
-          "workflow_id": str,
-          "summary": {
-            "states": {
-              "total": int,
-              "pending": int,
-              "running": int,
-              "done": int,
-              "failed": int,
-              "cancelled": int
-            },
-            "agents": {
-              "to_delete": int,
-              "deleted": int,
-              "delete_errors": int
-            },
-            "final_status": str
-          },
-          "agents": [
-            {"state": str, "agent_id": str, "deleted": bool, "error": str or None}
-          ],
-          "warnings": [str, ...]
-        }
+      {
+        "status": "finalized"|None,
+        "error": str|None,
+        "workflow_id": str,
+        "summary": {
+          "states": {"total": int,"pending": int,"running": int,"done": int,"failed": int,"cancelled": int},
+          "agents": {"to_delete": int,"deleted": int,"delete_errors": int},
+          "final_status": str
+        },
+        "agents": [{"state": str, "agent_id": str, "deleted": bool, "error": str|None}],
+        "warnings": [str, ...]
+      }
     """
     # --- Dependencies ---
     try:
@@ -70,21 +44,20 @@ def finalize_workflow(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Missing dependency: install the `redis` package. ImportError: %s" % e,
+            "error": f"Missing dependency: install the `redis` package. ImportError: {e}",
             "workflow_id": workflow_id,
             "summary": None,
             "agents": [],
             "warnings": ["redis dependency missing"]
         }
 
+    # Letta SDK is optional for finalize (we may still close states without it)
+    letta_import_error = None
+    Letta = None  # sentinel for availability
     try:
         from letta_client import Letta  # type: ignore
     except Exception as e:
-        # We can finalize without deleting agents; degrade gracefully.
-        letta_import_error = "Missing dependency: letta_client not importable: %s" % e
-        Letta = None
-    else:
-        letta_import_error = None
+        letta_import_error = f"Missing dependency: letta_client not importable: {e}"
 
     # --- Redis connection ---
     r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
@@ -94,7 +67,7 @@ def finalize_workflow(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Failed to connect to Redis at %s: %s: %s" % (r_url, e.__class__.__name__, e),
+            "error": f"Failed to connect to Redis at {r_url}: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "summary": None,
             "agents": [],
@@ -113,10 +86,8 @@ def finalize_workflow(workflow_id,
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # --- Keys ---
-    meta_key = "cp:wf:%s:meta" % workflow_id
-
     # --- Load meta ---
+    meta_key = f"cp:wf:{workflow_id}:meta"
     try:
         meta = r.json().get(meta_key, '$')
         if isinstance(meta, list) and len(meta) == 1:
@@ -124,7 +95,7 @@ def finalize_workflow(workflow_id,
         if not isinstance(meta, dict):
             return {
                 "status": None,
-                "error": "Control-plane meta not found or invalid at %s" % meta_key,
+                "error": f"Control-plane meta not found or invalid at {meta_key}",
                 "workflow_id": workflow_id,
                 "summary": None,
                 "agents": [],
@@ -133,7 +104,7 @@ def finalize_workflow(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Failed to read meta: %s: %s" % (e.__class__.__name__, e),
+            "error": f"Failed to read meta: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "summary": None,
             "agents": [],
@@ -143,13 +114,12 @@ def finalize_workflow(workflow_id,
     agents_map = meta.get("agents") or {}
     planner_agent_id = meta.get("planner_agent_id")
     states = meta.get("states") or []
-    deps = meta.get("deps") or {}
 
     # --- Gather state statuses ---
     counts = {"pending": 0, "running": 0, "done": 0, "failed": 0, "cancelled": 0}
     state_docs = {}
     for s in states:
-        s_key = "cp:wf:%s:state:%s" % (workflow_id, s)
+        s_key = f"cp:wf:{workflow_id}:state:{s}"
         try:
             sdoc = r.json().get(s_key, '$')
             if isinstance(sdoc, list) and len(sdoc) == 1:
@@ -162,10 +132,8 @@ def finalize_workflow(workflow_id,
             if st in counts:
                 counts[st] += 1
             else:
-                # unknown status; treat as pending for safety
                 counts["pending"] += 1
         else:
-            # missing state doc; treat as pending
             state_docs[s] = None
             counts["pending"] += 1
 
@@ -179,12 +147,9 @@ def finalize_workflow(workflow_id,
                 new_doc = dict(sdoc or {})
                 new_doc["status"] = "cancelled"
                 new_doc["finished_at"] = now_iso
-                msg = "finalized: state closed by finalize_workflow"
-                if not isinstance(new_doc.get("errors"), list):
-                    new_doc["errors"] = []
-                new_doc["errors"].append(msg)
-                # keep lease as-is (cleared or stale) — audit trail
-                s_key = "cp:wf:%s:state:%s" % (workflow_id, s)
+                # Keep lease as-is for audit; only update last_error with a clear reason
+                new_doc["last_error"] = "finalized: state closed by finalize_workflow"
+                s_key = f"cp:wf:{workflow_id}:state:{s}"
                 pipe.execute_command('JSON.SET', s_key, '$', json.dumps(new_doc))
                 closed_now += 1
         try:
@@ -202,8 +167,10 @@ def finalize_workflow(workflow_id,
         if counts["failed"] > 0:
             final_status = "failed"
         elif counts["pending"] > 0 or counts["running"] > 0:
+            # Some states remained open but were not force-closed
             final_status = "partial"
         else:
+            # All states are done or cancelled without failures
             final_status = "succeeded"
     else:
         final_status = str(overall_status)
@@ -216,6 +183,7 @@ def finalize_workflow(workflow_id,
 
     if delete_worker_agents and agents_map:
         to_delete = len(agents_map)
+
         client = None
         if Letta is None:
             delete_errors = to_delete
@@ -228,8 +196,10 @@ def finalize_workflow(workflow_id,
                 })
         else:
             try:
-                client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
-                               token=os.getenv("LETTA_TOKEN"))
+                client = Letta(
+                    base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
+                    token=os.getenv("LETTA_TOKEN")
+                )
             except Exception as e:
                 delete_errors = to_delete
                 for st_name, ag_id in agents_map.items():
@@ -237,7 +207,7 @@ def finalize_workflow(workflow_id,
                         "state": st_name,
                         "agent_id": ag_id,
                         "deleted": False,
-                        "error": "Letta init failed: %s: %s" % (e.__class__.__name__, e)
+                        "error": f"Letta init failed: {e.__class__.__name__}: {e}"
                     })
                 client = None
 
@@ -252,7 +222,6 @@ def finalize_workflow(workflow_id,
                         })
                         continue
                     try:
-                        # Best-effort delete; ignore if already gone
                         client.agents.delete(agent_id=ag_id)
                         agent_results.append({
                             "state": st_name,
@@ -266,7 +235,7 @@ def finalize_workflow(workflow_id,
                             "state": st_name,
                             "agent_id": ag_id,
                             "deleted": False,
-                            "error": "%s: %s" % (e.__class__.__name__, e)
+                            "error": f"{e.__class__.__name__}: {e}"
                         })
                         delete_errors += 1
 
@@ -280,7 +249,7 @@ def finalize_workflow(workflow_id,
     try:
         r.json().set(meta_key, '$', meta_updates)
     except Exception:
-        # non-fatal; continue
+        # non-fatal
         pass
 
     audit_rec = {
@@ -297,10 +266,10 @@ def finalize_workflow(workflow_id,
         "note": finalize_note or None
     }
     try:
-        audit_key = "dp:wf:%s:audit:finalize" % workflow_id
+        audit_key = f"dp:wf:{workflow_id}:audit:finalize"
         r.json().set(audit_key, '$', audit_rec)
     except Exception:
-        # non-fatal; continue
+        # non-fatal
         pass
 
     summary = {

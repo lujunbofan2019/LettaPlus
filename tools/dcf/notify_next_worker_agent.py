@@ -2,245 +2,159 @@ import os
 import json
 from datetime import datetime, timezone
 
-def notify_next_worker_agent(workflow_id,
-                             source_state=None,
-                             reason=None,
-                             payload_json=None,
-                             redis_url=None,
-                             include_only_ready=True,
-                             message_role="system",
-                             async_message=False,
-                             max_steps=None):
-    """
-    Notify downstream (or initial) worker agent(s) for a workflow state machine.
+def notify_next_worker_agent(
+    workflow_id: str,
+    source_state: str = None,
+    reason: str = None,
+    payload_json: str = None,
+    redis_url: str = None,
+    include_only_ready: bool = True,
+    message_role: str = "system",
+    async_message: bool = False,
+    max_steps: int = None,
+) -> dict:
+    """Notify downstream (or initial) worker agent(s) for a workflow state machine.
 
-    This function:
-      1) Reads the control-plane meta doc (RedisJSON: cp:wf:{workflow_id}:meta)
-      2) Determines targets:
-         - If `source_state` is provided: targets = deps[source_state].downstream
-         - If omitted: targets = "source states" (no upstream) — useful for initial kickoff
-      3) (Optional) Filters to targets that are READY (all upstream states have status == "done")
-      4) Looks up each target's assigned agent_id via meta.agents[target]
-      5) Sends a Letta agent message (role=system by default) to each target agent
-         containing an event envelope: {type, workflow_id, target_state, source_state, reason, payload, ts}
-      6) Returns a per-target result list (success / failure)
+    Steps:
+      1) Read control-plane meta (RedisJSON: cp:wf:{workflow_id}:meta).
+      2) Choose targets:
+         - If source_state is provided => deps[source_state].downstream
+         - Else => states with no upstream (initial kickoff).
+      3) If include_only_ready=True, filter to targets whose upstream deps are all 'done'.
+      4) Resolve agent_id via meta.agents[target].
+      5) Send a Letta message to each target with a workflow-event envelope.
 
     Args:
-      workflow_id (str):
-        Workflow UUID (string).
-      source_state (str, optional):
-        Name of the completed (or triggering) state. If omitted, will notify all "source" Task states
-        (i.e., states with no upstream dependencies) — for initial kickoff.
-      reason (str, optional):
-        A short reason for the notification (e.g., "initial", "upstream_done").
-      payload_json (str, optional):
-        Optional JSON string with additional event payload for the target worker(s).
-      redis_url (str, optional):
-        Redis connection URL (e.g., "redis://localhost:6379/0"). Default from REDIS_URL or localhost.
-      include_only_ready (bool, optional):
-        If True (default), only notify targets whose upstream dependencies are satisfied (status == "done").
-      message_role (str, optional):
-        Message role to use when sending to the agent. Default "system". Consider "system" for event semantics.
-      async_message (bool, optional):
-        If True, uses the Letta async message API (background run). Default False (synchronous message).
-      max_steps (int, optional):
-        Optional Letta max_steps hint when creating the agent message.
+      workflow_id: Workflow UUID.
+      source_state: Triggering state name (completed or firing). If None, notifies source states (no upstream deps).
+      reason: Short reason for the event (e.g., "initial", "upstream_done").
+      payload_json: Optional JSON string to include as event payload.
+      redis_url: Redis URL (e.g., "redis://localhost:6379/0"). Defaults to REDIS_URL env or localhost.
+      include_only_ready: When True, only notify targets whose upstream states are all status == "done".
+      message_role: Letta message role (default "system").
+      async_message: If True, use async messaging (background run). Otherwise sync.
+      max_steps: Optional Letta max_steps hint for the recipient run.
 
     Returns:
-      dict:
-        {
-          "status": str or None,
-          "error": str or None,
-          "workflow_id": str,
-          "source_state": str or None,
-          "targets": [
-            {
-              "state": str,
-              "agent_id": str or None,
-              "sent": bool,
-              "skipped_not_ready": bool,
-              "reason": str or None,
-              "message_id": str or None,
-              "run_id": str or None,
-              "error": str or None
-            },
-            ...
-          ]
-        }
+      dict: {
+        "status": str | None,
+        "error": str | None,
+        "workflow_id": str,
+        "source_state": str | None,
+        "targets": [
+          {
+            "state": str,
+            "agent_id": str | None,
+            "sent": bool,
+            "skipped_not_ready": bool,
+            "reason": str | None,
+            "message_id": str | None,
+            "run_id": str | None,
+            "error": str | None
+          }, ...
+        ]
+      }
     """
-    # --- Dependencies ---
+    # Dependencies
     try:
         import redis  # type: ignore
     except Exception as e:
-        return {
-            "status": None,
-            "error": "Missing dependency: install the `redis` package. ImportError: %s" % e,
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
-
+        return {"status": None, "error": f"Missing dependency: redis import error: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
     try:
         from letta_client import Letta  # type: ignore
     except Exception as e:
-        return {
-            "status": None,
-            "error": "Missing dependency: letta_client not importable: %s" % e,
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
+        return {"status": None, "error": f"Missing dependency: letta_client import error: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 
+    # Redis
     r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()
     except Exception as e:
-        return {
-            "status": None,
-            "error": "Failed to connect to Redis at %s: %s: %s" % (r_url, e.__class__.__name__, e),
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
-
+        return {"status": None, "error": f"Failed to connect Redis {r_url}: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
     if not hasattr(r, "json"):
-        return {
-            "status": None,
-            "error": "RedisJSON not available (r.json()). Ensure RedisJSON is enabled.",
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
+        return {"status": None, "error": "RedisJSON not available (r.json()).", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 
-    # --- Load meta ---
-    meta_key = "cp:wf:%s:meta" % workflow_id
+    # Meta
+    meta_key = f"cp:wf:{workflow_id}:meta"
     try:
-        meta = r.json().get(meta_key, '$')
+        meta = r.json().get(meta_key, "$")
         if isinstance(meta, list) and len(meta) == 1:
             meta = meta[0]
         if not isinstance(meta, dict):
-            return {
-                "status": None,
-                "error": "Control-plane meta not found or invalid at %s" % meta_key,
-                "workflow_id": workflow_id,
-                "source_state": source_state,
-                "targets": []
-            }
+            return {"status": None, "error": f"Control-plane meta missing/invalid at {meta_key}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
     except Exception as e:
-        return {
-            "status": None,
-            "error": "Failed to read meta: %s: %s" % (e.__class__.__name__, e),
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
+        return {"status": None, "error": f"Failed to read meta: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 
     deps = meta.get("deps") or {}
     agents_map = meta.get("agents") or {}
     all_states = meta.get("states") or []
 
-    # --- Decide targets ---
-    targets = []
+    # Targets
+    targets: list[str] = []
     if source_state:
         node = deps.get(source_state) or {}
-        downstream = node.get("downstream") or []
-        for t in downstream:
+        for t in (node.get("downstream") or []):
             if isinstance(t, str):
                 targets.append(t)
     else:
-        # "Source" states: those with no upstream deps
+        # initial kickoff: states with no upstream
         for s in all_states:
-            node = deps.get(s) or {}
-            ups = node.get("upstream") or []
+            ups = ((deps.get(s) or {}).get("upstream") or [])
             if not ups:
                 targets.append(s)
 
-    # --- Optional readiness filter ---
-    def _is_ready(state_name):
-        node = deps.get(state_name) or {}
-        upstream = node.get("upstream") or []
-        if not upstream:
-            return True
-        for u in upstream:
-            u_key = "cp:wf:%s:state:%s" % (workflow_id, u)
-            try:
-                udoc = r.json().get(u_key, '$')
-                if isinstance(udoc, list) and len(udoc) == 1:
-                    udoc = udoc[0]
-            except Exception:
-                udoc = None
-            if not isinstance(udoc, dict) or udoc.get("status") != "done":
-                return False
-        return True
-
-    effective_targets = []
-    for t in targets:
-        if include_only_ready and not _is_ready(t):
-            effective_targets.append((t, True))   # mark skipped_not_ready
-        else:
-            effective_targets.append((t, False))
-
-    # --- Letta client ---
-    try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
-                       token=os.getenv("LETTA_TOKEN"))
-    except Exception as e:
-        return {
-            "status": None,
-            "error": "Failed to init Letta client: %s: %s" % (e.__class__.__name__, e),
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
-
-    # --- Prepare payload template ---
+    # Parse payload once
     try:
         payload = json.loads(payload_json) if payload_json else None
     except Exception as e:
-        return {
-            "status": None,
-            "error": "Invalid payload_json: %s: %s" % (e.__class__.__name__, e),
-            "workflow_id": workflow_id,
-            "source_state": source_state,
-            "targets": []
-        }
+        return {"status": None, "error": f"Invalid payload_json: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
+
+    # Letta client
+    try:
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"), token=os.getenv("LETTA_TOKEN"))
+    except Exception as e:
+        return {"status": None, "error": f"Failed to init Letta client: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 
     now_iso = datetime.now(timezone.utc).isoformat()
     reason_text = reason or ("initial" if source_state is None else "upstream_done")
 
-    # --- Send messages ---
     results = []
-    for (t_state, skipped_not_ready) in effective_targets:
+    for t_state in targets:
+        # Optional readiness filter: evaluate inline (no helper defs)
+        skipped_not_ready = False
+        if include_only_ready:
+            ups = ((deps.get(t_state) or {}).get("upstream") or [])
+            if ups:
+                # Must have all upstream 'done'
+                all_done = True
+                for u in ups:
+                    u_key = f"cp:wf:{workflow_id}:state:{u}"
+                    try:
+                        udoc = r.json().get(u_key, "$")
+                        if isinstance(udoc, list) and len(udoc) == 1:
+                            udoc = udoc[0]
+                    except Exception:
+                        udoc = None
+                    if not isinstance(udoc, dict) or udoc.get("status") != "done":
+                        all_done = False
+                        break
+                if not all_done:
+                    skipped_not_ready = True
+
         agent_id = agents_map.get(t_state)
 
         if skipped_not_ready:
-            results.append({
-                "state": t_state,
-                "agent_id": agent_id,
-                "sent": False,
-                "skipped_not_ready": True,
-                "reason": "not_ready",
-                "message_id": None,
-                "run_id": None,
-                "error": None
-            })
+            results.append({"state": t_state, "agent_id": agent_id, "sent": False, "skipped_not_ready": True,
+                            "reason": "not_ready", "message_id": None, "run_id": None, "error": None})
             continue
 
         if not agent_id:
-            results.append({
-                "state": t_state,
-                "agent_id": None,
-                "sent": False,
-                "skipped_not_ready": False,
-                "reason": "no_agent_assigned",
-                "message_id": None,
-                "run_id": None,
-                "error": "No agent_id in meta.agents for state '%s'." % t_state
-            })
+            results.append({"state": t_state, "agent_id": None, "sent": False, "skipped_not_ready": False,
+                            "reason": "no_agent_assigned", "message_id": None, "run_id": None,
+                            "error": f"No agent_id in meta.agents for state '{t_state}'."})
             continue
 
-        # Event envelope (use role=system for workflow events)
         event = {
             "type": "workflow_event",
             "workflow_id": workflow_id,
@@ -250,47 +164,24 @@ def notify_next_worker_agent(workflow_id,
             "payload": payload,
             "ts": now_iso,
             "control_plane": {
-                "meta_key": "cp:wf:%s:meta" % workflow_id,
-                "state_key": "cp:wf:%s:state:%s" % (workflow_id, t_state),
-                "output_key": "dp:wf:%s:output:%s" % (workflow_id, t_state)
+                "meta_key": meta_key,
+                "state_key": f"cp:wf:{workflow_id}:state:{t_state}",
+                "output_key": f"dp:wf:{workflow_id}:output:{t_state}"
             }
         }
-
-        # Build Letta message request: messages=[{role, content=[{type:"text", text:...}]}]
-        msg = {
-            "role": message_role,
-            "content": [
-                {"type": "text", "text": json.dumps(event)}
-            ]
-        }
+        msg = {"role": message_role, "content": [{"type": "text", "text": json.dumps(event)}]}
         req = {"messages": [msg]}
         if isinstance(max_steps, int):
             req["max_steps"] = max_steps
 
-        # Call sync or async message endpoint via SDK
         try:
             if async_message:
-                # Asynchronous background run (fetchable by run_id)
-                # API: POST /agents/{agent_id}/messages/async
-                # SDK: client.agents.messages.create_async(...)
                 resp = client.agents.messages.create_async(agent_id=agent_id, **req)
                 run_id = getattr(resp, "id", None) or getattr(resp, "run_id", None)
-                results.append({
-                    "state": t_state,
-                    "agent_id": agent_id,
-                    "sent": True,
-                    "skipped_not_ready": False,
-                    "reason": reason_text,
-                    "message_id": None,
-                    "run_id": run_id,
-                    "error": None
-                })
+                results.append({"state": t_state, "agent_id": agent_id, "sent": True, "skipped_not_ready": False,
+                                "reason": reason_text, "message_id": None, "run_id": run_id, "error": None})
             else:
-                # Synchronous message (returns agent's response messages)
-                # API: POST /agents/{agent_id}/messages
-                # SDK: client.agents.messages.create(...)
                 resp = client.agents.messages.create(agent_id=agent_id, **req)
-                # Some SDK builds return a wrapper with "messages" (list); capture a synthetic id if present
                 msg_id = None
                 try:
                     mlist = getattr(resp, "messages", None)
@@ -298,31 +189,15 @@ def notify_next_worker_agent(workflow_id,
                         msg_id = getattr(mlist[-1], "id", None) or getattr(mlist[-1], "message_id", None)
                 except Exception:
                     msg_id = None
-
-                results.append({
-                    "state": t_state,
-                    "agent_id": agent_id,
-                    "sent": True,
-                    "skipped_not_ready": False,
-                    "reason": reason_text,
-                    "message_id": msg_id,
-                    "run_id": None,
-                    "error": None
-                })
+                results.append({"state": t_state, "agent_id": agent_id, "sent": True, "skipped_not_ready": False,
+                                "reason": reason_text, "message_id": msg_id, "run_id": None, "error": None})
         except Exception as e:
-            results.append({
-                "state": t_state,
-                "agent_id": agent_id,
-                "sent": False,
-                "skipped_not_ready": False,
-                "reason": reason_text,
-                "message_id": None,
-                "run_id": None,
-                "error": "%s: %s" % (e.__class__.__name__, e)
-            })
+            results.append({"state": t_state, "agent_id": agent_id, "sent": False, "skipped_not_ready": False,
+                            "reason": reason_text, "message_id": None, "run_id": None,
+                            "error": f"{e.__class__.__name__}: {e}"})
 
     return {
-        "status": "Notified %d target(s) for workflow '%s'." % (len(results), workflow_id),
+        "status": f"Notified {len(results)} target(s) for workflow '{workflow_id}'.",
         "error": None,
         "workflow_id": workflow_id,
         "source_state": source_state,

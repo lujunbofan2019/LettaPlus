@@ -7,50 +7,61 @@ from pathlib import Path
 DCF_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/dcf_manifests/")
 DEFAULT_PREVIEW_CHARS = int(os.getenv("SKILL_PREVIEW_CHARS", "400"))
 
-def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, preview_chars=None):
+def get_skillset(manifests_dir: str = None,
+                 schema_path: str = None,
+                 include_previews: bool = True,
+                 preview_chars: int = None) -> dict:
     """Discover Skill Manifests from a directory and summarize their metadata.
 
-    This tool scans a directory for JSON files, parses each as a Skill Manifest, optionally validates against a JSON Schema,
-    and returns a lightweight catalog for agent planning and retrieval.
+    This tool scans a directory for JSON files, parses each as a Skill Manifest,
+    optionally validates against a JSON Schema, and returns a lightweight catalog
+    to assist planning agents with fast skill selection and referencing.
+      - Schema validation requires `jsonschema`. If not installed, validation is skipped and a warning is returned.
+      - The function is resilient to partially invalid JSON files; errors are captured per-manifest so discovery can proceed for the rest.
+      - Aliases include: `name@version`, `skill://name@version`, `skill://packageId@version` (when present), and the raw `manifestId`.
 
     Args:
-      manifests_dir: Optional directory path to scan. Defaults to env DCF_MANIFESTS_DIR. The directory must exist and be readable.
-      schema_path: Optional filesystem path to the Skill Manifest JSON Schema.
-      include_previews: If True, include a short 'directives_preview' for each skill to help the Planner pick the right skill without loading it yet.
-      preview_chars: Optional int to control the preview length.
+        manifests_dir (str, optional): Directory to scan. Defaults to env `DCF_MANIFESTS_DIR`.
+            The directory must exist and be readable.
+        schema_path (str, optional): Filesystem path to the Skill Manifest JSON Schema
+            (e.g., `schemas/skill-manifest-v2.0.0.json`). If provided and `jsonschema`
+            is installed, each manifest will be validated.
+        include_previews (bool, optional): When True, include a short
+            `directives_preview` for each skill to help the Planner choose without
+            loading the full skill. Defaults to True.
+        preview_chars (int, optional): Max characters for `directives_preview`.
+            Defaults to env `SKILL_PREVIEW_CHARS` (400) when None.
 
     Returns:
-      dict: {
-        "ok": bool,
-        "exit_code": int,     # 0 ok, 4 error
-        "available_skills": [ # catalog entries, sorted by skillName then version
-          {
-            "manifestId": str,
-            "skillPackageId": str or None,
-            "skillName": str,
-            "skillVersion": str,
-            "aliases": [str],  # e.g., name@ver, skill://name@ver, skill://packageId@ver, manifestId
-            "description": str or None,
-            "tags": [str],
-            "permissions": {
-              "egress": "none"|"intranet"|"internet",
-              "secrets": [str]
-            },
-            "toolNames": [str],
-            "toolCount": int,
-            "dataSourceCount": int,
-            "directives_preview": str or None,  # present only when include_previews=True
-            "path": str,        # absolute path to the manifest file
-            "valid_schema": bool or None,  # None when schema_path not provided
-            "errors": [str],    # per-manifest errors (non-fatal to the whole run)
-            "warnings": [str]   # per-manifest warnings
-          }
-        ],
-        "warnings": [str],      # global warnings
-        "error": str or None    # fatal error string or None on success
-      }
-    """ % (DCF_MANIFESTS_DIR, DEFAULT_PREVIEW_CHARS)
-
+        dict: Result object:
+            {
+              "ok": bool,
+              "exit_code": int,     # 0 ok, 4 error
+              "available_skills": [
+                {
+                  "manifestId": str or None,
+                  "skillPackageId": str or None,
+                  "skillName": str or None,
+                  "skillVersion": str or None,
+                  "manifestApiVersion": str or None,
+                  "aliases": [str],
+                  "description": str or None,
+                  "tags": [str],
+                  "permissions": {"egress": "none"|"intranet"|"internet", "secrets": [str]},
+                  "toolNames": [str],
+                  "toolCount": int,
+                  "dataSourceCount": int,
+                  "directives_preview": str or None,   # present when include_previews=True
+                  "path": str,                          # absolute path to the manifest file
+                  "valid_schema": bool or None,         # None if schema validation skipped
+                  "errors": [str],                      # per-manifest errors (non-fatal overall)
+                  "warnings": [str]                     # per-manifest warnings
+                }
+              ],
+              "warnings": [str],       # global warnings
+              "error": str or None     # fatal error string or None on success
+            }
+    """
     out = {
         "ok": False,
         "exit_code": 4,
@@ -59,10 +70,24 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
         "error": None
     }
 
-    # Resolve inputs
+    # Resolve inputs and basic checks
     base_dir = manifests_dir or DCF_MANIFESTS_DIR
-    preview_len = int(preview_chars) if preview_chars is not None else DEFAULT_PREVIEW_CHARS
+    try:
+        preview_len = int(preview_chars) if preview_chars is not None else DEFAULT_PREVIEW_CHARS
+    except Exception:
+        preview_len = DEFAULT_PREVIEW_CHARS
 
+    if manifests_dir is not None and not isinstance(manifests_dir, str):
+        out["error"] = "TypeError: manifests_dir must be a string path or None"
+        return out
+    if schema_path is not None and not isinstance(schema_path, str):
+        out["error"] = "TypeError: schema_path must be a string path or None"
+        return out
+    if not isinstance(include_previews, bool):
+        out["error"] = "TypeError: include_previews must be a boolean"
+        return out
+
+    # Verify directory
     try:
         p = Path(base_dir)
         if not p.is_dir():
@@ -99,6 +124,7 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
             "skillPackageId": None,
             "skillName": None,
             "skillVersion": None,
+            "manifestApiVersion": None,
             "aliases": [],
             "description": None,
             "tags": [],
@@ -113,6 +139,7 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
             "warnings": []
         }
 
+        # Parse JSON
         try:
             with open(fp, "r", encoding="utf-8") as f:
                 doc = json.load(f)
@@ -136,15 +163,14 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
                 item["valid_schema"] = False
                 item["errors"].append("SchemaValidationError: %s" % ex)
 
-        # Minimal key extraction (robust, even if schema invalid)
-        def _str(v):
-            return v if isinstance(v, str) else None
+        # Minimal key extraction (inline, no helpers)
+        v = doc.get("manifestId"); item["manifestId"] = v if isinstance(v, str) else None
+        v = doc.get("skillPackageId"); item["skillPackageId"] = v if isinstance(v, str) else None
+        v = doc.get("skillName"); item["skillName"] = v if isinstance(v, str) else None
+        v = doc.get("skillVersion"); item["skillVersion"] = v if isinstance(v, str) else None
+        v = doc.get("manifestApiVersion"); item["manifestApiVersion"] = v if isinstance(v, str) else None
+        v = doc.get("description"); item["description"] = v if isinstance(v, str) else None
 
-        item["manifestId"] = _str(doc.get("manifestId"))
-        item["skillPackageId"] = _str(doc.get("skillPackageId"))
-        item["skillName"] = _str(doc.get("skillName"))
-        item["skillVersion"] = _str(doc.get("skillVersion"))
-        item["description"] = _str(doc.get("description"))
         tags = doc.get("tags") or []
         if isinstance(tags, list):
             item["tags"] = [t for t in tags if isinstance(t, str)]
@@ -162,14 +188,14 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
         if isinstance(tools, list):
             for t in tools:
                 if isinstance(t, dict):
-                    tname = t.get("toolName")
-                    if isinstance(tname, str) and tname:
-                        item["toolNames"].append(tname)
-            item["toolCount"] = len(tools)
+                    tn = t.get("toolName")
+                    if isinstance(tn, str) and tn:
+                        item["toolNames"].append(tn)
+            item["toolCount"] = len([t for t in tools if isinstance(t, dict)])
 
         dsrc = doc.get("requiredDataSources") or []
         if isinstance(dsrc, list):
-            item["dataSourceCount"] = len(dsrc)
+            item["dataSourceCount"] = len([d for d in dsrc if isinstance(d, dict)])
 
         if include_previews:
             directives = doc.get("skillDirectives")
@@ -179,21 +205,21 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
                     preview = preview[:preview_len].rstrip() + "…"
                 item["directives_preview"] = preview
 
-        # Basic required checks (manifestId, skillName, skillVersion)
+        # Basic required checks
         missing = []
-        for k in ("manifestId", "skillName", "skillVersion"):
-            if not item[k]:
-                missing.append(k)
+        if not item["manifestId"]: missing.append("manifestId")
+        if not item["skillName"]: missing.append("skillName")
+        if not item["skillVersion"]: missing.append("skillVersion")
         if missing:
             item["errors"].append("Missing required fields: %s" % ", ".join(missing))
 
-        # Aliases: name@ver, skill://name@ver, packageId@ver, manifestId
-        name = item["skillName"] or ""
+        # Aliases (inline, no helpers)
+        name = (item["skillName"] or "").lower()
         ver = item["skillVersion"] or ""
         pkg = item["skillPackageId"] or ""
         if name and ver:
-            item["aliases"].append("%s@%s" % (name.lower(), ver))
-            item["aliases"].append("skill://%s@%s" % (name.lower(), ver))
+            item["aliases"].append("%s@%s" % (name, ver))
+            item["aliases"].append("skill://%s@%s" % (name, ver))
         if pkg and ver:
             item["aliases"].append("skill://%s@%s" % (pkg, ver))
         if item["manifestId"]:
@@ -201,11 +227,11 @@ def get_skillset(manifests_dir=None, schema_path=None, include_previews=True, pr
 
         out["available_skills"].append(item)
 
-    # Sort for stable UX
-    def _sort_key(x):
-        return ((x.get("skillName") or "").lower(), (x.get("skillVersion") or ""))
-    out["available_skills"].sort(key=_sort_key)
-
+    # Sort for stable UX (inline lambda, no helper)
+    out["available_skills"].sort(
+        key=lambda x: ((x.get("skillName") or "").lower(),
+                       (x.get("skillVersion") or ""),
+                       (x.get("manifestId") or "")))
     out["ok"] = True
     out["exit_code"] = 0
     return out

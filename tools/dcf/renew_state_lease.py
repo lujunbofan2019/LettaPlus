@@ -2,14 +2,16 @@ import os
 import json
 from datetime import datetime, timezone, timedelta
 
-def renew_state_lease(workflow_id,
-                      state,
-                      lease_token,
-                      owner_agent_id=None,
-                      redis_url=None,
-                      lease_ttl_s=None,
-                      reject_if_expired=True,
-                      touch_only=False):
+def renew_state_lease(
+    workflow_id: str,
+    state: str,
+    lease_token: str,
+    owner_agent_id: str = None,
+    redis_url: str = None,
+    lease_ttl_s: int = None,
+    reject_if_expired: bool = True,
+    touch_only: bool = False
+) -> dict:
     """
     Renew (heartbeat) an existing lease for a workflow state in the RedisJSON control-plane.
 
@@ -18,33 +20,30 @@ def renew_state_lease(workflow_id,
       - Requires that the stored lease.token == lease_token. If not, renewal fails with 'lease_mismatch'.
 
     Semantics:
-      - Updates lease.ts to now (ISO-8601 UTC).
-      - If touch_only=False and lease_ttl_s is provided, update lease.ttl_s; otherwise preserves current ttl.
+      - Always updates lease.ts to now (ISO-8601 UTC).
+      - If touch_only=False and lease_ttl_s is provided, updates lease.ttl_s; otherwise preserves current ttl.
       - If reject_if_expired=True (default), renewal fails when the lease appears expired
         (now - ts > ttl_s). Set reject_if_expired=False to allow renewal even if clock drift caused
         soft expiry, but only when token matches.
 
-    Typical usage:
-      - A worker holding the lease sends periodic renewals (e.g., every 1/3 of ttl) to indicate liveness.
-
     Args:
       workflow_id (str): Workflow UUID.
-      state (str): State name (ASL Task state).
+      state (str): Target state name (ASL Task state).
       lease_token (str): The lease token currently held by the worker.
-      owner_agent_id (str, optional): If provided, must match stored lease.owner_agent_id.
-      redis_url (str, optional): Redis URL (default env REDIS_URL or redis://localhost:6379/0).
-      lease_ttl_s (int, optional): New TTL to set (if touch_only=False). If omitted, keeps existing TTL.
-      reject_if_expired (bool, optional): If True, fail when lease appears expired. Default True.
-      touch_only (bool, optional): If True, only update ts, never ttl_s. Default False.
+      owner_agent_id (str): If provided, must match stored lease.owner_agent_id.
+      redis_url (str): Redis URL (default env REDIS_URL or "redis://localhost:6379/0").
+      lease_ttl_s (int): New TTL seconds to set (if touch_only is False). If omitted, keeps existing TTL.
+      reject_if_expired (bool): If True, fail when lease appears expired. Default True.
+      touch_only (bool): If True, only update ts, never ttl_s. Default False.
 
     Returns:
       dict: {
-        "status": str or None,            # "lease_renewed" on success
+        "status": "lease_renewed" | None,
         "error": str or None,
         "workflow_id": str,
         "state": str,
-        "lease": dict or None,            # Updated lease object
-        "updated_state": dict or None     # Updated state document (post-commit)
+        "lease": dict or None,            # Updated lease object (post-commit) or current on failure
+        "updated_state": dict or None     # State document after commit (or current on failure)
       }
     """
     try:
@@ -53,7 +52,7 @@ def renew_state_lease(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Missing dependency: install the `redis` package. ImportError: %s" % e,
+            "error": f"Missing dependency: install the `redis` package. ImportError: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
@@ -67,7 +66,7 @@ def renew_state_lease(workflow_id,
     except Exception as e:
         return {
             "status": None,
-            "error": "Failed to connect to Redis at %s: %s: %s" % (r_url, e.__class__.__name__, e),
+            "error": f"Failed to connect to Redis at {r_url}: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
@@ -84,7 +83,7 @@ def renew_state_lease(workflow_id,
             "updated_state": None
         }
 
-    state_key = "cp:wf:%s:state:%s" % (workflow_id, state)
+    state_key = f"cp:wf:{workflow_id}:state:{state}"
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat()
 
@@ -134,7 +133,7 @@ def renew_state_lease(workflow_id,
         if owner_agent_id is not None and cur_owner and cur_owner != owner_agent_id:
             return {
                 "status": None,
-                "error": "owner_mismatch: lease owner '%s' != '%s'." % (cur_owner, owner_agent_id),
+                "error": f"owner_mismatch: lease owner '{cur_owner}' != '{owner_agent_id}'.",
                 "workflow_id": workflow_id,
                 "state": state,
                 "lease": lease,
@@ -146,11 +145,10 @@ def renew_state_lease(workflow_id,
             try:
                 ts_obj = datetime.fromisoformat(cur_ts)
                 if ts_obj.tzinfo is None:
-                    from datetime import timezone as _tz
-                    ts_obj = ts_obj.replace(tzinfo=_tz.utc)
+                    ts_obj = ts_obj.replace(tzinfo=timezone.utc)
             except Exception:
                 ts_obj = None
-            if ts_obj is not None and now - ts_obj > timedelta(seconds=int(cur_ttl)):
+            if ts_obj is not None and (now - ts_obj) > timedelta(seconds=int(cur_ttl)):
                 return {
                     "status": None,
                     "error": "lease_expired",
@@ -167,11 +165,13 @@ def renew_state_lease(workflow_id,
             try:
                 next_lease["ttl_s"] = int(lease_ttl_s)
             except Exception:
+                # Preserve current ttl_s if provided value is invalid
                 next_lease["ttl_s"] = lease.get("ttl_s")
 
         next_state["lease"] = next_lease
 
         pipe.multi()
+        # Keep JSON op inside the transaction
         pipe.execute_command('JSON.SET', state_key, '$', json.dumps(next_state))
         pipe.execute()
 
@@ -195,14 +195,14 @@ def renew_state_lease(workflow_id,
             pass
         return {
             "status": None,
-            "error": "renew_failed: %s: %s" % (e.__class__.__name__, e),
+            "error": f"renew_failed: {e.__class__.__name__}: {e}",
             "workflow_id": workflow_id,
             "state": state,
             "lease": None,
             "updated_state": None
         }
 
-    # Read back
+    # Read back the committed doc
     try:
         updated = r.json().get(state_key, '$')
         if isinstance(updated, list) and len(updated) == 1:

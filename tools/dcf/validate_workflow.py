@@ -1,55 +1,56 @@
 import json
 import os
 from urllib.parse import urlparse
-from jsonschema import Draft202012Validator
 
-def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None):
+def validate_workflow(
+    workflow_json: str,
+    schema_path: str,
+    imports_base_dir: str = None,
+    skills_base_dir: str = None
+) -> dict:
     """Validate a Letta–ASL workflow (v2.2.0) and resolve .af and skill references.
 
-      1) Validates the workflow instance against the v2.2.0 workflow JSON Schema.
-      2) Loads .af v2 bundles from `af_imports[*].uri` and builds an agent index (by id and by name).
-      3) Loads skill manifests from `skill_imports[*].uri` (single or {"skills": [...]}) and indexes them by:
+    Pipeline:
+      1) Validate instance against the v2.2.0 workflow schema.
+      2) Load .af v2 bundles from af_imports[*].uri -> index agents/tools.
+      3) Load skills from skill_imports[*].uri -> index manifests by:
          - manifestId
          - skillPackageId
-         - skillName@skillVersion (case-insensitive)
-         - skill://skillPackageId@skillVersion
-         - skill://skillName@skillVersion (case-insensitive)
-      4) Resolves each Task state's AgentBinding:
-         - requires either agent_template_ref or agent_ref
-         - resolves agent refs against .af imports
-         - resolves `skills` array to imported manifests
-      5) Performs ASL graph checks (StartAt present, valid transitions, terminal sanity).
+         - name@version (ci)
+         - skill://skillPackageId@version
+         - skill://name@version (ci)
+      4) Resolve each Task state's AgentBinding and skills.
+      5) ASL graph checks (StartAt, transitions, terminals).
 
     Args:
-      workflow_json: String containing the workflow JSON instance to validate.
-      schema_path: Filesystem path to the v2.2.0 workflow JSON Schema file.
-      imports_base_dir: Optional base dir for resolving relative .af import URIs (defaults to schema dir).
-      skills_base_dir: Optional base dir for resolving skill manifest URIs (defaults to imports_base_dir).
+      workflow_json: Workflow JSON instance (string).
+      schema_path: Filesystem path to v2.2.0 workflow schema.
+      imports_base_dir: Base dir for resolving relative .af import URIs (defaults to schema dir).
+      skills_base_dir: Base dir for resolving skill URIs (defaults to imports_base_dir).
 
     Returns:
-      Dict shaped for agent consumption:
-        {
-          "ok": bool,
-          "exit_code": int,  # 0 OK, 1 schema validation errors, 2 imports/refs validation errors, 3 graph validation errors, 4 other errors
-          "schema_errors": [str],
-          "resolution": {
-            "af_imports_loaded": [{"uri": str, "status": "ok|error", "error": str|None, "agents": int, "tools": int}],
-            "skill_imports_loaded": [{"uri": str, "status": "ok|error", "error": str|None, "skills": int}],
-            "agents_index_size": int,
-            "skills_index_size": int,
-            "unresolved_agent_refs": [{"where": str, "ref": {"id": str|None, "name": str|None}}],
-            "unresolved_skill_ids": [str],
-            "state_skill_map": { "StateName": [{"skill": str, "manifestId": str}] }
-          },
-          "graph": {
-            "start_exists": bool,
-            "missing_states": [str],
-            "unreachable_states": [str],
-            "invalid_transitions": [{"state": str, "to": str}],
-            "terminal_states_ok": bool
-          },
-          "warnings": [str]
-        }
+      {
+        "ok": bool,
+        "exit_code": int,  # 0 OK, 1 schema errors, 2 imports/refs errors, 3 graph errors, 4 other errors
+        "schema_errors": [str],
+        "resolution": {
+          "af_imports_loaded": [{"uri": str, "status": "ok|error", "error": str|None, "agents": int, "tools": int}],
+          "skill_imports_loaded": [{"uri": str, "status": "ok|error", "error": str|None, "skills": int}],
+          "agents_index_size": int,
+          "skills_index_size": int,
+          "unresolved_agent_refs": [{"where": str, "ref": {"id": str|None, "name": str|None}}],
+          "unresolved_skill_ids": [str],
+          "state_skill_map": { "StateName": [{"skill": str, "manifestId": str}] }
+        },
+        "graph": {
+          "start_exists": bool,
+          "missing_states": [str],
+          "unreachable_states": [str],
+          "invalid_transitions": [{"state": str, "to": str}],
+          "terminal_states_ok": bool
+        },
+        "warnings": [str]
+      }
     """
     out = {
         "ok": False,
@@ -68,11 +69,19 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
         "warnings": []
     }
 
+    # Lazy import for jsonschema
+    try:
+        from jsonschema import Draft202012Validator  # type: ignore
+    except Exception as ex:
+        out["warnings"].append(f"DependencyError: jsonschema not available: {ex}")
+        out["exit_code"] = 4
+        return out
+
     # ---------- Parse workflow + load schema ----------
     try:
         inst = json.loads(workflow_json)
     except Exception as ex:
-        out["warnings"].append("JSONDecodeError: %s" % ex)
+        out["warnings"].append(f"JSONDecodeError: {ex}")
         out["exit_code"] = 4
         return out
 
@@ -81,7 +90,7 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
         with open(schema_abs, "r", encoding="utf-8") as f:
             schema = json.load(f)
     except Exception as ex:
-        out["warnings"].append("SchemaLoadError: %s" % ex)
+        out["warnings"].append(f"SchemaLoadError: {ex}")
         out["exit_code"] = 4
         return out
 
@@ -97,17 +106,17 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
         if errors:
             for e in errors:
                 path = "/".join(map(str, e.path)) or "<root>"
-                out["schema_errors"].append("%s: %s" % (path, e.message))
+                out["schema_errors"].append(f"{path}: {e.message}")
             out["exit_code"] = 1
             return out
     except Exception as ex:
-        out["warnings"].append("SchemaValidationError: %s" % ex)
+        out["warnings"].append(f"SchemaValidationError: {ex}")
         out["exit_code"] = 4
         return out
 
-    # ---------- 2) Option B enforcement ----------
+    # ---------- 2) Option B enforcement (imports-only) ----------
     if "af_v2_entities" in inst:
-        out["warnings"].append("Embedded 'af_v2_entities' is not supported in Option B.")
+        out["warnings"].append("Embedded 'af_v2_entities' is not supported in imports-only validation (Option B).")
         out["exit_code"] = 2
         return out
 
@@ -130,7 +139,7 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
                 with open(path, "r", encoding="utf-8") as f:
                     bundle = json.load(f)
             else:
-                raise ValueError("Only file paths/file:// URIs are allowed for af_imports: %s" % uri)
+                raise ValueError(f"Only file paths/file:// URIs are allowed for af_imports: {uri}")
 
             agents = (bundle.get("agents") or [])
             tools = (bundle.get("tools") or [])
@@ -147,15 +156,14 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
             rec["tools"]  = len(tools)
         except Exception as ex:
             rec["status"] = "error"
-            rec["error"] = "%s: %s" % (type(ex).__name__, ex)
+            rec["error"] = f"{type(ex).__name__}: {ex}"
         out["resolution"]["af_imports_loaded"].append(rec)
 
     out["resolution"]["agents_index_size"] = len(af_agents_index)
 
     # ---------- 4) Load skill manifests ----------
-    # An import may be a single manifest or { "skills": [ ... ] }
     skills_index = {}   # key -> manifest object
-    # also track canonical id by manifestId for reporting
+
     for simp in (inst.get("skill_imports") or []):
         uri = (simp or {}).get("uri")
         rec = {"uri": uri, "status": "ok", "error": None, "skills": 0}
@@ -171,35 +179,51 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
                 with open(path, "r", encoding="utf-8") as f:
                     doc = json.load(f)
             else:
-                raise ValueError("Only file paths/file:// URIs are allowed for skill_imports: %s" % uri)
+                raise ValueError(f"Only file paths/file:// URIs are allowed for skill_imports: {uri}")
 
-            def _index_one(m):
-                if not isinstance(m, dict):
-                    return
+            # Inline "index-one" without helper def
+            if isinstance(doc, dict) and isinstance(doc.get("skills"), list):
+                count = 0
+                for m in (doc.get("skills") or []):
+                    if isinstance(m, dict):
+                        manifestId = m.get("manifestId")
+                        pkgId = m.get("skillPackageId")
+                        name = (m.get("skillName") or "").strip()
+                        ver = (m.get("skillVersion") or "").strip()
+                        if manifestId: skills_index.setdefault(manifestId, m)
+                        if pkgId:
+                            skills_index.setdefault(pkgId, m)
+                            if ver: skills_index.setdefault(f"skill://{pkgId}@{ver}", m)
+                        if name and ver:
+                            nmv = f"{name.lower()}@{ver}"
+                            skills_index.setdefault(nmv, m)
+                            skills_index.setdefault(f"skill://{nmv}", m)
+                            # Also allow raw "name@ver" (original case) as a convenience
+                            skills_index.setdefault(f"{name}@{ver}", m)
+                        count += 1
+                rec["skills"] = count
+            else:
+                m = doc if isinstance(doc, dict) else None
+                if m is None:
+                    raise ValueError("Skill import is not an object or bundle with 'skills' array.")
                 manifestId = m.get("manifestId")
                 pkgId = m.get("skillPackageId")
                 name = (m.get("skillName") or "").strip()
                 ver = (m.get("skillVersion") or "").strip()
-                if manifestId:
-                    skills_index.setdefault(manifestId, m)
+                if manifestId: skills_index.setdefault(manifestId, m)
                 if pkgId:
                     skills_index.setdefault(pkgId, m)
-                    if ver:
-                        skills_index.setdefault("skill://%s@%s" % (pkgId, ver), m)
+                    if ver: skills_index.setdefault(f"skill://{pkgId}@{ver}", m)
                 if name and ver:
-                    skills_index.setdefault("%s@%s" % (name.lower(), ver), m)
-                    skills_index.setdefault("skill://%s@%s" % (name.lower(), ver), m)
-
-            if isinstance(doc, dict) and isinstance(doc.get("skills"), list):
-                for m in (doc.get("skills") or []):
-                    _index_one(m)
-                rec["skills"] = len(doc.get("skills") or [])
-            else:
-                _index_one(doc)
+                    nmv = f"{name.lower()}@{ver}"
+                    skills_index.setdefault(nmv, m)
+                    skills_index.setdefault(f"skill://{nmv}", m)
+                    skills_index.setdefault(f"{name}@{ver}", m)
                 rec["skills"] = 1
+
         except Exception as ex:
             rec["status"] = "error"
-            rec["error"] = "%s: %s" % (type(ex).__name__, ex)
+            rec["error"] = f"{type(ex).__name__}: {ex}"
         out["resolution"]["skill_imports_loaded"].append(rec)
 
     out["resolution"]["skills_index_size"] = len(skills_index)
@@ -212,59 +236,53 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
     asl = inst.get("asl") or {}
     states = asl.get("States") or {}
     for sname, sdef in states.items():
-        if not isinstance(sdef, dict):
+        if not isinstance(sdef, dict) or sdef.get("Type") != "Task":
             continue
-        if sdef.get("Type") != "Task":
-            continue
+
         ab = sdef.get("AgentBinding")
         if not isinstance(ab, dict):
-            unresolved_agent_refs.append({
-                "where": "asl.States['%s']" % sname,
-                "ref": {"id": None, "name": None}
-            })
-            continue
+            unresolved_agent_refs.append({"where": f"asl.States['{sname}']", "ref": {"id": None, "name": None}})
+        else:
+            # require agent_template_ref or agent_ref
+            has_any = False
+            for key in ("agent_template_ref", "agent_ref"):
+                ref = ab.get(key)
+                rid = (ref or {}).get("id")
+                rname = (ref or {}).get("name")
+                if rid or rname:
+                    has_any = True
+                    ok = False
+                    if isinstance(rid, str) and rid in af_agents_index:
+                        ok = True
+                    if (not ok) and isinstance(rname, str) and rname in af_agents_index:
+                        ok = True
+                    if not ok:
+                        unresolved_agent_refs.append({
+                            "where": f"asl.States['{sname}'].AgentBinding.{key}",
+                            "ref": {"id": rid, "name": rname}
+                        })
+            if not has_any:
+                unresolved_agent_refs.append({
+                    "where": f"asl.States['{sname}'].AgentBinding (missing agent_template_ref/agent_ref)",
+                    "ref": {"id": None, "name": None}
+                })
 
-        # require either agent_template_ref or agent_ref
-        has_any = False
-        for key in ("agent_template_ref", "agent_ref"):
-            ref = ab.get(key)
-            if isinstance(ref, dict) and (ref.get("id") or ref.get("name")):
-                has_any = True
-                rid = ref.get("id")
-                rname = ref.get("name")
-                ok = False
-                if rid and rid in af_agents_index:
-                    ok = True
-                if (not ok) and rname and rname in af_agents_index:
-                    ok = True
-                if not ok:
-                    unresolved_agent_refs.append({
-                        "where": "asl.States['%s'].AgentBinding.%s" % (sname, key),
-                        "ref": {"id": rid, "name": rname}
-                    })
-        if not has_any:
-            unresolved_agent_refs.append({
-                "where": "asl.States['%s'].AgentBinding (missing agent_template_ref/agent_ref)" % sname,
-                "ref": {"id": None, "name": None}
-            })
-
-        # skills resolution
-        resolved_list = []
-        for sid in (ab.get("skills") or []):
-            key = sid
-            # normalize possible name@ver to lowercase for name part
-            if isinstance(key, str) and "@" in key and not key.lower().startswith("skill://"):
-                name, ver = key.split("@", 1)
-                key_try = "%s@%s" % (name.lower(), ver)
-                m = skills_index.get(key) or skills_index.get(key_try)
-            else:
-                m = skills_index.get(key) or skills_index.get(key.lower()) if isinstance(key, str) else None
-            if not m:
-                unresolved_skill_ids.append(sid)
-            else:
-                resolved_list.append({"skill": sid, "manifestId": m.get("manifestId")})
-        if resolved_list:
-            state_skill_map[sname] = resolved_list
+            # skills resolution
+            resolved_list = []
+            for sid in (ab.get("skills") or []):
+                m = None
+                if isinstance(sid, str) and "@" in sid and not sid.lower().startswith("skill://"):
+                    name, ver = sid.split("@", 1)
+                    key_try = f"{name.lower()}@{ver}"
+                    m = skills_index.get(sid) or skills_index.get(key_try)
+                else:
+                    m = skills_index.get(sid) or (skills_index.get(sid.lower()) if isinstance(sid, str) else None)
+                if not m:
+                    unresolved_skill_ids.append(sid)
+                else:
+                    resolved_list.append({"skill": sid, "manifestId": m.get("manifestId")})
+            if resolved_list:
+                state_skill_map[sname] = resolved_list
 
     out["resolution"]["unresolved_agent_refs"] = unresolved_agent_refs
     out["resolution"]["unresolved_skill_ids"] = unresolved_skill_ids
@@ -285,7 +303,6 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
         "terminal_states_ok": True
     }
 
-    states = asl.get("States") or {}
     start = asl.get("StartAt")
     if not start or start not in states:
         graph["start_exists"] = False
@@ -324,14 +341,14 @@ def validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_
                 else:
                     referenced.add(default)
 
-        # Parallel
+        # Parallel branches: ensure StartAt exists inside each branch
         if sd.get("Type") == "Parallel":
             for i, br in enumerate(sd.get("Branches") or []):
                 bst = (br.get("States") or {})
                 if br.get("StartAt") not in bst:
-                    graph["invalid_transitions"].append({"state": name, "to": "branch[%d].StartAt" % i})
+                    graph["invalid_transitions"].append({"state": name, "to": f"branch[{i}].StartAt"})
 
-        # Map
+        # Map iterator: ensure Iterator.StartAt exists
         if sd.get("Type") == "Map":
             it = sd.get("Iterator") or {}
             ist = (it.get("States") or {})
