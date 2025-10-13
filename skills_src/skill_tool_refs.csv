@@ -1,0 +1,4 @@
+manifestId,serverId,toolName,required,notes
+skill.pkg.research.web@0.1.0,search,search.query,true,"Core search tool"
+skill.pkg.research.web@0.1.0,web,web.fetch,true,"Get page content"
+skill.pkg.write.summary@0.1.0,llm,llm.summarize,true,"Summarize input text"
