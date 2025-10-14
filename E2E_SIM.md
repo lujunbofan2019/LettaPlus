@@ -48,3 +48,9 @@ Ask for e2e simulation:
 - if not successful, trying again (presumably for some number of times)
   - unloading the unsuccessful capability
   - finding and loading a new one, and repeat process above
+
+
+
+
+
+OpenAI Agent Builder as alternative
