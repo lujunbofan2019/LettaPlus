@@ -101,3 +101,16 @@ services:
       --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
     restart: unless-stopped
 
+#  stub-mcp:
+#    build:
+#      context: ./stub_mcp
+#      dockerfile: Dockerfile
+#    environment:
+#      - STUB_CONFIG=/app/generated/stub/stub_config.json
+#      - STUB_MCP_WS=1            # set to "0" to use stdio (no port)
+#      - STUB_MCP_PORT=8765
+#    volumes:
+#      - ./generated/stub:/app/generated/stub:ro
+#    ports:
+#      - "8765:8765"              # only needed if STUB_MCP_WS=1
+#    restart: unless-stopped

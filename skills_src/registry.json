@@ -1,0 +1,8 @@
+{
+  "env": "test",
+  "bindings": {
+    "search": { "transport": "ws", "endpoint": "ws://127.0.0.1:8211" },
+    "web":    { "transport": "ws", "endpoint": "ws://127.0.0.1:8211" },
+    "llm":    { "transport": "ws", "endpoint": "ws://127.0.0.1:8211" }
+  }
+}

@@ -309,7 +309,7 @@ This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overa
 
 ---
 
-## Suggested Project Layout
+## Project Layout
 ```
 project/
 ├─ schemas/
@@ -354,7 +354,150 @@ project/
 
 ---
 
-## Next steps
-- Add `notify_ready_states` (broadcast to all ready states).
-- Add metrics exporters (Prometheus gauges from control-plane docs).
-- Add a simple KG over skills (tags, tools, success metrics) to improve planning prompts.
+## Update: CSV-first prototyping & stub MCP server
+
+**CSV-first rapid skill prototyping**
+- Author many skills and their MCP tools in simple CSV files
+- Generate validated skill manifests plus a registry for discovery
+- Stand up a stub MCP server that exposes deterministic tools for BDD-style tests
+
+**Stub MCP server to exercise workflows end-to-end before real tool implementations exist**
+- `stub_mcp/stub_mcp_server.py` — trivial stdio/WebSocket MCP that reads `generated/stub/stub_config.json`
+- `stub_mcp/Dockerfile` — containerize the stub for docker-compose
+- `docker-compose.yaml` — example compose file including Letta and the stub MCP
+
+**Local resolver in the skill loader to choose real vs. stub endpoints without editing manifests.**
+- `skills_src/registry.json` — generated registry of skills
+- `skills_src/resolver.json` — maps logical serverId → transport/endpoint; consumed by `load_skill_with_resolver`
+
+---
+
+## Change to Directory Layout
+
+```
+project/
+├─ schemas/
+├─ tools/
+│  ├─ csv_to_manifests.py
+│  ├─ csv_to_stub_config.py
+│  ├─ … (other DCF tools)
+├─ skills_src/                 # input CSVs + generated artifacts
+│  ├─ skills.csv               # one row per skill
+│  ├─ tools.csv                # one row per MCP tool
+│  └─ registry.json            # generated: catalog of skills (for Planner/loader)
+├─ skills/                     # generated manifests
+│  ├─ <skillName>@<version>.json
+│  └─ …
+├─ generated/
+│  └─ stub/
+│     └─ stub_config.json      # generated MCP tool behavior config
+├─ stub_mcp/
+│  ├─ stub_mcp_server.py
+│  └─ Dockerfile
+├─ docker-compose.yaml         # runs Letta + stub MCP
+└─ workflows/                  # your workflows (ASL + Letta bindings)
+   └─ example_workflow.json
+```
+
+---
+
+## CSV specs
+
+### skills_src/skills.csv
+Columns
+- manifestId (optional; otherwise auto)
+- skillPackageId (optional)
+- skillName (required)
+- skillVersion (required, semver)
+- description
+- tags (space or comma separated)
+- permissions_egress (none|intranet|internet)
+- permissions_secrets (comma separated)
+- skillDirectives (free text)
+- requiredTools (comma-separated tool keys; see below)
+- requiredDataSources (optional; JSON list or blank)
+
+Each row → one manifest in `skills/` and an entry in `skills_src/registry.json` (with aliases and path).
+
+### skills_src/tools.csv
+Columns
+- key (required; unique row id referenced by skills.csv requiredTools)
+- name (tool name exposed to the agent)
+- description
+- serverId (logical MCP server id; NOT a URL)
+- transport (stdio|websocket)
+- endpoint (ignored for stdio; ws URL for websocket)
+- args_schema_json (optional; JSON schema for parameters)
+- behavior_type (stub|echo|fail) — testing behavior
+- behavior_inputs (optional; JSON switch/case inputs for stub)
+- behavior_output (optional; JSON to return)
+- error_message (when behavior_type=fail)
+
+Each row → an MCP tool definition for the stub server. The stub uses the behavior columns to respond deterministically.
+
+---
+
+## Quickstart
+
+1) Prepare CSVs
+```
+skills_src/skills.csv
+skills_src/tools.csv
+```
+
+2) Generate manifests + registry
+```
+python tools/csv_to_manifests.py   --skills_csv skills_src/skills.csv   --tools_csv skills_src/tools.csv   --schema schemas/skill-manifest-v2.0.0.json   --out_dir skills   --registry_out skills_src/registry.json
+```
+
+3) Generate stub MCP config
+```
+python tools/csv_to_stub_config.py   --tools_csv skills_src/tools.csv   --out generated/stub/stub_config.json
+```
+
+4) Create resolver for the loader (choose stub endpoints)
+   Create `skills_src/resolver.json`:
+```json
+{
+  "servers": {
+    "stub://default": { "transport": "websocket", "endpoint": "ws://stub-mcp:8765" }
+  },
+  "aliases": {
+    "web.search.svc": "stub://default",
+    "db.ops.svc": "stub://default"
+  }
+}
+```
+
+5) Run services
+- Ensure your Letta server is reachable (e.g., http://letta:8283).
+- Bring up the stub MCP with docker-compose.
+
+6) Load a skill that references logical server IDs
+- Ensure your `load_skill_with_resolver` tool reads `skills_src/registry.json` and `skills_src/resolver.json`.
+- When it sees a required tool with source_type=mcp_server + serverId, it maps serverId → (transport, endpoint) using the resolver and attaches the tool to the agent.
+
+7) Execute a workflow end-to-end
+- Use the Planner to validate a workflow (validate_workflow), seed the control-plane, create workers, and notify source states.
+- Workers acquire leases, load skills, call MCP tools (stubbed), write outputs, and notify downstream.
+- Finalize when terminals are done.
+
+---
+
+## Stub MCP server
+
+Runtime behavior
+- Reads `generated/stub/stub_config.json` on start.
+- Exposes each tool from tools.csv.
+- Behavior modes:
+  - stub: match on behavior_inputs (exact or pattern) and return behavior_output
+  - echo: return the input arguments under `{ "ok": true, "echo": { ... } }`
+  - fail: raise a structured MCP error with error_message
+
+Transport
+- WebSocket on port 8765 (default). Stdio mode is also available for simple local runs.
+
+Dockerfile (stub_mcp/Dockerfile)
+- Minimal Python base image
+- Copies `stub_mcp_server.py` and installs no heavy deps
+- Entrypoint launches the WebSocket server
