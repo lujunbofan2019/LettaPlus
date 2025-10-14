@@ -315,15 +315,17 @@ project/
 ├─ schemas/
 │  ├─ letta-asl-workflow-2.2.0.json
 │  ├─ skill-manifest-v2.0.0.json
+│  ├─ data-plane-output-1.0.0.json
+│  ├─ notification-payload-1.0.0.json
 │  ├─ control-plane-meta.json
 │  └─ control-plane-state.json
 ├─ af/
-│  └─ agent_templates.json
+│  └─ agent_template.json
 ├─ skills/
-│  ├─ web.search.json
-│  └─ summarize.json
+│  ├─ <skillName>@<version>.json
+│  └─ ...
 ├─ workflows/
-│  └─ example_workflow_v220.json
+│  └─ example_workflow_v2.2.0.json
 └─ tools/
    ├─ workflow_validator_v220.py
    ├─ skill_discovery_tool.py
@@ -336,7 +338,8 @@ project/
    ├─ release_state_lease.py
    ├─ notify_next_worker_agent.py
    ├─ notify_if_ready.py
-   └─ finalize_workflow.py
+   ├─ finalize_workflow.py   
+   └─ ...   
 ```
 
 ---
@@ -387,7 +390,7 @@ project/
 │  └─ registry.json            # generated: catalog of skills (for Planner/loader)
 ├─ skills/                     # generated manifests
 │  ├─ <skillName>@<version>.json
-│  └─ …
+│  └─ ...
 ├─ generated/
 │  └─ stub/
 │     └─ stub_config.json      # generated MCP tool behavior config
@@ -396,7 +399,7 @@ project/
 │  └─ Dockerfile
 ├─ docker-compose.yaml         # runs Letta + stub MCP
 └─ workflows/                  # your workflows (ASL + Letta bindings)
-   └─ example_workflow.json
+   └─ example_workflow_v2.2.0.json
 ```
 
 ---
