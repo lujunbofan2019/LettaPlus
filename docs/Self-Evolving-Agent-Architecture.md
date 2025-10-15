@@ -18,11 +18,9 @@ The system comprises an **Orchestrator**, **Planner**, **Executor**, **Validator
 
 ## Brief Description of the Drawings
 
-- **Figure 1 (System Architecture)** — Depicts services (Orchestrator, Planner, Executor, Validator, Memory Manager, Policy Service, SOP Registry, Reflector, Evaluator, Guardrails) and data plane components (Experience Log, Knowledge Graph, Vector Store, Episodic Diary, Object Storage), and their interconnections.  
-  *[Insert the System Architecture Mermaid diagram here]*
+- **Figure 1 (System Architecture)** — Depicts services (Orchestrator, Planner, Executor, Validator, Memory Manager, Policy Service, SOP Registry, Reflector, Evaluator, Guardrails) and data plane components (Experience Log, Knowledge Graph, Vector Store, Episodic Diary, Object Storage), and their interconnections.
 
-- **Figure 2 (Sequence Workflow)** — Depicts the end‑to‑end task lifecycle from user submission through planning, execution, validation, logging, consolidation, and policy updates.  
-  *[Insert the Sequence Mermaid diagram here]*
+- **Figure 2 (Sequence Workflow)** — Depicts the end‑to‑end task lifecycle from user submission through planning, execution, validation, logging, consolidation, and policy updates.
 
 ## Detailed Description
 
@@ -251,6 +249,148 @@ Prior systems include memory‑augmented agents, RAG pipelines, tool‑use frame
 
 ## Reference to Drawings
 
-- **Figure 1:** System Architecture (services and data plane). *[Insert diagram here]*  
+- **Figure 1:** System Architecture (services and data plane).
+
+```mermaid
+graph TD
+%% ==== LAYOUT HINTS ====
+classDef svc fill:#0ea5e9,stroke:#055d75,color:#fff,rx:6,ry:6;
+classDef data fill:#22c55e,stroke:#14532d,color:#fff,rx:6,ry:6;
+classDef ext fill:#a78bfa,stroke:#4c1d95,color:#fff,rx:6,ry:6;
+classDef guard fill:#f97316,stroke:#7c2d12,color:#fff,rx:6,ry:6;
+classDef ui fill:#94a3b8,stroke:#334155,color:#fff,rx:6,ry:6;
+
+%% ==== ENTRY ====
+U[User / Client Apps]:::ui --> G["Guardrails (PII, policy, budgets)"]:::guard
+G --> O["Orchestrator (Agent Shell)"]:::svc
+
+%% ==== CORE SERVICES ====
+O --> P[Planner]:::svc
+O --> X[Executor]:::svc
+O --> V[Validator]:::svc
+O --> M["Memory Manager (read/write + consolidation API)"]:::svc
+O --> AB[A/B Router]:::svc
+
+P --> PS["Policy Service (Contextual Bandit / Ranker)"]:::svc
+P --> SR[SOP Registry]:::svc
+P --> M
+
+X -->|tool calls| MCP["MCP Tool Layer (Adapters, schemas, error mapping)"]:::ext
+
+O --> EV["Evaluator (offline training, regression, dashboards)"]:::svc
+EV --> PS
+
+%% ==== DATA PLANE ====
+subgraph Data Plane
+EL["Experience Log (Postgres/BigQuery)"]:::data
+KG[(Neo4j / Graphiti Knowledge Graph)]:::data
+VS[(Chroma Vector Store)]:::data
+ED[(Letta / MemGPT Episodic Diary)]:::data
+OBJ["Object Storage (artifacts, short TTL)"]:::data
+end
+
+%% ==== MEMORY MANAGER WIRES ====
+M -->|read/write| KG
+M -->|read/write| VS
+M -->|append summaries| ED
+X -->|step logs| EL
+X -->|artifacts| OBJ
+V -->|validation metrics| EL
+O -->|final outcome| EL
+
+%% ==== FEEDBACK & LEARNING LOOPS ====
+Rf[Reflector & Consolidation Jobs]:::svc
+Rf -->|lessons/SOP candidates| KG
+Rf -->|embedded lessons| VS
+Rf -->|diary summaries| ED
+EL --> Rf
+EL --> EV
+EL --> PS
+
+%% ==== TRAFFIC FLOW HINTS ====
+AB --> P
+AB --> X
+AB --> V
+
+%% styling
+class U ui; class G guard; class O,P,X,V,M,PS,SR,EV,Rf,AB svc;
+class EL,KG,VS,ED,OBJ data; class MCP ext;
+```
+
 - **Figure 2:** Sequence Workflow (end‑to‑end lifecycle). *[Insert diagram here]*
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as User / Client
+  participant Guard as Guardrails
+  participant Orch as Orchestrator
+  participant AB as A/B Router
+  participant Mem as Memory Manager
+  participant Chroma as Chroma (Vectors)
+  participant Neo4j as Neo4j / Graphiti (KG)
+  participant Letta as Letta / MemGPT (Diary)
+  participant Policy as Policy Service (Bandit/Ranker)
+  participant Plan as Planner
+  participant Exec as Executor
+  participant MCP as MCP Tools
+  participant Valid as Validator
+  participant Exp as Experience Log
+  participant Refl as Reflector/Consolidation
+  participant Obj as Object Storage
+  participant Eval as Evaluator
+
+  User->>Guard: Submit goal + constraints
+  Guard-->>User: (optional) reject/redact if policy violation
+  Guard->>Orch: Forward sanitized task
+
+  Orch->>AB: Determine experiment bucket (policy/SOP variants)
+  AB-->>Orch: Routing decision
+
+  par Triangulated Retrieval
+    Orch->>Mem: Retrieve prior knowledge for planning
+    Mem->>Chroma: k-NN similar tasks/SOPs/postmortems
+    Mem->>Neo4j: Query best strategies, failure modes
+    Mem->>Letta: Fetch reflective snippets
+    Chroma-->>Mem: Top-k docs + metadata
+    Neo4j-->>Mem: Facts/edges (p_success, latencies)
+    Letta-->>Mem: Snippets
+  end
+  Orch->>Policy: Suggest (tool,strategy) ranking for current context
+  Policy-->>Orch: Ranked arms + uncertainty
+
+  Orch->>Plan: Plan with retrieval bundle + policy hints
+  Plan-->>Orch: Plan JSON (or SOP reference)
+
+  Orch->>Exec: Execute plan (respect budgets/guardrails)
+  loop For each step
+    Exec->>MCP: Invoke tool (with idempotency, backoff)
+    MCP-->>Exec: Result or structured error
+    Exec->>Exp: Append step log (latency, error class, cost)
+    alt Artifact produced
+      Exec->>Obj: Store artifact (short TTL)
+    end
+    opt SLA breach or error
+      Exec-->>Exec: Fallback / retry per plan
+    end
+  end
+
+  Exec->>Valid: Validate artifacts vs success_criteria
+  Valid-->>Exec: Pass/Fail + reasons
+  Exec-->>Orch: Final outcome + metrics + artifact refs
+  Orch->>Exp: Write experience tuple (plan, context, result)
+
+  par Learning & Consolidation
+    Refl->>Exp: Read recent runs
+    Refl-->>Refl: Synthesize lessons, candidate SOPs
+    Refl->>Mem: Write consolidated summaries
+    Mem->>Neo4j: Upsert facts/SOP edges
+    Mem->>Chroma: Upsert embedded lessons/SOP text
+    Mem->>Letta: Update rolling diary summary
+    Exp->>Policy: Update bandit with (context, arm, reward)
+    Exp->>Eval: Feed offline training & regression checks
+  end
+
+  Orch-->>User: Return answer + provenance (run_id, sop_id?)
+```
 

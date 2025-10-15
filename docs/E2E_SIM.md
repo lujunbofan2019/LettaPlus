@@ -63,14 +63,19 @@ Can you help me with that?
 
 
 
+Document checklist:
+- README.md: a technical readme file that explains the contents of a source code repo and their purposes;
+- DCF-Patent-Proposal.md: an early stage document about the Dynamic Capability Framework, written in the format of a patent proposal;
+- Hybrid-Memory-Patent-Proposal.md: an additional document that provides complementary information to the previous DCF proposal;
+- Self-Evolving-Agent-Architecture.md: a more recent document that attempted to combine DCF and Hybrid Memory together.
 
 
 
-README
 
-TEST PLAN
 
-Optional: Sample context window
+
+
+
 
 
 
@@ -94,7 +99,3 @@ Ask for e2e simulation:
   - finding and loading a new one, and repeat process above
 
 
-
-
-
-OpenAI Agent Builder as alternative
