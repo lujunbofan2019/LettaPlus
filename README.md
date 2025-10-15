@@ -7,13 +7,15 @@ This project provides:
 - **Schemas**
     - `schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
     - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
-    - `schemas/control-plane-meta.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
-    - `schemas/control-plane-state.json` — *Documented shape* of per-state docs
+    - `schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
+    - `schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
+    - `schemas/notification-payload-v1.0.0.json`
+    - `schemas/data-plane-output-v1.0.0.json`
 - **Planning tools**
     1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
     2) `validate_skill_manifest(manifest_json, schema_path)`
     3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
-    4) `load_skill(manifest_id, agent_id)`
+    4) `load_skill(manifest_id, agent_id)` and `load_skill_with_resolver(manifest_id, agent_id)`
     5) `unload_skill(manifest_id, agent_id)`
 - **Execution tools**
     6) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
@@ -26,6 +28,9 @@ This project provides:
     13) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
     14) `notify_if_ready(workflow_id, state, ...)`
     15) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
+- **Testing tools**
+    16) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
+    17) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
 
 Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining. Skills are loaded/unloaded dynamically per worker.
 
@@ -327,18 +332,21 @@ project/
 ├─ workflows/
 │  └─ example_workflow_v2.2.0.json
 └─ tools/
-   ├─ workflow_validator_v220.py
-   ├─ skill_discovery_tool.py
-   ├─ create_workflow_control_plane.py
+   ├─ acquire_state_lease.py
    ├─ create_worker_agents.py
+   ├─ create_workflow_control_plane.py
+   ├─ finalize_workflow.py
+   ├─ get_skillset.py
+   ├─ load_skill.py
+   ├─ notify_if_ready.py
+   ├─ notify_next_worker_agent.py
+   ├─ unload_skill.py
    ├─ read_workflow_control_plane.py
    ├─ update_workflow_control_plane.py
-   ├─ acquire_state_lease.py
    ├─ renew_state_lease.py
    ├─ release_state_lease.py
-   ├─ notify_next_worker_agent.py
-   ├─ notify_if_ready.py
-   ├─ finalize_workflow.py   
+   ├─ validate_skill_manifest.py
+   ├─ validate_workflow.py
    └─ ...   
 ```
 
@@ -357,7 +365,7 @@ project/
 
 ---
 
-## Update: CSV-first prototyping & stub MCP server
+## Update Oct-2025: CSV-first prototyping & stub MCP server
 
 **CSV-first rapid skill prototyping**
 - Author many skills and their MCP tools in simple CSV files
@@ -380,20 +388,23 @@ project/
 ```
 project/
 ├─ schemas/
+│  ├─ ...
 ├─ tools/
 │  ├─ csv_to_manifests.py
 │  ├─ csv_to_stub_config.py
-│  ├─ … (other DCF tools)
+│  ├─ ... (other DCF tools)
 ├─ skills_src/                 # input CSVs + generated artifacts
 │  ├─ skills.csv               # one row per skill
-│  ├─ tools.csv                # one row per MCP tool
+│  ├─ mcp_tools.csv            # one row per MCP tool
+│  ├─ skill_tool_refs.csv
 │  └─ registry.json            # generated: catalog of skills (for Planner/loader)
 ├─ skills/                     # generated manifests
 │  ├─ <skillName>@<version>.json
 │  └─ ...
 ├─ generated/
 │  └─ stub/
-│     └─ stub_config.json      # generated MCP tool behavior config
+│     ├─ stub_config.json      # generated MCP tool behavior config
+│     └─ ...
 ├─ stub_mcp/
 │  ├─ stub_mcp_server.py
 │  └─ Dockerfile
