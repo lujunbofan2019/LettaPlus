@@ -122,3 +122,5 @@ This becomes another workflow JSON file the Planner agent saves in the vector st
 Last but not least, sometimes the Whisper based transcribing skill may fail or timeout. The worker agent may unload it and load the alternative AssemblyAI based skill for the same purpose.
 
 The AI agents keep updating the knowledge base and identifies that the failure rate of Whisper based transcribing skill goes beyond a threshold. Hence, the next time the Planner agent applies this workflow, the validation tool would trigger a warning, and the Planner agent would update the workflow JSON file, replacing the Whisper based skill with the AssemblyAI based skill.
+
+Please write a detailed TESTING_PLAN_B.md according to the use case scenarios described above.
