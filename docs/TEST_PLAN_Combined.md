@@ -460,3 +460,55 @@ A week later, after several more runs have experienced similar timeouts, the Pla
 ### 4.4. The Evolved Workflow
 
 The system doesn't just recover from failure; it learns from it. By persistently recording performance data in the knowledge graph, the Planner can identify degrading tools and proactively "heal" its own workflows, ensuring the system becomes more robust and reliable over time. This closes the loop on self-evolution.
+
+---
+
+## 5. Appendices
+
+### 5.1 Capability Schema
+
+```json
+
+```
+
+### 5.2 Skill Manifest Schema
+
+```json
+
+```
+
+### 5.3 Workflow Control-Plane Metadata Schema
+
+```json
+
+```
+
+### 5.4 Workflow Control-Plane State Schema
+
+```json
+
+```
+
+### 5.5 Workflow Notification Payload Schema
+
+```json
+
+```
+
+### 5.6 Workflow Data-Plane Output Schema
+
+```json
+
+```
+
+### 5.7 Planner Agent Template
+
+```json
+
+```
+
+### 5.8 Worker Agent Template
+
+```json
+
+```
