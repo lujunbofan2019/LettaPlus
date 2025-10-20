@@ -11,7 +11,7 @@ As a financial services provider regulated by the Financial Conduct Authority (F
 The traditional process involves line managers or compliance staff manually listening to hours of call recordings (`.mp3` files) to:
 - Assess the performance of newly onboarded advisors.
 - Verify that new financial products are being explained correctly and consistently.
-- Ensure adherence to FCA regulations like Consumer Duty.
+- Ensure adherence to FCA regulations like Mandatory Disclosures and Consumer Duty.
 
 This manual approach is incredibly time-consuming, difficult to scale, and prone to human inconsistency. The goal is to automate this entire process using an autonomous AI agent that can understand a user's analytical goal and execute the necessary steps to achieve it.
 
@@ -25,64 +25,64 @@ Our system addresses this challenge with a **Planner Agent** that can leverage a
 - **Diarization:** To identify and separate speakers in a conversation.
 - **Labelling & Segmentation:** To categorize parts of a conversation (e.g., "Introduction," "Product Detail").
 - **Sentiment Analysis:** To detect a customer's emotional state.
-- **Compliance Analysis:** To evaluate a transcript against a set of rules from a vector store.
+- **Compliance Analysis:** To evaluate a transcript against a set of compliance rules from a vector store.
 - **Scoring:** To calculate an overall quality score based on a dynamic formula.
 
-[TODO: description of architectural diagram]
+### 1.3. The System Diagram
 
-### 1.3. Scenarios to be Demonstrated
+[TODO: Lu will add the diagram and descriptions, AI assistant please ignore]
+
+### 1.4. Scenarios to be Demonstrated
 
 This document will walk through three key scenarios to illustrate the system's core features:
 
 1.  **Initial Capability Creation.** We will show how the Planner agent interacts with a user to understand a new request, identifies a "capability gap" (the lack of a pre-existing workflow), collaboratively designs a new workflow, and executes a test run.
 2.  **Capability Refinement and Reuse.** We will demonstrate how the agent can retrieve the previously saved workflow, adapt it to a new, more specific user request, and save the modified version as a new, reusable asset.
-3.  **Dynamic Failure Handling and Self-Healing.** We will simulate a runtime tool failure and show how a worker agent can dynamically swap to an alternative skill. We will also show how the system records these failures in its knowledge graph, allowing the Planner to proactively "heal" the master workflow for future runs, demonstrating true self-evolution.
+3.  **Dynamic Failure Handling and Self-Healing.** We will simulate a runtime tool failure and show how a worker agent can dynamically swap to a substitute skill (by unloading the designated one, and loading an alternative one). We will also show how the system records these failures in its knowledge graph, allowing the Planner to proactively "heal" the master workflow for future runs, demonstrating self-evolution.
 
-Through these scenarios, we will provide concrete examples of the agent's chain of thought, the artifacts it produces (workflow JSON, skill manifests), the tool calls it makes, and the updates it performs on its hybrid memory system (memory blocks, knowledge graph, and vector store).
+Through these scenarios, we will provide concrete examples of the agent's chain of thought (CoT), the artifacts it produces (like capability files, skill manifests, control-plane objects, notifications, etc), the tool calls it makes, and the updates it performs on its hybrid memory system (memory blocks, knowledge graph, and vector store).
 
-### 1.4. Prerequisites
+### 1.5. Prerequisites
 
-[TODO: improve the list below]
-
-- Letta server + Redis (for archival memory) running locally.
+- Letta, Redis, Chroma, Graphiti, and Neo4j servers running locally.
 - Vector store (e.g., Chroma) seeded with:
-    - Regulatory rulebook chunks (`compliance_rules_v2024Q4.jsonl`).
+    - Regulatory rulebook chunks (`compliance_rules_v2024Q4.csv`).
     - Scoring formula document (`qa_scoring_formula_v3.md`).
-    - Saved workflows (after step 1).
-- Knowledge graph initialized with entities: `SelinaFinance`, `L&C Department`, `Advisor:<name>`, `Workflow:AdviceCallAnalysis`.
-- Skill manifests (examples shown later) stored in `skills/` with registry metadata in `skills_src/registry.json`.
-- MCP endpoints accessible via Docker Compose (for Recording Management, etc.).
-- Planner and Worker prompts configured with tools:
+    - Pre-existing capability files and skill manifests.
+- Planner and Worker agent templates (see Appendix 5.7 and 5.8) configured with proper system instructions and built-in tools:
     - **Planner**: `get_skillset`, `validate_skill_manifest`, `validate_workflow`, `create_workflow_control_plane`,
       `create_worker_agents`, `read_workflow_control_plane`, `notify_next_worker_agent`, `notify_if_ready`,
       `finalize_workflow`, `store_memory`, `append_graph_episode`.
     - **Worker**: `read_workflow_control_plane`, `acquire_state_lease`, `update_workflow_control_plane`,
       `load_skill`, `unload_skill`, `invoke_skill_tool`, `store_memory`, `append_graph_episode`,
       `notify_next_worker_agent`, `notify_if_ready`.
-- Logging capture enabled for:
+- MCP server running locally, with SSE tooling endpoints accessible to Letta agents.
+- Debugging level logging enabled for:
     - Planner/Worker conversations.
     - Tool inputs/outputs (JSON payloads).
-    - Memory block writes (working, short-term, archival).
-    - Knowledge-graph mutations (episodes, relationships, attributes).
+    - Memory block writes (context window, working memory, archival memory).
+    - Knowledge-graph mutations (episodes, entities, relationships, attributes).
 
 ---
 
-## 2. Scenario 1: Initial Workflow Creation
+## 2. Scenario 1: Initial Capability Creation
 
 This scenario demonstrates the system's behavior when faced with a novel task for which no pre-defined workflow exists.
 
-**Goal:** A compliance manager wants to review the performance of a newly hired advisor, John Doe, for calls made in the last week.
+**Goal:** A compliance manager wants to review the performance of a newly hired advisor, Alex Wong, for calls made in the last week.
 
 ### 2.1. The Conversation: Defining the Need
 
-**[USER]:** "Hi, I need to check the quality of advice calls made by John Doe last week. Can you help me analyze them?"
+[TODO: AI assistant please improve the visualisation of agent-human conversations using appropriate markdown features]
+
+**[USER]:** "Hi, I need to check the quality of advice calls made by Alex Wong last week. Can you help me analyze them?"
 
 **[PLANNER AGENT]:** "Of course. To ensure I get this right, could you clarify what 'analyzing them' involves? For example, are you interested in compliance with specific rules, customer sentiment, or something else?"
 
 **[USER]:** "Good question. I need to know if he's following the standard script, so compliance is key. I'm also interested in the customer's sentiment during the calls. Finally, I'd like an overall quality score for each call."
 
 **[PLANNER AGENT]:** "Thank you. That's very clear. Based on your request, here is the workflow I propose:
-1.  Find all loan application IDs assigned to 'John Doe' in Salesforce from last week.
+1.  Find all loan application IDs assigned to 'Alex Wong' in Salesforce from last week.
 2.  For those applications, retrieve the associated call recordings.
 3.  For each recording, transcribe it from audio to text.
 4.  Once transcribed, I will run two analyses in parallel:
@@ -94,13 +94,15 @@ Does this plan meet your needs?"
 
 **[USER]:** "Yes, that looks perfect."
 
-### 2.2. The Agent's Internal Monologue (Chain of Thought)
+### 2.2. The Agent's Internal Monologue (CoT)
+
+[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
 
 1.  **Intent Analysis:** The user wants to perform "Advice Call Analysis" for a specific advisor and date range. The key success metrics are **compliance**, **sentiment**, and a final **score**.
 
-2.  **Memory & Capability Check (Identifying the Gap):**
-    *   **Vector Store Query:** Search for existing workflows with keywords: `advice call`, `quality assurance`, `compliance analysis`.
-    *   **Result:** No existing workflow found. **This is a capability gap.** I need to construct a new Standard Operating Procedure (SOP). Planner records a **capability gap** memory block:
+2.  **Memory & Capability Check:**
+    *   **Vector Store Query:** Search for existing capabilities with keywords: `advice call`, `quality assurance`, `compliance analysis`.
+    *   **Result:** No existing capabilities found. **This is a capability gap.** I need to construct a new workflow JSON file. Planner records a **capability gap** memory block:
 
     ```json
     {
@@ -111,13 +113,13 @@ Does this plan meet your needs?"
     ```
         
     *   **Knowledge Graph Query:** What is the historical performance of skills tagged with `compliance`, `sentiment`, `transcription`?
-    *   **Result:** The graph shows `skill://whisper-transcribe@1.0.0` has a 98% success rate, and `skill://assemblyai-transcribe@1.2.0` has a 95% success rate. I'll select the Whisper-based skill as the primary for now. The `compliance-analyzer` and `sentiment-analyzer` skills show high reliability.
+    *   **Result:** The graph shows `skill://whisper-transcribe@1.0.0` has a 99% success rate, and `skill://assemblyai-transcribe@1.2.0` has a 99% success rate. I'll select the Whisper-based skill as the primary for now. The `compliance-analyzer` and `sentiment-analyzer` skills show 100% reliability.
 
-3.  **SOP & Workflow Construction:**
+3.  **Workflow Construction:**
     *   The user's request maps to a sequence of steps. I'll need skills for each step.
-    *   **Step 1 (Get Apps):** The `salesforce-integration` skill can find applications by advisor name.
-    *   **Step 2 (Get Recordings):** The `recording-management` skill can retrieve audio files.
-    *   **Step 3 (Transcribe):** The `whisper-transcribe` skill is the best choice.
+    *   **Step 1 (Get Apps):** The `salesforce-integration` skill can find applications by advisor name and date range.
+    *   **Step 2 (Get Recordings):** The `recording-management` skill can retrieve audio files by IDs.
+    *   **Step 3 (Transcribe):** The `whisper-transcribe` skill is selected.
     *   **Step 4 (Analyze):** The problem splits here. I can run sentiment and compliance analysis in parallel to be more efficient. This requires a `Parallel` state in my ASL workflow. I will use the `sentiment-analysis` and `compliance-analysis` skills.
     *   **Step 5 (Score):** The `scoring` skill can take the outputs from the parallel branches and compute a final score.
     *   I will now compile this logic into a `letta-asl-workflow` JSON structure.
@@ -125,6 +127,8 @@ Does this plan meet your needs?"
 ### 2.3. The Generated Workflow Artifact
 
 The Planner Agent generates the following `workflow_advice_call_analysis_v1.json` file.
+
+[TODO: AI assistant please double-check the JSON file against schemas\letta_asl_workflow_schema_v2.2.0.json to ensure correctness and comprehensiveness]
 
 ```json
 {
@@ -202,14 +206,17 @@ The Planner Agent generates the following `workflow_advice_call_analysis_v1.json
 }
 ```
 
-### 2.4. Simulated Run & Memory Updates
+### 2.4. Test Drive & Memory Updates
 
-The Planner Agent now executes this workflow for a single call recording.
+The Planner Agent now executes this workflow as a test drive.
 
 - **Tool Calls:** The system executes the tools defined in the skills, passing inputs and receiving outputs at each step.
+
+[TODO: AI assistant please show the sequence of tool calls to be made here]
+
 - **Control Plane:** A Redis key `cp:wf:c4b1...:meta` is created, along with state keys for each task. The `status` of each state transitions from `pending` -> `running` -> `done`.
-  
-  [TODO: review the object below]
+
+  [TODO: AI assistant please review the control-plane state object against \schemas\control-plane-state-1.0.0.json to ensure correctness and comprehensiveness]
 
   Control plane (`create_workflow_control_plane`) with initial state:
   ```json
@@ -221,7 +228,9 @@ The Planner Agent now executes this workflow for a single call recording.
   }
   ```
 
-[TODO: review the table below]
+[TODO: AI assistant please add control-plane meta object according to \schemas\control-plane-meta-1.0.0.json]
+
+[TODO: AI assistant please review the table below for correctness and consistency]
 - Worker lifecycle snapshot:
   | Phase | Action |
   |-------|--------|
@@ -232,7 +241,7 @@ The Planner Agent now executes this workflow for a single call recording.
   | Knowledge Graph | Adds episode `CallAnalysisTrial` with relation `(Advisor:AlexWong) -[handled]-> (Application:APP-49201)`.
   | Control Plane | Updates step `fetch_applications` to `completed` with artifact reference.
 
-[TODO: review the steps below]
+[TODO: AI assistant please review the steps below to ensure correctness and consistency; multiple worker agents should be involved in this workflow, some of which should work in parallel - the current narrative does not show that clearly, please improve]
 - Repeat for each step:
   1. **Retrieve Recordings**
       - Tool output sample:
@@ -256,7 +265,7 @@ The Planner Agent now executes this workflow for a single call recording.
 
   2. **Transcription**
       - Whisper skill output stored in working memory.
-      - Letta archival memory receives chunked transcript (split into 2k token blocks).
+      - Letta archival memory receives chunked transcript (split into 5k token blocks).
       - Control plane artifact references `artifact://transcripts/APP-49201.txt`.
 
   3. **Sentiment Analysis**
@@ -273,14 +282,21 @@ The Planner Agent now executes this workflow for a single call recording.
       - Output: `{ "score": 72, "rationale": "Compliance failure on ProductClarity" }`.
       - Control plane artifact appended `artifact://qa_scores/APP-49201.json`.
 
+[TODO: AI assistant please note that 'cognitive garbage collection' is one example, but not the best example to illustrate Letta's virtual context management capability. Instead, please add another example about how Letta summarises and moves memory blocks around for the Planner agent in order to prevent its context window from overflowed.]
+
 - **Letta Context Management:** Before each task, the ephemeral worker agent loads the required skill. The `DCF Runtime` ensures the correct tool definitions and directives are added to the agent's context. After the task, the skill is unloaded ("cognitive garbage collection").
-- **Hybrid Memory Updates (Post-Run):**
+
+[TODO: AI assistant please note 1) I don't think it illustrated the working mechanism of the Vector store correctly - semantic search should be supported rather than indexing, so the newly created workflow should be discovered and retrieved later on by its description; 2) please clarify that the memory blocks were initially created in the context window but subsequently externalised to archival memory by Letta to prevent context window from overflowing]
+
+- **Hybrid Memory Updates:**
     - **Vector Store:** The newly created `workflow_advice_call_analysis_v1.json` is indexed and stored in the vector store with metadata tags `["advice call", "compliance", "sentiment", "scoring"]`.
     - **Knowledge Graph:**
         - A new `WorkflowExecution` node is created, linked to the `Workflow` node for `c4b1a2e8...`.
         - This execution node is linked via `USED_SKILL` edges to the specific versions of all skills that were part of the run.
         - The `p_success` and `p95_latency` properties on the edges connecting to the skill nodes are updated to reflect the successful and timely execution.
     - **Memory Blocks:** A new entry is added to the Planner's archival memory: "Successfully created and executed `workflow_advice_call_analysis_v1.json` for user [Compliance Manager's ID]. The workflow involved Salesforce integration, transcription, parallel analysis for sentiment and compliance, and scoring. The user confirmed the plan was correct."
+
+[TODO: AI assistant please note that the latest version of Letta framework supports 'sleep-time agent', which is a companion to a main agent that converses with users and performs ordinary tasks. We use the sleep-time agent to consolidate and optimize the context window of the main agent periodically, swapping memory blocks out to archival memory, and generating analytical insights to update the knowledge graph. Please create a clear narrative here.]
 
 ---
 
@@ -292,9 +308,11 @@ This scenario demonstrates how the system reuses and adapts existing workflows t
 
 ### 3.1. The Conversation: A More Specific Need
 
-**[USER]:** "I need to check if our advisors are explaining the new 'FlexiLoan 2.5' product correctly in their calls since the start of the month."
+[TODO: AI assistant please improve the visualisation of agent-human conversations using appropriate markdown features]
 
-**[PLANNER AGENT]:** "I can help with that. I have an existing workflow for general advice call analysis. To ensure I tailor it correctly for your needs, could you confirm if you need a full compliance and sentiment analysis, or something more specific to the product explanation?"
+**[USER]:** "I need to check if our advisors are explaining the new 'HELOC 2.0' product correctly in their calls since the start of the month."
+
+**[PLANNER AGENT]:** "I can help with that. I have an existing capability for general advice call analysis. To ensure I tailor it correctly for your needs, could you confirm if you need a full compliance and sentiment analysis, or something more specific to the product explanation?"
 
 **[USER]:** "I don't need sentiment or a general score. I only care about the parts of the conversation where the advisor is actually describing the product and its terms. I need to know if that specific part of the script is compliant."
 
@@ -311,18 +329,20 @@ How does this sound?"
 
 **[USER]:** "That is exactly what I need. Perfect."
 
-### 3.2. The Agent's Internal Monologue (Chain of Thought)
+### 3.2. The Agent's Internal Monologue (CoT)
 
-1.  **Intent Analysis:** The user wants to check for compliance on a *specific topic* ("FlexiLoan 2.5" explanation) across all advisors. This is different from the previous general quality check.
+[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
 
-2.  **Memory & Capability Check (Reusing an Asset):**
-    *   **Vector Store Query:** Search for workflows with keywords: `advice call`, `product explanation`, `compliance`.
-    *   **Result:** The search returns `workflow_advice_call_analysis_v1.json` as a strong candidate. **This is a capability match.** I can adapt this existing SOP.
+1.  **Intent Analysis:** The user wants to check for compliance on a *specific topic* ("HELOC 2.0" explanation) across all advisors. This is different from the previous general quality check.
+
+2.  **Memory & Capability Check:**
+    *   **Vector Store Query:** Search for capabilities with keywords: `advice call`, `product explanation`, `compliance`.
+    *   **Result:** The search returns `workflow_advice_call_analysis_v1.json` as a strong candidate. **This is a capability match.** I can adapt this existing workflow.
     *   **Analysis of User Need vs. Existing Workflow:** The user's request requires more granular processing. The existing workflow transcribes the whole call, but the user only wants specific parts. I will need to add diarization and segmentation steps. The sentiment and scoring steps are not needed.
 
-3.  **SOP & Workflow Refinement:**
+3.  **Workflow Refinement:**
     *   I will use the `workflow_advice_call_analysis_v1.json` as a template.
-    *   **Modify Step 1 (Get Apps):** Remove the 'advisor name' filter to get all applications.
+    *   **Modify Step 1 (Get Apps):** Remove the 'advisor name' filter to get all applications in the date range.
     *   **Keep Steps 2 & 3:** `GetCallRecordings` and `TranscribeRecording` are still needed.
     *   **Insert New Step 4 (Diarize):** I need to add a diarization step to separate speakers. The `gpt4o-diarize` skill is available and has a high success rate according to the Knowledge Graph.
     *   **Insert New Step 5 (Segment):** I need to add a `labelling-segmentation` skill to extract the relevant conversation parts.
@@ -332,6 +352,8 @@ How does this sound?"
 ### 3.3. The Generated Workflow Artifact
 
 The Planner Agent generates `workflow_product_explanation_compliance_v1.json`.
+
+[TODO: AI assistant please double-check the JSON file against schemas\letta_asl_workflow_schema_v2.2.0.json to ensure correctness and comprehensiveness]
 
 ```json
 {
@@ -391,6 +413,8 @@ The Planner Agent generates `workflow_product_explanation_compliance_v1.json`.
 
 ### 3.4. Memory Updates
 
+[TODO: AI assistant please note that the Vector store mechanism may be wrong again - it should support semantic search rather than indexing]
+
 - **Vector Store:** The new workflow `workflow_product_explanation_compliance_v1.json` is indexed and stored with tags `["product explanation", "compliance", "diarization", "segmentation"]`.
 - **Knowledge Graph:**
     - A new `Workflow` node is created for `a8d3b1c9...`.
@@ -401,7 +425,7 @@ The Planner Agent generates `workflow_product_explanation_compliance_v1.json`.
 
 ## 4. Scenario 3: Dynamic Failure Handling and Self-Healing
 
-This scenario showcases the system's resilience and ability to learn from operational failures.
+This scenario showcases the system's resilience and ability to learn from operational failures. Also, it illustrates how skills can be loaded and unloaded dynamically.
 
 **Goal:** During the execution of the "Standard Advice Call Analysis" workflow, the primary transcription skill fails. The system must recover, complete the task, and learn from the failure to improve future runs.
 
@@ -412,18 +436,22 @@ During a run of `workflow_advice_call_analysis_v1.json`, the worker agent respon
 - **Worker Agent's State:** The worker agent has acquired the lease for the `TranscribeRecording` state. Its current loaded skill has failed.
 - **Control Plane Update:** The worker agent immediately updates the Redis state document for `TranscribeRecording`, incrementing the `attempts` counter and logging the timeout error in the `errors` array.
 
-### 4.2. The Worker's Recovery Monologue (Chain of Thought)
+[TODO: AI assistant please illustrate the control-plane's state change better with concrete JSON objects]
+
+### 4.2. The Worker's Recovery Monologue (CoT)
+
+[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
 
 1.  **Error Detected:** The `whisper-transcribe` skill failed with a `TimeoutError`. This is a recoverable network/service issue, not a fatal data error. My primary objective is to complete the task.
 
-2.  **Identify Alternatives (Dynamic Capability Re-evaluation):**
-    *   I need a skill that can fulfill the `transcription` capability.
-    *   I will query the **Skill Repository** for skills with the tag `transcription` that are *not* the one that just failed.
+2.  **Identify Alternatives (Dynamic Skill Re-evaluation):**
+    *   I need a skill that can fulfill the `transcription` task.
+    *   I will query the Vector Store for skill manifests with `transcription` keyword that are *not* the one that just failed.
     *   **Result:** The repository returns `skill://assemblyai-transcribe@1.2.0`.
 
 3.  **Attempt Recovery (Skill Swapping):**
     *   **Unload the failed skill:** I will call `unload_skill("skill://whisper-transcribe@1.0.0", ...)` to remove it from my context. This prevents any further attempts with the failing tool.
-    *   **Load the alternative skill:** I will call `load_skill("skill://assemblyai-transcribe@1.2.0", ...)` to dynamically acquire the new capability.
+    *   **Load the alternative skill:** I will call `load_skill("skill://assemblyai-transcribe@1.2.0", ...)` to dynamically acquire the new skill.
     *   **Retry the task:** I will re-run the transcription logic using the newly loaded AssemblyAI skill.
 
 4.  **Successful Recovery:** The AssemblyAI skill succeeds. The worker proceeds to write the output to the data plane, release its lease, and notify the downstream workers, allowing the workflow to continue.
@@ -432,7 +460,6 @@ During a run of `workflow_advice_call_analysis_v1.json`, the worker agent respon
 
 The workflow completes successfully, but the failure was logged permanently in the Knowledge Graph.
 
-[TODO: review the block below]
 - **Adds archival memory block**:
   ```json
   {
@@ -444,6 +471,8 @@ The workflow completes successfully, but the failure was logged permanently in t
   }
   ```
 
+[TODO: AI assistant please note that the knowledge graph should be updated by the sleep-time agent after digesting the archival memory block above - this is not clearly indicated at the moment, please improve]
+
 - **Updates Knowledge Graph:** When the Whisper skill failed, the `WorkflowExecution` node was updated. The `USED_SKILL` edge pointing to `skill://whisper-transcribe@1.0.0` was updated with `n_failures: +1`. When the AssemblyAI skill was used, a new `USED_SKILL` edge was created for it, marked with `n_success: +1`.
 
 A week later, after several more runs have experienced similar timeouts, the Planner Agent is tasked with another "Standard Advice Call Analysis."
@@ -452,7 +481,7 @@ A week later, after several more runs have experienced similar timeouts, the Pla
     1.  **Pre-flight Check:** Before executing `workflow_advice_call_analysis_v1.json`, I will validate its components against the Knowledge Graph for reliability.
     2.  **Knowledge Graph Query:** `MATCH (s:Skill {name: 'whisper-transcribe'}) RETURN s.n_success, s.n_failures`.
     3.  **Result:** The query shows that the failure rate for the Whisper skill (`n_failures / (n_success + n_failures)`) has now crossed a predefined threshold of 5%. The alternative, `assemblyai-transcribe`, has a failure rate below 1%.
-    4.  **Proactive Healing:** The primary transcription skill in the stored workflow is no longer reliable. I must update the SOP. I will recommend a new version of the workflow to the user.
+    4.  **Proactive Healing:** The primary transcription skill in the stored workflow is no longer reliable. I will recommend a new version of the workflow to the user.
     5.  **Generate New Version:** I will programmatically create `workflow_advice_call_analysis_v1.0.1.json`, which is identical to the original except that the `TranscribeRecording` state's `AgentBinding` now lists `skill://assemblyai-transcribe@1.2.0` instead of the Whisper skill.
 
 **[PLANNER AGENT]:** "I am ready to start the Advice Call Analysis. I've noticed that a tool I normally use for transcription has become less reliable recently. I have updated the workflow to use a more stable alternative to ensure a smooth execution. I will proceed with this improved version."
@@ -462,6 +491,8 @@ A week later, after several more runs have experienced similar timeouts, the Pla
 The system doesn't just recover from failure; it learns from it. By persistently recording performance data in the knowledge graph, the Planner can identify degrading tools and proactively "heal" its own workflows, ensuring the system becomes more robust and reliable over time. This closes the loop on self-evolution.
 
 ---
+
+[TODO: Lu will complete the sections below, AI assistant please ignore]
 
 ## 5. Appendices
 
@@ -510,5 +541,11 @@ The system doesn't just recover from failure; it learns from it. By persistently
 ### 5.8 Worker Agent Template
 
 ```json
+
+```
+
+### 5.9 Docker Compose File For The Execution Environment
+
+```
 
 ```
