@@ -2,13 +2,20 @@
   "agents": [
     {
       "name": "worker",
-      "memory_blocks": [],
-      "tools": [],
       "tool_ids": [
         "tool-0",
-        "tool-1"
+        "tool-1",
+        "tool-11",
+        "tool-12",
+        "tool-13",
+        "tool-15",
+        "tool-16",
+        "tool-17",
+        "tool-18",
+        "tool-19",
+        "tool-20",
+        "tool-21"
       ],
-      "source_ids": [],
       "block_ids": [
         "block-0",
         "block-1"
@@ -16,101 +23,42 @@
       "tool_rules": [
         {
           "tool_name": "conversation_search",
-          "type": "continue_loop",
-          "prompt_template": null
+          "type": "continue_loop"
         },
         {
           "tool_name": "send_message",
-          "type": "exit_loop",
-          "prompt_template": null
+          "type": "exit_loop"
         }
       ],
-      "tags": [],
       "system": "<base_instructions>... ...</base_instructions>",
       "agent_type": "letta_v1_agent",
       "llm_config": {
         "model": "gpt-4.1",
         "model_endpoint_type": "openai",
         "model_endpoint": "https://api.openai.com/v1",
-        "provider_name": "openai",
-        "provider_category": "base",
-        "model_wrapper": null,
-        "context_window": 1000000,
-        "put_inner_thoughts_in_kwargs": false,
-        "handle": "openai/gpt-4.1",
         "temperature": 0.2,
-        "max_tokens": 8192,
-        "enable_reasoner": false,
-        "reasoning_effort": null,
-        "max_reasoning_tokens": 0,
-        "frequency_penalty": null,
-        "compatibility_type": null,
-        "verbosity": null,
-        "tier": null
+        "max_tokens": 8192
       },
       "embedding_config": {
         "embedding_endpoint_type": "openai",
         "embedding_endpoint": "https://embeddings.letta.com/",
         "embedding_model": "letta-free",
-        "embedding_dim": 1536,
-        "embedding_chunk_size": 300,
-        "handle": "letta/letta-free",
-        "batch_size": 32,
-        "azure_endpoint": null,
-        "azure_version": null,
-        "azure_deployment": null
+        "embedding_dim": 1536
       },
-      "initial_message_sequence": null,
-      "include_base_tools": false,
-      "include_multi_agent_tools": false,
-      "include_base_tool_rules": false,
-      "include_default_source": false,
       "description": "DCF Worker Agent with a sleep-time companion.",
-      "metadata": null,
-      "model": null,
-      "embedding": null,
-      "context_window_limit": null,
-      "embedding_chunk_size": null,
-      "max_tokens": null,
-      "max_reasoning_tokens": null,
-      "enable_reasoner": false,
-      "reasoning": null,
-      "from_template": null,
-      "template": false,
-      "project": null,
-      "tool_exec_environment_variables": {},
-      "secrets": null,
-      "memory_variables": null,
-      "project_id": null,
-      "template_id": null,
-      "base_template_id": null,
-      "identity_ids": null,
-      "message_buffer_autoclear": false,
-      "enable_sleeptime": false,
-      "response_format": null,
-      "timezone": "UTC",
-      "max_files_open": 15,
-      "per_file_view_window_char_limit": 40000,
-      "hidden": null,
       "id": "agent-0",
-      "in_context_message_ids": [],
-      "messages": [],
-      "files_agents": [],
       "group_ids": [
         "group-0"
       ]
     },
     {
       "name": "worker-sleeptime",
-      "memory_blocks": [],
-      "tools": [],
       "tool_ids": [
         "tool-2",
         "tool-3",
         "tool-4",
         "tool-5"
       ],
-      "source_ids": [],
       "block_ids": [
         "block-0",
         "block-1",
@@ -119,97 +67,39 @@
       "tool_rules": [
         {
           "tool_name": "memory_finish_edits",
-          "type": "exit_loop",
-          "prompt_template": null
+          "type": "exit_loop"
         },
         {
           "tool_name": "memory_insert",
-          "type": "continue_loop",
-          "prompt_template": null
+          "type": "continue_loop"
         },
         {
           "tool_name": "memory_rethink",
-          "type": "continue_loop",
-          "prompt_template": null
+          "type": "continue_loop"
         },
         {
           "tool_name": "memory_replace",
-          "type": "continue_loop",
-          "prompt_template": null
+          "type": "continue_loop"
         }
       ],
-      "tags": [],
       "system": "<base_instructions>... ...</base_instructions>",
       "agent_type": "sleeptime_agent",
       "llm_config": {
         "model": "letta-free",
         "model_endpoint_type": "openai",
         "model_endpoint": "https://inference.letta.com/v1/",
-        "provider_name": "letta",
-        "provider_category": "base",
-        "model_wrapper": null,
-        "context_window": 30000,
-        "put_inner_thoughts_in_kwargs": true,
-        "handle": "letta/letta-free",
-        "temperature": 0.7,
-        "max_tokens": null,
-        "enable_reasoner": true,
-        "reasoning_effort": null,
-        "max_reasoning_tokens": 0,
-        "frequency_penalty": null,
-        "compatibility_type": null,
-        "verbosity": null,
-        "tier": null
+        "temperature": 0.7
       },
       "embedding_config": {
         "embedding_endpoint_type": "openai",
         "embedding_endpoint": "https://embeddings.letta.com/",
         "embedding_model": "letta-free",
-        "embedding_dim": 1536,
-        "embedding_chunk_size": 300,
-        "handle": "letta/letta-free",
-        "batch_size": 32,
-        "azure_endpoint": null,
-        "azure_version": null,
-        "azure_deployment": null
+        "embedding_dim": 1536
       },
-      "initial_message_sequence": null,
-      "include_base_tools": false,
-      "include_multi_agent_tools": false,
-      "include_base_tool_rules": false,
-      "include_default_source": false,
-      "description": null,
-      "metadata": null,
-      "model": null,
-      "embedding": null,
-      "context_window_limit": null,
-      "embedding_chunk_size": null,
-      "max_tokens": null,
-      "max_reasoning_tokens": null,
-      "enable_reasoner": false,
-      "reasoning": null,
-      "from_template": null,
-      "template": false,
-      "project": null,
-      "tool_exec_environment_variables": {},
-      "secrets": null,
-      "memory_variables": null,
-      "project_id": null,
-      "template_id": null,
-      "base_template_id": null,
-      "identity_ids": null,
-      "message_buffer_autoclear": false,
-      "enable_sleeptime": false,
-      "response_format": null,
       "timezone": "UTC",
       "max_files_open": 5,
       "per_file_view_window_char_limit": 15000,
-      "hidden": null,
-      "id": "agent-1",
-      "in_context_message_ids": [],
-      "messages": [],
-      "files_agents": [],
-      "group_ids": []
+      "id": "agent-1"
     }
   ],
   "groups": [
@@ -217,76 +107,36 @@
       "agent_ids": [
         "agent-1"
       ],
-      "description": "",
       "manager_config": {
         "manager_type": "sleeptime",
         "manager_agent_id": "agent-0",
         "sleeptime_agent_frequency": 5
       },
-      "project_id": null,
-      "shared_block_ids": [],
-      "hidden": null,
       "id": "group-0"
     }
   ],
   "blocks": [
     {
+      "value": "The following is my persona...",
+      "limit": 20000,
+      "label": "persona",
+      "description": "The persona block: Stores details about your current persona, guiding how you behave and respond. This helps you to maintain consistency and personality in your interactions.",
+      "id": "block-0"
+    },
+    {
       "value": "This is my section of core memory devoted to information about the human....",
       "limit": 20000,
-      "project_id": null,
-      "template_name": null,
-      "is_template": false,
-      "template_id": null,
-      "base_template_id": null,
-      "deployment_id": null,
-      "entity_id": null,
-      "preserve_on_migration": false,
       "label": "human",
-      "read_only": false,
       "description": "The human block: Stores key details about the person you are conversing with, allowing for more personalized and friend-like conversation.",
-      "metadata": {},
-      "hidden": null,
       "id": "block-1"
     },
     {
       "value": "I am an expert conversation memory agent that can do the following:...",
       "limit": 20000,
-      "project_id": null,
-      "template_name": null,
-      "is_template": false,
-      "template_id": null,
-      "base_template_id": null,
-      "deployment_id": null,
-      "entity_id": null,
-      "preserve_on_migration": false,
       "label": "memory_persona",
-      "read_only": false,
-      "description": null,
-      "metadata": {},
-      "hidden": null,
       "id": "block-2"
-    },
-    {
-      "value": "The following is my persona...",
-      "limit": 20000,
-      "project_id": null,
-      "template_name": null,
-      "is_template": false,
-      "template_id": null,
-      "base_template_id": null,
-      "deployment_id": null,
-      "entity_id": null,
-      "preserve_on_migration": false,
-      "label": "persona",
-      "read_only": false,
-      "description": "The persona block: Stores details about your current persona, guiding how you behave and respond. This helps you to maintain consistency and personality in your interactions.",
-      "metadata": {},
-      "hidden": null,
-      "id": "block-0"
     }
   ],
-  "files": [],
-  "sources": [],
   "tools": [
     {
       "id": "tool-0",
@@ -297,87 +147,8 @@
       "tags": [
         "letta_core"
       ],
-      "source_code": null,
-      "json_schema": {... ...}
-      },
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
-    },
-    {
-      "id": "tool-2",
-      "tool_type": "letta_sleeptime_core",
-      "description": "This function is called when the agent is done rethinking the memory.",
-      "source_type": "python",
-      "name": "memory_finish_edits",
-      "tags": [
-        "letta_sleeptime_core"
-      ],
-      "source_code": null,
       "json_schema": {... ...},
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
-    },
-    {
-      "id": "tool-3",
-      "tool_type": "letta_sleeptime_core",
-      "description": "The memory_insert command allows you to insert text at a specific location in a memory block...",
-      "source_type": "python",
-      "name": "memory_insert",
-      "tags": [
-        "letta_sleeptime_core"
-      ],
-      "source_code": null,
-      "json_schema": {... ...},
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
-    },
-    {
-      "id": "tool-4",
-      "tool_type": "letta_sleeptime_core",
-      "description": "The memory_replace command allows you to replace a specific string in a memory block with a new string...",
-      "source_type": "python",
-      "name": "memory_replace",
-      "tags": [
-        "letta_sleeptime_core"
-      ],
-      "source_code": null,
-      "json_schema": {... ...},
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
-    },
-    {
-      "id": "tool-5",
-      "tool_type": "letta_sleeptime_core",
-      "description": "The memory_rethink command allows you to completely rewrite the contents of a memory block...",
-      "source_type": "python",
-      "name": "memory_rethink",
-      "tags": [
-        "letta_sleeptime_core"
-      ],
-      "source_code": null,
-      "json_schema": {... ...},
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
+      "return_char_limit": 50000
     },
     {
       "id": "tool-1",
@@ -388,17 +159,178 @@
       "tags": [
         "letta_core"
       ],
-      "source_code": null,
       "json_schema": {... ...},
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "metadata_": {}
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-2",
+      "tool_type": "letta_sleeptime_core",
+      "description": "This function is called when the agent is done rethinking the memory.",
+      "source_type": "python",
+      "name": "memory_finish_edits",
+      "tags": [
+        "letta_sleeptime_core"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-3",
+      "tool_type": "letta_sleeptime_core",
+      "description": "The memory_insert command allows you to insert text at a specific location in a memory block...",
+      "source_type": "python",
+      "name": "memory_insert",
+      "tags": [
+        "letta_sleeptime_core"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-4",
+      "tool_type": "letta_sleeptime_core",
+      "description": "The memory_replace command allows you to replace a specific string in a memory block with a new string...",
+      "source_type": "python",
+      "name": "memory_replace",
+      "tags": [
+        "letta_sleeptime_core"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-5",
+      "tool_type": "letta_sleeptime_core",
+      "description": "The memory_rethink command allows you to completely rewrite the contents of a memory block...",
+      "source_type": "python",
+      "name": "memory_rethink",
+      "tags": [
+        "letta_sleeptime_core"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-11",
+      "tool_type": "dcf",
+      "description": "Read workflow control-plane documents from RedisJSON and optionally compute readiness.",
+      "source_type": "python",
+      "name": "read_workflow_control_plane",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-12",
+      "tool_type": "dcf",
+      "description": "Notify downstream (or initial) worker agent(s) for a workflow state machine.",
+      "source_type": "python",
+      "name": "notify_next_worker_agent",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-13",
+      "tool_type": "dcf",
+      "description": "Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False).",
+      "source_type": "python",
+      "name": "notify_if_ready",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-15",
+      "tool_type": "dcf",
+      "description": "Store workflow insights into long-term memory for downstream agents.",
+      "source_type": "python",
+      "name": "store_memory",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-16",
+      "tool_type": "dcf",
+      "description": "Append a workflow execution episode to the shared knowledge graph timeline.",
+      "source_type": "python",
+      "name": "append_graph_episode",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-17",
+      "tool_type": "dcf",
+      "description": "Atomically acquire a lease on a workflow state in the RedisJSON control-plane.",
+      "source_type": "python",
+      "name": "acquire_state_lease",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-18",
+      "tool_type": "dcf",
+      "description": "Atomically update a state's control-plane JSON and optionally write data-plane output.",
+      "source_type": "python",
+      "name": "update_workflow_control_plane",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-19",
+      "tool_type": "dcf",
+      "description": "Load a skill into a Letta agent: attach directives, tools, and data sources.",
+      "source_type": "python",
+      "name": "load_skill",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-20",
+      "tool_type": "dcf",
+      "description": "Unload a previously loaded skill from a Letta agent.",
+      "source_type": "python",
+      "name": "unload_skill",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
+    },
+    {
+      "id": "tool-21",
+      "tool_type": "dcf",
+      "description": "Invoke a loaded skill tool and capture its structured response for the workflow.",
+      "source_type": "python",
+      "name": "invoke_skill_tool",
+      "tags": [
+        "dcf"
+      ],
+      "json_schema": {... ...},
+      "return_char_limit": 50000
     }
   ],
-  "mcp_servers": [],
   "metadata": {
     "revision_id": "c734cfc0d595"
   }
