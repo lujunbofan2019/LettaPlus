@@ -208,8 +208,7 @@
       "tags": [
         "letta_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-1",
@@ -220,8 +219,7 @@
       "tags": [
         "letta_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-2",
@@ -232,8 +230,7 @@
       "tags": [
         "letta_sleeptime_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-3",
@@ -244,8 +241,7 @@
       "tags": [
         "letta_sleeptime_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-4",
@@ -256,8 +252,7 @@
       "tags": [
         "letta_sleeptime_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-5",
@@ -268,8 +263,7 @@
       "tags": [
         "letta_sleeptime_core"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-11",
@@ -280,8 +274,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-12",
@@ -292,8 +285,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-13",
@@ -304,8 +296,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-15",
@@ -316,8 +307,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-16",
@@ -328,8 +318,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-17",
@@ -340,8 +329,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-18",
@@ -352,8 +340,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-19",
@@ -364,8 +351,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-20",
@@ -376,8 +362,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     },
     {
       "id": "tool-21",
@@ -388,8 +373,7 @@
       "tags": [
         "dcf"
       ],
-      "json_schema": {... ...},
-      "return_char_limit": 50000
+      "json_schema": {... ...}
     }
   ],
   "metadata": {
