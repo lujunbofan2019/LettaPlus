@@ -1,6 +1,6 @@
 services:
   letta:
-    image: letta/letta:latest
+    image: letta/letta:0.11.7
     entrypoint: ["/entrypoint.sh"]
     command: ["./letta/server/startup.sh"]
     ports:
