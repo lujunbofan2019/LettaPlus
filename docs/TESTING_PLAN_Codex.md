@@ -109,7 +109,7 @@ Throughout, we expose CoT snippets, workflow JSON, skill manifests, control-plan
 
 ### 2.2. Capability Assessment & Gap Detection
 
-1. Planner invokes `get_skillset` → receives registry listing required skills but no orchestrated workflow.
+1. Planner invokes `get_skillset` → receives registry listing of individual skills but no orchestrated workflow.
 2. Executes semantic vector search (`search_embeddings(query="Alex Wong advice call analysis")`) → **no matching workflow**. Capability gap detected.
 3. Planner writes a working-memory block in the active context window documenting the gap. Letta’s runtime flags the block for archival.
 4. Planner queries the knowledge graph for historical success rates of `skill://whisper-transcribe@1.0.0`, `skill://sentiment-analysis@1.2.0`, and `skill://compliance-analysis@1.3.0`; reliability ≥ 0.98, suitable for initial draft.
@@ -330,7 +330,7 @@ Each tool call emits structured JSON responses captured in the control plane and
 
 | Phase | Worker | Actions |
 |-------|--------|---------|
-| 1. Lease Acquisition | `worker-qa-001` | `acquire_state_lease` for `GetApplicationIDs`; loads Salesforce skill; invokes tool; writes result to control plane; unloads skill; notifies Planner. |
+| 1. Lease Acquisition | `worker-qa-001` | `acquire_state_lease` for `GetApplicationIDs`; loads Salesforce skill; invokes tool; writes result to control plane; unloads skill; calls `notify_next_worker_agent`. |
 | 2. Recording Retrieval | `worker-qa-002` | Loads Recording Management skill; streams manifest; persists artifact `artifact://recordings/APP-49201.json`; updates state to `done`. |
 | 3. Transcription | `worker-qa-003` | Loads Whisper skill; transcribes audio; stores transcript chunks in working memory; posts artifact `artifact://transcripts/APP-49201.txt`; releases lease. |
 | 4a. Sentiment Branch | `worker-qa-004` | Spawned automatically when parallel state opens; loads Sentiment skill; produces report; updates branch state to `done`. |
@@ -342,12 +342,12 @@ Parallel branches 4a and 4b execute concurrently; the control plane waits for bo
 ### 2.7. Hybrid Memory Activity
 
 - **Context Window → Working Memory:** During each step, Workers append concise summaries (e.g., Salesforce IDs retrieved) into the context window for the Planner. Letta automatically tags these blocks with TTLs.
-- **Automatic Summarisation:** Once the conversation exceeds 6k tokens, Letta’s runtime compresses earlier turns into a working-memory summary block to avoid overflow.
+- **Automatic Summarisation and Offloading:** Once the conversation exceeds 6k tokens, Letta’s runtime compresses earlier turns into a working-memory summary block and schedules the originals for archival export, preventing context-window overflow.
 - **Sleep-Time Agent:** After the trial run completes, the Planner’s paired sleep-time agent activates during idle cycles. It:
     1. Consolidates transient working-memory blocks into an archival summary (“Created and validated Standard Advice Call Analysis workflow …”).
     2. Moves verbose artifacts (full transcripts) from the Planner’s context window into archival storage, replacing them with vector-store URIs.
-    3. Writes an analytics note into the knowledge graph, linking the workflow execution to the advisor, call, and rules touched.
-- **Vector Store:** The new workflow is embedded (`embed(workflow_json)`) and stored via `vector_store.upsert`, enabling later retrieval through semantic search rather than direct indexing by ID.
+    3. Uses `append_graph_episode` to link the workflow execution to the advisor, call, and rules touched, and records summary reliability metrics.
+- **Vector Store:** The new workflow file `workflow_advice_call_analysis_v1.json` is embedded (`embed(workflow_json)`) and stored via `vector_store.upsert`, enabling later retrieval through semantic search rather than direct indexing by ID.
 
 ---
 
@@ -522,7 +522,7 @@ Parallel branches 4a and 4b execute concurrently; the control plane waits for bo
 
 - **Vector Store:** Refined workflow embedded and upserted with metadata `{"topic": "product_clarity", "origin": "c4b1a2e8-..."}`. Subsequent semantic searches for "product explanation compliance" rank it highly.
 - **Planner Archival Memory:** Sleep-time agent summarises adaptation outcome: “Refined Standard Advice Call Analysis into Product Explanation Compliance Check; added diarization + segmentation; removed sentiment/scoring.”
-- **Knowledge Graph:** Adds node `Workflow:a8d3b1c9...` with `REFINEMENT_OF` edge pointing to the original workflow. Advisor-product episodes link to `Product:HELOC 2.0` entity, enabling future analytics.
+- **Knowledge Graph:** Adds node `Workflow:a8d3b1c9...` with `REFINEMENT_OF` edge pointing to the original workflow. The link preserves capability lineage; coupled with advisor-product episodes that connect to `Product:HELOC 2.0`, it enables later analytics such as tracking execution counts per refinement, comparing compliance rates across products, and identifying which training cohorts required workflow adjustments.
 
 ---
 
@@ -532,9 +532,25 @@ Parallel branches 4a and 4b execute concurrently; the control plane waits for bo
 
 ### 4.1. Failure Event and Control Plane Trace
 
-When `worker-qa-011` processes `TranscribeRecording`, the Whisper backend times out after 120 seconds. The control-plane state transitions as follows:
+When `worker-qa-011` processes `TranscribeRecording`, the Whisper backend times out after 120 seconds. The control-plane state transitions from a running lease to a failure record:
 
 ```json
+// During execution
+{
+  "status": "running",
+  "attempts": 1,
+  "lease": {
+    "token": "lease-77fa",
+    "owner_agent_id": "worker-qa-011",
+    "ts": "2024-08-12T14:01:30Z",
+    "ttl_s": 120
+  },
+  "started_at": "2024-08-12T14:01:30Z",
+  "finished_at": null,
+  "last_error": null
+}
+
+// After timeout
 {
   "status": "failed",
   "attempts": 1,

@@ -9,6 +9,7 @@ This document provides a **worked example** that demonstrates how the Letta-base
 As a financial services provider regulated by the Financial Conduct Authority (FCA), Selina Finance has a critical duty to ensure all customer interactions meet rigorous compliance and quality standards. Our advisors and case managers handle numerous phone calls daily, which are recorded for quality assurance (QA) and training purposes.
 
 The traditional process involves line managers or compliance staff manually listening to hours of call recordings (`.mp3` files) to:
+
 - Assess the performance of newly onboarded advisors.
 - Verify that new financial products are being explained correctly and consistently.
 - Ensure adherence to FCA regulations like Mandatory Disclosures and Consumer Duty.
@@ -36,9 +37,9 @@ Our system addresses this challenge with a **Planner Agent** that can leverage a
 
 This document will walk through three key scenarios to illustrate the system's core features:
 
-1.  **Initial Capability Creation.** We will show how the Planner agent interacts with a user to understand a new request, identifies a "capability gap" (the lack of a pre-existing workflow), collaboratively designs a new workflow, and executes a test run.
-2.  **Capability Refinement and Reuse.** We will demonstrate how the agent can retrieve the previously saved workflow, adapt it to a new, more specific user request, and save the modified version as a new, reusable asset.
-3.  **Dynamic Failure Handling and Self-Healing.** We will simulate a runtime tool failure and show how a worker agent can dynamically swap to a substitute skill (by unloading the designated one, and loading an alternative one). We will also show how the system records these failures in its knowledge graph, allowing the Planner to proactively "heal" the master workflow for future runs, demonstrating self-evolution.
+1. **Initial Capability Creation.** We will show how the Planner agent interacts with a user to understand a new request, identifies a "capability gap" (the lack of a pre-existing workflow), collaboratively designs a new workflow, and executes a test run.
+2. **Capability Refinement and Reuse.** We will demonstrate how the agent can retrieve the previously saved workflow, adapt it to a new, more specific user request, and save the modified version as a new, reusable asset.
+3. **Dynamic Failure Handling and Self-Healing.** We will simulate a runtime tool failure and show how a worker agent can dynamically swap to a substitute skill (by unloading the designated one, and loading an alternative one). We will also show how the system records these failures in its knowledge graph, allowing the Planner to proactively "heal" the master workflow for future runs, demonstrating self-evolution.
 
 Through these scenarios, we will provide concrete examples of the agent's chain of thought (CoT), the artifacts it produces (like capability files, skill manifests, control-plane objects, notifications, etc), the tool calls it makes, and the updates it performs on its hybrid memory system (memory blocks, knowledge graph, and vector store).
 
@@ -71,99 +72,166 @@ This scenario demonstrates the system's behavior when faced with a novel task fo
 
 **Goal:** A compliance manager wants to review the performance of a newly hired advisor, Alex Wong, for calls made in the last week.
 
-### 2.1. The Conversation: Defining the Need
+### 2.1. Conversation Timeline
 
-[TODO: AI assistant please improve the visualisation of agent-human conversations using appropriate markdown features]
+> Turn 1 — User
+>
+>
+> "Hi, I need to check the quality of advice calls made by Alex Wong last week. Can you help me analyse them?"
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Intent classification → *advisor QA review*.
+> - Required outcomes: compliance verdicts, sentiment, score per call.
+> - Check for existing workflow in semantic memory.
+>
+> </details>
+>
 
-**[USER]:** "Hi, I need to check the quality of advice calls made by Alex Wong last week. Can you help me analyze them?"
+> Turn 2 — Planner
+>
+>
+> "Of course. To confirm, should I check compliance with the standard script, assess customer sentiment, and produce an overall score?"
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Clarify evaluation axes before designing workflow.
+> - Prompt user for scoring rubric confirmation.
+>
+> </details>
+>
 
-**[PLANNER AGENT]:** "Of course. To ensure I get this right, could you clarify what 'analyzing them' involves? For example, are you interested in compliance with specific rules, customer sentiment, or something else?"
+> Turn 3 — User
+>
+>
+> "Yes. Please use the existing QA scorecard."
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - QA scorecard likely stored in vector store (`qa_scoring_formula_v3`).
+> - Need skills: Salesforce lookup, recording retrieval, transcription, sentiment, compliance, scoring.
+>
+> </details>
+>
 
-**[USER]:** "Good question. I need to know if he's following the standard script, so compliance is key. I'm also interested in the customer's sentiment during the calls. Finally, I'd like an overall quality score for each call."
+> Turn 4 — Planner
+>
+>
+> "Great. I'll source Alex's recordings for last week, transcribe them, analyse sentiment and compliance in parallel, and then compute the QA score. I'll run a single-call pilot first; if that looks good, I can scale to the whole set."
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Confirmed plan; now evaluate capability catalog.
+> - Expect capability gap (no prior workflow).
+>
+> </details>
+>
 
-**[PLANNER AGENT]:** "Thank you. That's very clear. Based on your request, here is the workflow I propose:
-1.  Find all loan application IDs assigned to 'Alex Wong' in Salesforce from last week.
-2.  For those applications, retrieve the associated call recordings.
-3.  For each recording, transcribe it from audio to text.
-4.  Once transcribed, I will run two analyses in parallel:
-    *   One for customer sentiment.
-    *   One for compliance against our standard rules.
-5.  Finally, I will calculate an overall quality score based on the results of the sentiment and compliance checks.
+### 2.2. Capability Assessment & Gap Detection (CoT)
 
-Does this plan meet your needs?"
-
-**[USER]:** "Yes, that looks perfect."
-
-### 2.2. The Agent's Internal Monologue (CoT)
-
-[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
-
-1.  **Intent Analysis:** The user wants to perform "Advice Call Analysis" for a specific advisor and date range. The key success metrics are **compliance**, **sentiment**, and a final **score**.
-
-2.  **Memory & Capability Check:**
-    *   **Vector Store Query:** Search for existing capabilities with keywords: `advice call`, `quality assurance`, `compliance analysis`.
-    *   **Result:** No existing capabilities found. **This is a capability gap.** I need to construct a new workflow JSON file. Planner records a **capability gap** memory block:
+1. **Intent Analysis:** The user wants to perform "Advice Call Analysis" for a specific advisor and date range. The key success metrics are **compliance**, **sentiment**, and a final **score**.
+2. **Memory & Capability Check:**
+    - **Vector Store Query:** Executes semantic vector search `search_embeddings(query="advice call analysis")`
+    - **Result:** No existing capabilities found. **This is a capability gap.** I need to construct a new workflow JSON file. Planner records a **capability gap** memory block:
 
     ```json
     {
-      "type": "capability_gap", 
-      "summary": "Advice Call Analysis workflow missing; need to orchestrate Salesforce lookup, recording fetch, transcription, sentiment, compliance, scoring.",
-      "tags": ["qa", "advisor_quality", "workflow:new"]
+      "type": "capability_gap",
+      "summary": "Advice Call Analysis capability missing; need to orchestrate Salesforce lookup, recording fetch, transcription, sentiment, compliance, scoring.",
+      "tags": ["qa", "advisor_quality", "capability:new"]
     }
     ```
-        
-    *   **Knowledge Graph Query:** What is the historical performance of skills tagged with `compliance`, `sentiment`, `transcription`?
-    *   **Result:** The graph shows `skill://whisper-transcribe@1.0.0` has a 99% success rate, and `skill://assemblyai-transcribe@1.2.0` has a 99% success rate. I'll select the Whisper-based skill as the primary for now. The `compliance-analyzer` and `sentiment-analyzer` skills show 100% reliability.
 
-3.  **Workflow Construction:**
-    *   The user's request maps to a sequence of steps. I'll need skills for each step.
-    *   **Step 1 (Get Apps):** The `salesforce-integration` skill can find applications by advisor name and date range.
-    *   **Step 2 (Get Recordings):** The `recording-management` skill can retrieve audio files by IDs.
-    *   **Step 3 (Transcribe):** The `whisper-transcribe` skill is selected.
-    *   **Step 4 (Analyze):** The problem splits here. I can run sentiment and compliance analysis in parallel to be more efficient. This requires a `Parallel` state in my ASL workflow. I will use the `sentiment-analysis` and `compliance-analysis` skills.
-    *   **Step 5 (Score):** The `scoring` skill can take the outputs from the parallel branches and compute a final score.
-    *   I will now compile this logic into a `letta-asl-workflow` JSON structure.
+    - **Knowledge Graph Query:** What is the historical performance of skills tagged with `compliance`, `sentiment`, `transcription`?
+    - **Result:** The graph shows `skill://whisper-transcribe@1.0.0` has a 99% success rate, and `skill://assemblyai-transcribe@1.2.0` has a 99% success rate. I'll select the Whisper-based skill as the primary for now. The `compliance-analyzer` and `sentiment-analyzer` skills show 100% reliability.
+3. **Workflow Construction:**
+    - The user's request maps to a sequence of steps. I'll need skills for each step.
+    - **Step 1 (Get Apps):** The `salesforce-integration` skill can find applications by advisor name and date range.
+    - **Step 2 (Get Recordings):** The `recording-management` skill can retrieve audio files by IDs.
+    - **Step 3 (Transcribe):** The `whisper-transcribe` skill is selected.
+    - **Step 4 (Analyze):** The problem splits here. I can run sentiment and compliance analysis in parallel to be more efficient. This requires a `Parallel` state in my ASL workflow. I will use the `sentiment-analysis` and `compliance-analysis` skills.
+    - **Step 5 (Score):** The `scoring` skill can take the outputs from the parallel branches and compute a final score.
+    - I will now compile this logic into a `letta-asl-workflow` JSON structure.
 
-### 2.3. The Generated Workflow Artifact
+### 2.3. Workflow Drafting
 
-The Planner Agent generates the following `workflow_advice_call_analysis_v1.json` file.
-
-[TODO: AI assistant please double-check the JSON file against schemas\letta_asl_workflow_schema_v2.2.0.json to ensure correctness and comprehensiveness]
+The Planner composes a Letta-ASL workflow that conforms to `schemas/letta_asl_workflow_schema_v2.2.0.json` and validates it via `validate_workflow`.
 
 ```json
 {
+  "workflow_schema_version": "2.2.0",
   "workflow_id": "c4b1a2e8-5d6f-4c7a-8b1e-3f9c0d7a6b21",
   "workflow_name": "Standard Advice Call Analysis",
+  "description": "Analyse advisor call recordings for compliance, sentiment, and QA scoring.",
   "version": "1.0.0",
-  "description": "A standard workflow to analyze an advisor's call recordings for compliance, sentiment, and a final quality score.",
+  "created_at": "2024-07-08T09:15:00Z",
+  "author": "planner@selina",
+  "tags": ["qa", "advisor_quality", "compliance"],
+  "workflow_input_schema": {
+    "type": "object",
+    "properties": {
+      "advisor_name": {"type": "string"},
+      "start_date": {"type": "string", "format": "date"},
+      "end_date": {"type": "string", "format": "date"}
+    },
+    "required": ["advisor_name", "start_date", "end_date"]
+  },
+  "skill_imports": [
+    {"uri": "file://skills/salesforce-integration.json"},
+    {"uri": "file://skills/recording-management.json"},
+    {"uri": "file://skills/whisper-transcribe.json"},
+    {"uri": "file://skills/sentiment-analysis.json"},
+    {"uri": "file://skills/compliance-analysis.json"},
+    {"uri": "file://skills/scoring.json"}
+  ],
   "asl": {
+    "Comment": "Salesforce lookup → recording retrieval → transcription → parallel sentiment/compliance → scoring",
     "StartAt": "GetApplicationIDs",
+    "Version": "1.0",
     "States": {
       "GetApplicationIDs": {
         "Type": "Task",
-        "Comment": "Find loan application IDs from Salesforce given an advisor's name and date range.",
+        "Comment": "Find loan applications for the advisor over the date range.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://salesforce-integration@2.1.0"]
         },
+        "Parameters": {
+          "advisor_name.$": "$.advisor_name",
+          "start_date.$": "$.start_date",
+          "end_date.$": "$.end_date"
+        },
+        "ResultPath": "$.applications",
         "Next": "GetCallRecordings"
       },
       "GetCallRecordings": {
         "Type": "Task",
-        "Comment": "Retrieve call recordings for the given application IDs.",
+        "Comment": "Retrieve call recordings linked to the applications.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://recording-management@1.5.0"]
         },
+        "Parameters": {
+          "application_ids.$": "$.applications.data.ids"
+        },
+        "ResultPath": "$.recordings",
         "Next": "TranscribeRecording"
       },
       "TranscribeRecording": {
         "Type": "Task",
-        "Comment": "Transcribe the audio file to text using the Whisper-based skill.",
+        "Comment": "Transcribe MP3 audio to text using Whisper backend.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://whisper-transcribe@1.0.0"]
         },
+        "Parameters": {
+          "recording_uri.$": "$.recordings.data[0].uri"
+        },
+        "ResultPath": "$.transcript",
         "Next": "ParallelAnalysis"
       },
       "ParallelAnalysis": {
@@ -174,7 +242,15 @@ The Planner Agent generates the following `workflow_advice_call_analysis_v1.json
             "States": {
               "SentimentAnalysis": {
                 "Type": "Task",
-                "AgentBinding": { "skills": ["skill://sentiment-analysis@1.0.0"] },
+                "Comment": "Assess overall sentiment and highlight issues.",
+                "AgentBinding": {
+                  "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
+                  "skills": ["skill://sentiment-analysis@1.2.0"]
+                },
+                "Parameters": {
+                  "transcript.$": "$.transcript.text"
+                },
+                "ResultPath": "$.sentiment",
                 "End": true
               }
             }
@@ -184,21 +260,37 @@ The Planner Agent generates the following `workflow_advice_call_analysis_v1.json
             "States": {
               "ComplianceAnalysis": {
                 "Type": "Task",
-                "AgentBinding": { "skills": ["skill://compliance-analysis@1.3.0"] },
+                "Comment": "Check transcript against compliance rules.",
+                "AgentBinding": {
+                  "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
+                  "skills": ["skill://compliance-analysis@1.3.0"]
+                },
+                "Parameters": {
+                  "transcript.$": "$.transcript.text",
+                  "rule_set": "compliance_rules_v2024Q4"
+                },
+                "ResultPath": "$.compliance",
                 "End": true
               }
             }
           }
         ],
+        "ResultPath": "$.analysis",
         "Next": "CalculateScore"
       },
       "CalculateScore": {
         "Type": "Task",
-        "Comment": "Calculate a final score based on the parallel analysis results.",
+        "Comment": "Combine sentiment and compliance outcomes into QA score.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://scoring@1.1.0"]
         },
+        "Parameters": {
+          "sentiment.$": "$.analysis.sentiment.report",
+          "compliance.$": "$.analysis.compliance.verdicts",
+          "formula": "qa_scoring_formula_v3"
+        },
+        "ResultPath": "$.qa_score",
         "End": true
       }
     }
@@ -206,97 +298,116 @@ The Planner Agent generates the following `workflow_advice_call_analysis_v1.json
 }
 ```
 
-### 2.4. Test Drive & Memory Updates
+### 2.4. Tool Call Sequence
 
-The Planner Agent now executes this workflow as a test drive.
+1. `salesforce-integration/applications.by_advisor`
+2. `recording-management/recordings.by_application`
+3. `whisper-transcribe/transcribe.audio`
+4. `sentiment-analysis/analyse`
+5. `compliance-analysis/evaluate`
+6. `scoring/calculate`
 
-- **Tool Calls:** The system executes the tools defined in the skills, passing inputs and receiving outputs at each step.
+Each tool call emits structured JSON responses captured in the control plane and persisted as artifacts.
 
-[TODO: AI assistant please show the sequence of tool calls to be made here]
+### 2.5. Control Plane Objects
 
-- **Control Plane:** A Redis key `cp:wf:c4b1...:meta` is created, along with state keys for each task. The `status` of each state transitions from `pending` -> `running` -> `done`.
+- **Meta document** (`schemas/control-plane-meta-1.0.0.json` compliant):
 
-  [TODO: AI assistant please review the control-plane state object against \schemas\control-plane-state-1.0.0.json to ensure correctness and comprehensiveness]
+    ```json
+    {
+      "workflow_id": "c4b1a2e8-5d6f-4c7a-8b1e-3f9c0d7a6b21",
+      "workflow_name": "Standard Advice Call Analysis",
+      "schema_version": "1.0.0",
+      "start_at": "GetApplicationIDs",
+      "terminal_states": ["CalculateScore"],
+      "states": [
+        "GetApplicationIDs",
+        "GetCallRecordings",
+        "TranscribeRecording",
+        "ParallelAnalysis",
+        "SentimentAnalysis",
+        "ComplianceAnalysis",
+        "CalculateScore"
+      ],
+      "agents": {
+        "planner": "agent://planner@1.0.0",
+        "worker_pool": {"name": "agent_template_worker", "version": "1.0.0"}
+      },
+      "skills": {
+        "GetApplicationIDs": ["skill://salesforce-integration@2.1.0"],
+        "GetCallRecordings": ["skill://recording-management@1.5.0"],
+        "TranscribeRecording": ["skill://whisper-transcribe@1.0.0"],
+        "SentimentAnalysis": ["skill://sentiment-analysis@1.2.0"],
+        "ComplianceAnalysis": ["skill://compliance-analysis@1.3.0"],
+        "CalculateScore": ["skill://scoring@1.1.0"]
+      },
+      "deps": {
+        "GetApplicationIDs": {"upstream": [], "downstream": ["GetCallRecordings"]},
+        "GetCallRecordings": {"upstream": ["GetApplicationIDs"], "downstream": ["TranscribeRecording"]},
+        "TranscribeRecording": {"upstream": ["GetCallRecordings"], "downstream": ["ParallelAnalysis"]},
+        "ParallelAnalysis": {"upstream": ["TranscribeRecording"], "downstream": ["SentimentAnalysis", "ComplianceAnalysis"]},
+        "SentimentAnalysis": {"upstream": ["ParallelAnalysis"], "downstream": ["CalculateScore"]},
+        "ComplianceAnalysis": {"upstream": ["ParallelAnalysis"], "downstream": ["CalculateScore"]},
+        "CalculateScore": {"upstream": ["SentimentAnalysis", "ComplianceAnalysis"], "downstream": []}
+      }
+    }
+    ```
 
-  Control plane (`create_workflow_control_plane`) with initial state:
-  ```json
-  {
-    "workflowId": "advice_call_analysis.v1",
-    "state": "initialized",
-    "currentStep": null,
-    "artifacts": []
-  }
-  ```
+- **State document** (`TranscribeRecording` just before completion):
 
-[TODO: AI assistant please add control-plane meta object according to \schemas\control-plane-meta-1.0.0.json]
+    ```json
+    {
+      "status": "running",
+      "attempts": 1,
+      "lease": {
+        "token": "lease-5d40",
+        "owner_agent_id": "worker-qa-002",
+        "ts": "2024-07-08T09:22:11Z",
+        "ttl_s": 120
+      },
+      "started_at": "2024-07-08T09:22:10Z",
+      "finished_at": null,
+      "last_error": null
+    }
+    ```
 
-[TODO: AI assistant please review the table below for correctness and consistency]
-- Worker lifecycle snapshot:
-  | Phase | Action |
-  |-------|--------|
-  | Lease | Worker acquires lease via `acquire_state_lease(control_plane_id)`.
-  | Skill Load | `load_skill(manifest_id="salesforce_integration.v3")` (uses registry to attach MCP endpoint).
-  | Tool Call | `invoke_skill_tool` with payload `{advisor_name: "Alex Wong", start_date: ..., end_date: ...}` → returns `{"data": {"ids": ["APP-49201"]}}`.
-  | Memory | Worker appends working-memory block summarizing Salesforce lookup.
-  | Knowledge Graph | Adds episode `CallAnalysisTrial` with relation `(Advisor:AlexWong) -[handled]-> (Application:APP-49201)`.
-  | Control Plane | Updates step `fetch_applications` to `completed` with artifact reference.
 
-[TODO: AI assistant please review the steps below to ensure correctness and consistency; multiple worker agents should be involved in this workflow, some of which should work in parallel - the current narrative does not show that clearly, please improve]
-- Repeat for each step:
-  1. **Retrieve Recordings**
-      - Tool output sample:
-        ```json
-        {
-          "data": [
-            {
-              "application_id": "APP-49201",
-              "uri": "s3://selina-calls/2024/07/03/AlexWong_APP-49201.mp3",
-              "duration_sec": 1220,
-              "metadata": {
-                "advisor": "Alex Wong",
-                "customer": "Jamie Carter",
-                "call_type": "advice"
-              }
-            }
-          ]
-        }
-        ```
-      - Knowledge graph adds entity `Call:APP-49201_20240703` and relation `(Advisor:AlexWong) -[conducted]-> (Call:...)`.
+### 2.6. Execution Flow: A Choreography of Workers
 
-  2. **Transcription**
-      - Whisper skill output stored in working memory.
-      - Letta archival memory receives chunked transcript (split into 5k token blocks).
-      - Control plane artifact references `artifact://transcripts/APP-49201.txt`.
+The Planner kicks off the workflow by calling `notify_next_worker_agent`. This begins a choreographed sequence of operations, with ephemeral worker agents performing each step.
 
-  3. **Sentiment Analysis**
-      - Tool result: `{ "report": { "overall": "Neutral", "flags": ["Customer confusion at minute 8"] } }`.
-      - Memory block type `analysis_result` created.
+1. **GetApplicationIDs:**
+    - `Worker-1` receives the notification, acquires the lease for this state, and loads the `salesforce-integration` skill.
+    - It calls the tool with `{advisor_name: "Alex Wong", ...}` and receives `{"ids": ["APP-49201"]}`.
+    - It writes this output to the data plane, updates its state to `done`, releases the lease, and calls `notify_next_worker_agent` for `GetCallRecordings`.
+2. **GetCallRecordings:**
+    - `Worker-2` is activated, acquires the lease for `GetCallRecordings`, and loads the `recording-management` skill.
+    - It reads the application ID from the data plane and retrieves the call recording URI.
+    - It updates its state, releases the lease, and notifies the `TranscribeRecording` worker.
+3. **TranscribeRecording:**
+    - `Worker-3` acquires the lease and loads the `whisper-transcribe` skill.
+    - It transcribes the audio, writes the full transcript text to the data plane, updates its state, releases its lease, and notifies the `ParallelAnalysis` state.
+4. **ParallelAnalysis:**
+    - The `ParallelAnalysis` state acts as a fork. It immediately notifies two *new* workers concurrently: `Worker-4` for `SentimentAnalysis` and `Worker-5` for `ComplianceAnalysis`.
+    - `Worker-4 (Sentiment)`**:** Acquires the lease for its state, loads the `sentiment-analysis` skill, reads the transcript from the data plane, performs its analysis, and writes its result (`{ "overall": "Neutral", ...}`). It updates its state to `done` and releases its lease.
+    - `Worker-5 (Compliance)`**:** Simultaneously, it acquires the lease for its state, loads the `compliance-analysis` skill, reads the transcript, and writes its result (`{"verdicts": [...]}`). It updates its state to `done` and releases its lease.
+    - Both workers, upon completion, call `notify_if_ready` for the downstream `CalculateScore` state.
+5. **CalculateScore:**
+    - The `notify_if_ready` call from the last parallel worker to finish triggers the notification for `Worker-6`.
+    - `Worker-6` acquires the lease, loads the `scoring` skill, reads the outputs from *both* the sentiment and compliance branches, calculates the final score, and writes it to the data plane.
+    - It updates its state to `done` and releases the lease. The workflow is now complete.
 
-  4. **Compliance Analysis**
-      - Planner preloaded compliance rules by calling `vector_store.fetch("compliance_rules_v2024Q4")` → Worker receives pointer.
-      - Tool result: `{"verdicts": [{"rule": "MandatoryDisclosure", "compliant": true}, {"rule": "ProductClarity", "compliant": false, "evidence": "Customer confusion"}]}`.
-      - Knowledge graph relation `(Call:...) -[non_compliant_in]-> (Rule:ProductClarity)`.
+### 2.7. Hybrid Memory Activity and Context Management
 
-  5. **Scoring**
-      - Score tool combines sentiment/compliance with formula.
-      - Output: `{ "score": 72, "rationale": "Compliance failure on ProductClarity" }`.
-      - Control plane artifact appended `artifact://qa_scores/APP-49201.json`.
-
-[TODO: AI assistant please note that 'cognitive garbage collection' is one example, but not the best example to illustrate Letta's virtual context management capability. Instead, please add another example about how Letta summarises and moves memory blocks around for the Planner agent in order to prevent its context window from overflowed.]
-
-- **Letta Context Management:** Before each task, the ephemeral worker agent loads the required skill. The `DCF Runtime` ensures the correct tool definitions and directives are added to the agent's context. After the task, the skill is unloaded ("cognitive garbage collection").
-
-[TODO: AI assistant please note 1) I don't think it illustrated the working mechanism of the Vector store correctly - semantic search should be supported rather than indexing, so the newly created workflow should be discovered and retrieved later on by its description; 2) please clarify that the memory blocks were initially created in the context window but subsequently externalised to archival memory by Letta to prevent context window from overflowing]
-
-- **Hybrid Memory Updates:**
-    - **Vector Store:** The newly created `workflow_advice_call_analysis_v1.json` is indexed and stored in the vector store with metadata tags `["advice call", "compliance", "sentiment", "scoring"]`.
-    - **Knowledge Graph:**
-        - A new `WorkflowExecution` node is created, linked to the `Workflow` node for `c4b1a2e8...`.
-        - This execution node is linked via `USED_SKILL` edges to the specific versions of all skills that were part of the run.
-        - The `p_success` and `p95_latency` properties on the edges connecting to the skill nodes are updated to reflect the successful and timely execution.
-    - **Memory Blocks:** A new entry is added to the Planner's archival memory: "Successfully created and executed `workflow_advice_call_analysis_v1.json` for user [Compliance Manager's ID]. The workflow involved Salesforce integration, transcription, parallel analysis for sentiment and compliance, and scoring. The user confirmed the plan was correct."
-
-[TODO: AI assistant please note that the latest version of Letta framework supports 'sleep-time agent', which is a companion to a main agent that converses with users and performs ordinary tasks. We use the sleep-time agent to consolidate and optimize the context window of the main agent periodically, swapping memory blocks out to archival memory, and generating analytical insights to update the knowledge graph. Please create a clear narrative here.]
+- **Letta's Virtual Context Management:** Throughout the workflow, the Planner Agent's context window could become cluttered with task details. Letta's virtual context manager works in the background to prevent this. For instance, after the Planner confirms the initial workflow with the user, it might have a large memory block containing the full conversation and the proposed plan. Letta can automatically summarize this:
+    - **Original Memory Block:** `(User Interaction) "Hi, I need to check..." + (Agent Response) "Of course... here is the workflow..." + (User Confirmation) "Yes, that looks perfect."`
+    - **Summarized Block (moved to working memory):** `User [Compliance Manager] requested QA analysis for Alex Wong. I proposed a 5-step workflow including parallel analysis, which the user approved.`
+    - This frees up the main context window for the agent to focus on the next task: initiating and monitoring the workflow execution.
+- **Vector Store for Retrieval:** The `capability_standard_advice_call_analysis_v1.json` file is chunked, embedded, and stored in the vector database. The key is that the *description* ("A standard workflow to analyze an advisor's call recordings...") is part of the embedded text. This allows the Planner in Scenario 2 to find this workflow later by performing a **semantic search** with a query like "find a workflow for checking compliance on calls."
+- **The Sleep-Time Agent:** After the user interaction is complete, the Planner agent might become idle. This is when its companion **sleep-time agent** activates. This specialized agent performs offline optimization tasks without interrupting the main agent. It can:
+    1. Review the Planner's recent working memory to a) consolidate transient working-memory blocks into an archival summary; and b) identify valuable, long-term memories (like the creation of a new, successful workflow).
+    2. Move verbose artifacts (full transcripts) from the Planner’s context window into archival storage, replacing them with vector-store URIs.
+    3. Call the `append_graph_episode` tool to update the Knowledge Graph with new nodes and relationships (e.g., creating the `WorkflowExecution` node and linking it to the skills used). This offloads the expensive task of graph updates from the main interactive loop.
 
 ---
 
@@ -306,104 +417,186 @@ This scenario demonstrates how the system reuses and adapts existing workflows t
 
 **Goal:** A training manager wants to verify that all advisors are correctly explaining a new loan product, "HELOC 2.0," following a recent training course.
 
-### 3.1. The Conversation: A More Specific Need
+### 3.1. Conversation Timeline
 
-[TODO: AI assistant please improve the visualisation of agent-human conversations using appropriate markdown features]
+> Turn 1 — User
+>
+>
+> "I need to check if advisors are explaining the new HELOC 2.0 product correctly in their calls since the start of the month."
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Trigger semantic search in workflow memory for "advice call analysis".
+> - Evaluate if existing workflow matches narrower intent.
+>
+> </details>
+>
 
-**[USER]:** "I need to check if our advisors are explaining the new 'HELOC 2.0' product correctly in their calls since the start of the month."
+> Turn 2 — Planner
+>
+>
+> "I have a reusable Advice Call Analysis workflow. Shall I adapt it to isolate the advisor’s product explanation and run a compliance check just on that section?"
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Candidate workflow: `Standard Advice Call Analysis` (v1.0.0).
+> - Need diarization + segmentation to isolate advisor speech.
+>
+> </details>
+>
 
-**[PLANNER AGENT]:** "I can help with that. I have an existing capability for general advice call analysis. To ensure I tailor it correctly for your needs, could you confirm if you need a full compliance and sentiment analysis, or something more specific to the product explanation?"
-
-**[USER]:** "I don't need sentiment or a general score. I only care about the parts of the conversation where the advisor is actually describing the product and its terms. I need to know if that specific part of the script is compliant."
-
-**[PLANNER AGENT]:** "Understood. So, the focus is on compliance within specific segments of the conversation. Here is the refined workflow I propose:
-1.  Find all loan application IDs since the start of the month.
-2.  Retrieve all associated call recordings.
-3.  Transcribe the recordings to text.
-4.  **New Step:** Identify the different speakers in the transcript (diarization) to isolate the advisor's speech.
-5.  **New Step:** Label the transcript to identify and extract only the 'product detail' and 'offer explanation' segments.
-6.  Run a compliance analysis *only* on those extracted segments.
-7.  Report the result as a simple pass or fail.
-
-How does this sound?"
-
-**[USER]:** "That is exactly what I need. Perfect."
+> Turn 3 — User
+>
+>
+> "Yes, only the parts where the advisor describes the product matter."
+>
+> <details>
+> <summary>Planner CoT Snapshot</summary>
+>
+> - Remove sentiment + scoring steps.
+> - Add diarization and targeted compliance.
+> - Save refined workflow as new asset; link via `REFINEMENT_OF` edge.
+>
+> </details>
+>
 
 ### 3.2. The Agent's Internal Monologue (CoT)
 
-[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
+1. **Intent Analysis:** The user wants to check for compliance on a specific topic ("HELOC 2.0" explanation) across all advisors.This is different from the previous general quality check.
+2. **Memory & Capability Check:**
+    - **Stage 1: Candidate Retrieval (Vector Store Query):** Search for capabilities regarding `advice call`, `product explanation`, `compliance`.
+    - **Result:** The search returns `workflow_advice_call_analysis_v1.json`. **This is a capability match.** I can adapt this existing workflow.
+    - [*Hypothetically*] **Stage 2: Candidate Ranking (Knowledge Graph Query):** If **Stage 1** returned multiple candidate capabilities, query the knowledge graph for those workflow IDs to understand their relationships and history. E.g., the knoledge graph reveals that `workflow_advice_call_analysis_v1.json` is a foundational workflow (it has `REFINEMENT_OF` edges pointing **away** from it) and has a high success rate. This confirms it's a reliable template to adapt.
+    - **Analysis of User Need vs. Existing Workflow:** The user's request requires more granular processing. The existing workflow transcribes the whole call, but the user only wants specific parts. I will need to add diarization and segmentation steps. The sentiment and scoring steps are not needed.
+3. **Workflow Refinement:**
+    - I will use the `workflow_advice_call_analysis_v1.json` as a template.
+    - **Modify Step 1 (Get Apps):** Remove the 'advisor name' filter to get all applications in the date range.
+    - **Keep Steps 2 & 3:** `GetCallRecordings` and `TranscribeRecording` are still needed.
+    - **Insert New Step 4 (Diarize):** I need to add a diarization step to separate speakers. The `gpt4o-diarize` skill is available and has a high success rate according to the Knowledge Graph.
+    - **Insert New Step 5 (Segment):** I need to add a `labelling-segmentation` skill to extract the relevant conversation parts.
+    - **Modify Final Step:** Replace the `ParallelAnalysis` and `CalculateScore` states with a single `ComplianceAnalysis` task that operates on the output of the new segmentation step.
+    - I will now compile this new logic into a new, versioned workflow JSON file.
 
-1.  **Intent Analysis:** The user wants to check for compliance on a *specific topic* ("HELOC 2.0" explanation) across all advisors. This is different from the previous general quality check.
+### 3.3. Capability Adaptation
 
-2.  **Memory & Capability Check:**
-    *   **Vector Store Query:** Search for capabilities with keywords: `advice call`, `product explanation`, `compliance`.
-    *   **Result:** The search returns `workflow_advice_call_analysis_v1.json` as a strong candidate. **This is a capability match.** I can adapt this existing workflow.
-    *   **Analysis of User Need vs. Existing Workflow:** The user's request requires more granular processing. The existing workflow transcribes the whole call, but the user only wants specific parts. I will need to add diarization and segmentation steps. The sentiment and scoring steps are not needed.
-
-3.  **Workflow Refinement:**
-    *   I will use the `workflow_advice_call_analysis_v1.json` as a template.
-    *   **Modify Step 1 (Get Apps):** Remove the 'advisor name' filter to get all applications in the date range.
-    *   **Keep Steps 2 & 3:** `GetCallRecordings` and `TranscribeRecording` are still needed.
-    *   **Insert New Step 4 (Diarize):** I need to add a diarization step to separate speakers. The `gpt4o-diarize` skill is available and has a high success rate according to the Knowledge Graph.
-    *   **Insert New Step 5 (Segment):** I need to add a `labelling-segmentation` skill to extract the relevant conversation parts.
-    *   **Modify Final Step:** Replace the `ParallelAnalysis` and `CalculateScore` states with a single `ComplianceAnalysis` task that operates on the output of the new segmentation step.
-    *   I will now compile this new logic into a new, versioned workflow JSON file.
-
-### 3.3. The Generated Workflow Artifact
-
-The Planner Agent generates `workflow_product_explanation_compliance_v1.json`.
-
-[TODO: AI assistant please double-check the JSON file against schemas\letta_asl_workflow_schema_v2.2.0.json to ensure correctness and comprehensiveness]
+Draft updated workflow, validate via schema, and version as `workflow_product_explanation_compliance_v1.json`.
 
 ```json
 {
+  "workflow_schema_version": "2.2.0",
   "workflow_id": "a8d3b1c9-9e8a-4f2b-9e3d-7c1b0d8a4b21",
   "workflow_name": "Product Explanation Compliance Check",
+  "description": "Verify advisor delivery of HELOC 2.0 product details.",
   "version": "1.0.0",
-  "description": "A specialized workflow to analyze if a new product is being explained correctly by advisors.",
+  "created_at": "2024-08-05T10:02:00Z",
+  "author": "planner@selina",
+  "tags": ["qa", "product_training", "compliance"],
+  "workflow_input_schema": {
+    "type": "object",
+    "properties": {
+      "start_date": {"type": "string", "format": "date"},
+      "end_date": {"type": "string", "format": "date"}
+    },
+    "required": ["start_date", "end_date"]
+  },
+  "skill_imports": [
+    {"uri": "file://skills/salesforce-integration.json"},
+    {"uri": "file://skills/recording-management.json"},
+    {"uri": "file://skills/whisper-transcribe.json"},
+    {"uri": "file://skills/gpt4o-diarize.json"},
+    {"uri": "file://skills/labelling-segmentation.json"},
+    {"uri": "file://skills/compliance-analysis.json"}
+  ],
   "asl": {
+    "Comment": "Focus on advisor narration of product details.",
     "StartAt": "GetApplicationIDs",
     "States": {
       "GetApplicationIDs": {
         "Type": "Task",
-        "AgentBinding": { "skills": ["skill://salesforce-integration@2.1.0"] },
+        "AgentBinding": {
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
+          "skills": ["skill://salesforce-integration@2.1.0"]
+        },
+        "Parameters": {
+          "start_date.$": "$.start_date",
+          "end_date.$": "$.end_date"
+        },
+        "ResultPath": "$.applications",
         "Next": "GetCallRecordings"
       },
       "GetCallRecordings": {
         "Type": "Task",
-        "AgentBinding": { "skills": ["skill://recording-management@1.5.0"] },
+        "AgentBinding": {
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
+          "skills": ["skill://recording-management@1.5.0"]
+        },
+        "Parameters": {
+          "application_ids.$": "$.applications.data.ids"
+        },
+        "ResultPath": "$.recordings",
         "Next": "TranscribeRecording"
       },
       "TranscribeRecording": {
         "Type": "Task",
-        "AgentBinding": { "skills": ["skill://whisper-transcribe@1.0.0"] },
+        "AgentBinding": {
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
+          "skills": ["skill://whisper-transcribe@1.0.0"]
+        },
+        "Parameters": {
+          "recording_uri.$": "$.recordings.data[0].uri"
+        },
+        "ResultPath": "$.transcript",
         "Next": "DiarizeTranscript"
       },
       "DiarizeTranscript": {
         "Type": "Task",
-        "Comment": "Identify speakers in the transcript.",
+        "Comment": "Isolate advisor speech segments.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
           "skills": ["skill://gpt4o-diarize@1.0.0"]
         },
+        "Parameters": {
+          "transcript.$": "$.transcript.segments",
+          "target_speaker": "advisor"
+        },
+        "ResultPath": "$.advisor_segments",
         "Next": "SegmentAndLabel"
       },
       "SegmentAndLabel": {
         "Type": "Task",
-        "Comment": "Extract only the 'product detail' and 'offer explanation' segments.",
+        "Comment": "Apply taxonomy labels to advisor speech.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
           "skills": ["skill://labelling-segmentation@1.2.0"]
         },
+        "Parameters": {
+          "segments.$": "$.advisor_segments",
+          "taxonomy": [
+            "introduction",
+            "security_check",
+            "product_detail",
+            "offer_explanation",
+            "closing"
+          ]
+        },
+        "ResultPath": "$.labelled_segments",
         "Next": "TargetedComplianceAnalysis"
       },
       "TargetedComplianceAnalysis": {
         "Type": "Task",
-        "Comment": "Run compliance check only on the extracted segments.",
+        "Comment": "Evaluate compliance on product-related segments only.",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
           "skills": ["skill://compliance-analysis@1.3.0"]
         },
+        "Parameters": {
+          "segments.$": "$.labelled_segments",
+          "allowed_labels": ["product_detail", "offer_explanation"],
+          "rule_set": "compliance_rules_v2024Q4"
+        },
+        "ResultPath": "$.compliance",
         "End": true
       }
     }
@@ -411,15 +604,11 @@ The Planner Agent generates `workflow_product_explanation_compliance_v1.json`.
 }
 ```
 
-### 3.4. Memory Updates
+### 3.4. Memory and Knowledge Updates
 
-[TODO: AI assistant please note that the Vector store mechanism may be wrong again - it should support semantic search rather than indexing]
-
-- **Vector Store:** The new workflow `workflow_product_explanation_compliance_v1.json` is indexed and stored with tags `["product explanation", "compliance", "diarization", "segmentation"]`.
-- **Knowledge Graph:**
-    - A new `Workflow` node is created for `a8d3b1c9...`.
-    - An edge `REFINEMENT_OF` is created, linking this new workflow node back to the `workflow_advice_call_analysis_v1.json` node, explicitly recording its origin.
-- **Memory Blocks:** A new entry is added to the Planner's archival memory: "Adapted the 'Standard Advice Call Analysis' workflow to create a new, more specific 'Product Explanation Compliance Check' workflow for user [Training Manager's ID]. This involved adding diarization and segmentation steps and removing sentiment/scoring."
+- **Vector Store:** Refined workflow embedded and upserted with metadata `{"topic": "product_clarity", "origin": "c4b1a2e8-..."}`. Subsequent semantic searches for "product explanation compliance" rank it highly.
+- **Planner Archival Memory:** Sleep-time agent summarises adaptation outcome: “Refined Standard Advice Call Analysis into Product Explanation Compliance Check; added diarization + segmentation; removed sentiment/scoring.”
+- **Knowledge Graph:** Adds node `Workflow:a8d3b1c9...` with `REFINEMENT_OF` edge pointing to the original workflow. Advisor-product episodes link to `Product:HELOC 2.0` entity, enabling future analytics.
 
 ---
 
@@ -434,65 +623,114 @@ This scenario showcases the system's resilience and ability to learn from operat
 During a run of `workflow_advice_call_analysis_v1.json`, the worker agent responsible for the `TranscribeRecording` state attempts to use the `skill://whisper-transcribe@1.0.0`. However, the underlying service is unresponsive, and the tool call times out, returning an error.
 
 - **Worker Agent's State:** The worker agent has acquired the lease for the `TranscribeRecording` state. Its current loaded skill has failed.
-- **Control Plane Update:** The worker agent immediately updates the Redis state document for `TranscribeRecording`, incrementing the `attempts` counter and logging the timeout error in the `errors` array.
+- **Control Plane Update:** The worker agent immediately updates the Redis state document for `TranscribeRecording`.
 
-[TODO: AI assistant please illustrate the control-plane's state change better with concrete JSON objects]
+**State before failure:**
+
+```json
+{
+  "status": "running",
+  "attempts": 1,
+  "lease": {"token": "xyz789", "owner_agent_id": "worker-3", ...},
+  "started_at": "2024-07-15T10:02:30Z",
+  "finished_at": null,
+  "last_error": null
+}
+```
+
+**State after failure:**
+
+```json
+{
+  "status": "running", // Still running as it will be retried
+  "attempts": 1, // Will be incremented to 2 on retry
+  "lease": {"token": "xyz789", "owner_agent_id": "worker-3", ...},
+  "started_at": "2024-07-15T10:02:30Z",
+  "finished_at": null,
+  "last_error": "TimeoutError: Tool call to whisper-transcribe timed out after 120s"
+}
+```
 
 ### 4.2. The Worker's Recovery Monologue (CoT)
 
-[TODO: AI assistant please improve the visualisation of CoTs using appropriate markdown features]
+- **Classify Error:** Timeout indicates transient or degraded service; retry with alternative backend rather than abort workflow.
+- **Discover Alternative Skill:** Query vector store for `transcription` skills excluding Whisper. Top hit: `skill://assemblyai-transcribe@1.2.0` (success rate 0.99 per knowledge graph).
+- **Swap Skills:**
+  — `unload_skill("skill://whisper-transcribe@1.0.0")`
+  — `load_skill("skill://assemblyai-transcribe@1.2.0")`
+- **Retry:** Reinvoke transcription tool (`transcribe.async`) with webhook callback. Poll until job completes; update control plane state to `running` then `done` with new artifact pointer.
 
-1.  **Error Detected:** The `whisper-transcribe` skill failed with a `TimeoutError`. This is a recoverable network/service issue, not a fatal data error. My primary objective is to complete the task.
+The AssemblyAI skill succeeds. The worker proceeds to write the output to the data plane, release its lease, and notify the downstream workers, allowing the workflow to continue. The updated control-plane state after recovery:
 
-2.  **Identify Alternatives (Dynamic Skill Re-evaluation):**
-    *   I need a skill that can fulfill the `transcription` task.
-    *   I will query the Vector Store for skill manifests with `transcription` keyword that are *not* the one that just failed.
-    *   **Result:** The repository returns `skill://assemblyai-transcribe@1.2.0`.
+```json
+{
+  "status": "done",
+  "attempts": 2,
+  "lease": {
+    "token": null,
+    "owner_agent_id": null,
+    "ts": null,
+    "ttl_s": null
+  },
+  "started_at": "2024-07-15T10:05:50Z",
+  "finished_at": "2024-07-15T10:11:14Z",
+  "last_error": "TimeoutError: Tool call to whisper-transcribe timed out after 120s"
+}
+```
 
-3.  **Attempt Recovery (Skill Swapping):**
-    *   **Unload the failed skill:** I will call `unload_skill("skill://whisper-transcribe@1.0.0", ...)` to remove it from my context. This prevents any further attempts with the failing tool.
-    *   **Load the alternative skill:** I will call `load_skill("skill://assemblyai-transcribe@1.2.0", ...)` to dynamically acquire the new skill.
-    *   **Retry the task:** I will re-run the transcription logic using the newly loaded AssemblyAI skill.
-
-4.  **Successful Recovery:** The AssemblyAI skill succeeds. The worker proceeds to write the output to the data plane, release its lease, and notify the downstream workers, allowing the workflow to continue.
-
-### 4.3. Post-Run Learning: The Planner's Self-Healing Process
+### 4.3. Post-Run Learning Loop
 
 The workflow completes successfully, but the failure was logged permanently in the Knowledge Graph.
 
 - **Adds archival memory block**:
-  ```json
-  {
-    "type": "workflow_update",
-    "workflow_id": "advice_call_analysis_product_focus",
-    "version": "2",
-    "reason": "Whisper timeout rate exceeded threshold; switched to AssemblyAI backend.",
-    "timestamp": "2024-07-15T11:24:00Z"
-  }
-  ```
 
-[TODO: AI assistant please note that the knowledge graph should be updated by the sleep-time agent after digesting the archival memory block above - this is not clearly indicated at the moment, please improve]
+    ```json
+    {
+      "type": "workflow_update",
+      "workflow_id": "advice_call_analysis_product_focus",
+      "version": "2",
+      "reason": "Whisper timeout rate exceeded threshold; switched to AssemblyAI backend.",
+      "timestamp": "2024-07-15T11:24:00Z"
+    }
+    ```
 
-- **Updates Knowledge Graph:** When the Whisper skill failed, the `WorkflowExecution` node was updated. The `USED_SKILL` edge pointing to `skill://whisper-transcribe@1.0.0` was updated with `n_failures: +1`. When the AssemblyAI skill was used, a new `USED_SKILL` edge was created for it, marked with `n_success: +1`.
+- **Knowledge Graph Update (via Sleep-Time Agent):** The raw event of the failure is now in the worker's archival memory. Later, during a period of inactivity, the Planner's **sleep-time agent** processes these archival records. It identifies the `workflow_update` block, understands its meaning, and translates it into a structured update for the knowledge graph. It calls the `append_graph_episode` tool to formally increment the `n_failures` count on the `(Skill:whisper-transcribe)` node and establish or reinforce the `(Skill:assemblyai-transcribe)` node as a reliable alternative. This offline processing ensures the main agent is not burdened with these analytical tasks.
+
+### 4.4. The Evolved Workflow
 
 A week later, after several more runs have experienced similar timeouts, the Planner Agent is tasked with another "Standard Advice Call Analysis."
 
 - **Planner Agent's Monologue (Proactive Healing):**
-    1.  **Pre-flight Check:** Before executing `workflow_advice_call_analysis_v1.json`, I will validate its components against the Knowledge Graph for reliability.
-    2.  **Knowledge Graph Query:** `MATCH (s:Skill {name: 'whisper-transcribe'}) RETURN s.n_success, s.n_failures`.
-    3.  **Result:** The query shows that the failure rate for the Whisper skill (`n_failures / (n_success + n_failures)`) has now crossed a predefined threshold of 5%. The alternative, `assemblyai-transcribe`, has a failure rate below 1%.
-    4.  **Proactive Healing:** The primary transcription skill in the stored workflow is no longer reliable. I will recommend a new version of the workflow to the user.
-    5.  **Generate New Version:** I will programmatically create `workflow_advice_call_analysis_v1.0.1.json`, which is identical to the original except that the `TranscribeRecording` state's `AgentBinding` now lists `skill://assemblyai-transcribe@1.2.0` instead of the Whisper skill.
+    1. **Pre-flight Check:** Before executing `workflow_advice_call_analysis_v1.json`, I will validate its components against the Knowledge Graph for reliability.
+    2. **Knowledge Graph Query:** `MATCH (s:Skill {name: 'whisper-transcribe'}) RETURN s.n_success, s.n_failures`.
+    3. **Result:** The query shows that the failure rate for the Whisper skill (`n_failures / (n_success + n_failures)`) has now crossed a predefined threshold of 5%. The alternative, `assemblyai-transcribe`, has a failure rate below 1%.
+    4. **Proactive Healing:** The primary transcription skill in the stored workflow is no longer reliable. I will recommend a new version of the workflow to the user.
+    5. **Generate New Version:** I will programmatically create `workflow_advice_call_analysis_v1.0.1.json`, which is identical to the original except that the `TranscribeRecording` state's `AgentBinding` now lists `skill://assemblyai-transcribe@1.2.0` instead of the Whisper skill.
+- **Updated Workflow Snippet:**
+
+    ```json
+    "TranscribeRecording": {
+      "Type": "Task",
+      "Comment": "Transcribe MP3 audio using AssemblyAI backend with async polling.",
+      "AgentBinding": {
+        "agent_template_ref": {"name": "agent_template_worker", "version": "1.0.0"},
+        "skills": ["skill://assemblyai-transcribe@1.2.0"]
+      },
+      "Parameters": {
+        "recording_uri.$": "$.recordings.data[0].uri",
+        "webhook": "{{control_plane.webhook_url}}"
+      },
+      "ResultPath": "$.transcript",
+      "Next": "ParallelAnalysis"
+    }
+    ```
+
 
 **[PLANNER AGENT]:** "I am ready to start the Advice Call Analysis. I've noticed that a tool I normally use for transcription has become less reliable recently. I have updated the workflow to use a more stable alternative to ensure a smooth execution. I will proceed with this improved version."
-
-### 4.4. The Evolved Workflow
 
 The system doesn't just recover from failure; it learns from it. By persistently recording performance data in the knowledge graph, the Planner can identify degrading tools and proactively "heal" its own workflows, ensuring the system becomes more robust and reliable over time. This closes the loop on self-evolution.
 
 ---
-
-[TODO: Lu will complete the sections below, AI assistant please ignore]
 
 ## 5. Appendices
 
@@ -549,3 +787,5 @@ The system doesn't just recover from failure; it learns from it. By persistently
 ```
 
 ```
+
+### 5.10 Sample Skill Manifests
