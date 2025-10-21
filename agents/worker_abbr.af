@@ -144,7 +144,7 @@
   ],
   "blocks": [
     {
-      "value": "This is my section of core memory devoted to information about the human....",
+      "value": "This is my section of core memory devoted to information about the human...",
       "limit": 20000,
       "project_id": null,
       "template_name": null,
@@ -226,7 +226,7 @@
     {
       "id": "tool-2",
       "tool_type": "letta_sleeptime_core",
-      "description": "This function is called when the agent is done rethinking the memory.",
+      "description": "This function is called when the agent is done rethinking the memory...",
       "source_type": "python",
       "name": "memory_finish_edits",
       "tags": [
@@ -274,7 +274,7 @@
     {
       "id": "tool-11",
       "tool_type": "dcf",
-      "description": "Read workflow control-plane documents from RedisJSON and optionally compute readiness.",
+      "description": "Read workflow control-plane documents from RedisJSON and optionally compute readiness...",
       "source_type": "python",
       "name": "read_workflow_control_plane",
       "tags": [
@@ -298,7 +298,7 @@
     {
       "id": "tool-13",
       "tool_type": "dcf",
-      "description": "Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False).",
+      "description": "Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False)...",
       "source_type": "python",
       "name": "notify_if_ready",
       "tags": [
@@ -310,7 +310,7 @@
     {
       "id": "tool-15",
       "tool_type": "dcf",
-      "description": "Store workflow insights into long-term memory for downstream agents.",
+      "description": "Store workflow insights into long-term memory for downstream agents...",
       "source_type": "python",
       "name": "store_memory",
       "tags": [
@@ -322,7 +322,7 @@
     {
       "id": "tool-16",
       "tool_type": "dcf",
-      "description": "Append a workflow execution episode to the shared knowledge graph timeline.",
+      "description": "Append a workflow execution episode to the shared knowledge graph timeline...",
       "source_type": "python",
       "name": "append_graph_episode",
       "tags": [
@@ -334,7 +334,7 @@
     {
       "id": "tool-17",
       "tool_type": "dcf",
-      "description": "Atomically acquire a lease on a workflow state in the RedisJSON control-plane.",
+      "description": "Atomically acquire a lease on a workflow state in the RedisJSON control-plane...",
       "source_type": "python",
       "name": "acquire_state_lease",
       "tags": [
@@ -346,7 +346,7 @@
     {
       "id": "tool-18",
       "tool_type": "dcf",
-      "description": "Atomically update a state's control-plane JSON and optionally write data-plane output.",
+      "description": "Atomically update a state's control-plane JSON and optionally write data-plane output...",
       "source_type": "python",
       "name": "update_workflow_control_plane",
       "tags": [
@@ -358,7 +358,7 @@
     {
       "id": "tool-19",
       "tool_type": "dcf",
-      "description": "Load a skill into a Letta agent: attach directives, tools, and data sources.",
+      "description": "Load a skill into a Letta agent: attach directives, tools, and data sources...",
       "source_type": "python",
       "name": "load_skill",
       "tags": [
@@ -370,7 +370,7 @@
     {
       "id": "tool-20",
       "tool_type": "dcf",
-      "description": "Unload a previously loaded skill from a Letta agent.",
+      "description": "Unload a previously loaded skill from a Letta agent...",
       "source_type": "python",
       "name": "unload_skill",
       "tags": [
@@ -382,7 +382,7 @@
     {
       "id": "tool-21",
       "tool_type": "dcf",
-      "description": "Invoke a loaded skill tool and capture its structured response for the workflow.",
+      "description": "Invoke a loaded skill tool and capture its structured response for the workflow...",
       "source_type": "python",
       "name": "invoke_skill_tool",
       "tags": [

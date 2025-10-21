@@ -215,7 +215,7 @@
     {
       "id": "tool-1",
       "tool_type": "letta_core",
-      "description": "Sends a message to the human user.",
+      "description": "Sends a message to the human user...",
       "source_type": "python",
       "name": "send_message",
       "tags": [
@@ -227,7 +227,7 @@
     {
       "id": "tool-2",
       "tool_type": "letta_sleeptime_core",
-      "description": "This function is called when the agent is done rethinking the memory.",
+      "description": "This function is called when the agent is done rethinking the memory...",
       "source_type": "python",
       "name": "memory_finish_edits",
       "tags": [
@@ -275,7 +275,7 @@
     {
       "id": "tool-6",
       "tool_type": "dcf",
-      "description": "Discover Skill Manifests from a directory and summarize their metadata.",
+      "description": "Discover Skill Manifests from a directory and summarize their metadata...",
       "source_type": "python",
       "name": "get_skillset",
       "tags": [
@@ -287,7 +287,7 @@
     {
       "id": "tool-7",
       "tool_type": "dcf",
-      "description": "Validate a Skill Manifest (v2.0.0) and run static sanity checks.",
+      "description": "Validate a Skill Manifest (v2.0.0) and run static sanity checks...",
       "source_type": "python",
       "name": "validate_skill_manifest",
       "tags": [
@@ -299,7 +299,7 @@
     {
       "id": "tool-8",
       "tool_type": "dcf",
-      "description": "Validate a Letta–ASL workflow (v2.2.0) and resolve .af and skill references.",
+      "description": "Validate a Letta–ASL workflow (v2.2.0) and resolve .af and skill references...",
       "source_type": "python",
       "name": "validate_workflow",
       "tags": [
@@ -311,7 +311,7 @@
     {
       "id": "tool-9",
       "tool_type": "dcf",
-      "description": "Create (idempotently) the RedisJSON control-plane for a workflow (choreography style).",
+      "description": "Create idempotently the RedisJSON control-plane for a workflow (choreography style)...",
       "source_type": "python",
       "name": "create_workflow_control_plane",
       "tags": [
@@ -323,7 +323,7 @@
     {
       "id": "tool-10",
       "tool_type": "dcf",
-      "description": "Create one worker agent per ASL Task state using Letta .af v2 templates.",
+      "description": "Create one worker agent per ASL Task state using Letta .af v2 templates...",
       "source_type": "python",
       "name": "create_worker_agents",
       "tags": [
@@ -335,7 +335,7 @@
     {
       "id": "tool-11",
       "tool_type": "dcf",
-      "description": "Read workflow control-plane documents from RedisJSON and optionally compute readiness.",
+      "description": "Read workflow control-plane documents from RedisJSON and optionally compute readiness...",
       "source_type": "python",
       "name": "read_workflow_control_plane",
       "tags": [
@@ -347,7 +347,7 @@
     {
       "id": "tool-12",
       "tool_type": "dcf",
-      "description": "Notify downstream (or initial) worker agent(s) for a workflow state machine.",
+      "description": "Notify downstream (or initial) worker agent(s) for a workflow state machine...",
       "source_type": "python",
       "name": "notify_next_worker_agent",
       "tags": [
@@ -359,7 +359,7 @@
     {
       "id": "tool-13",
       "tool_type": "dcf",
-      "description": "Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False).",
+      "description": "Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False)...",
       "source_type": "python",
       "name": "notify_if_ready",
       "tags": [
@@ -371,7 +371,7 @@
     {
       "id": "tool-14",
       "tool_type": "dcf",
-      "description": "Finalize a workflow execution: optionally delete worker agents, close open states, and write final audit/summary metadata.",
+      "description": "Finalize a workflow execution: optionally delete worker agents, close open states, and write final audit/summary metadata...",
       "source_type": "python",
       "name": "finalize_workflow",
       "tags": [
@@ -383,7 +383,7 @@
     {
       "id": "tool-15",
       "tool_type": "dcf",
-      "description": "Store workflow insights into long-term memory for downstream agents.",
+      "description": "Store workflow insights into long-term memory for downstream agents...",
       "source_type": "python",
       "name": "store_memory",
       "tags": [
@@ -395,7 +395,7 @@
     {
       "id": "tool-16",
       "tool_type": "dcf",
-      "description": "Append a workflow execution episode to the shared knowledge graph timeline.",
+      "description": "Append a workflow execution episode to the shared knowledge graph timeline...",
       "source_type": "python",
       "name": "append_graph_episode",
       "tags": [
