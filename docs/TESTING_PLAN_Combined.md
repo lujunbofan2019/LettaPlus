@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document provides a **worked example** that demonstrates how the Letta-based Planner and Worker agents deliver Selina Finance's *Advice Call Analysis* quality-assurance workflow. It narrates the full lifecycle across planning, capability discovery, skill orchestration, hybrid memory usage, and iterative improvement. Each phase is illustrated with representative artifacts—conversation turns, chain-of-thought (CoT) excerpts, workflow JSON, tool calls, memory updates, and knowledge-graph mutations.
+This document provides a **worked example** that demonstrates how the Letta-based Planner and Worker agents deliver Selina Finance's *Advice Call Analysis* quality-assurance workflow. It narrates the full lifecycle across planning, capability discovery, skill orchestration, hybrid memory usage, and iterative improvement. Each phase is illustrated with representative artifacts - conversation turns, chain-of-thought (CoT) excerpts, workflow JSON, tool calls, memory updates, and knowledge-graph mutations.
 
 ### 1.1. The Business Use Case: Advice Call Analysis
 
@@ -370,7 +370,7 @@ Each tool call emits structured JSON responses captured in the control plane and
       "attempts": 1,
       "lease": {
         "token": "lease-5d40",
-        "owner_agent_id": "worker-qa-002",
+        "owner_agent_id": "worker-2",
         "ts": "2024-07-08T09:22:11Z",
         "ttl_s": 120
       },
