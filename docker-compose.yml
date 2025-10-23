@@ -1,8 +1,8 @@
 services:
   letta:
     image: letta/letta:0.12.1
-    entrypoint: ["/entrypoint.sh"]
-    command: ["./letta/server/startup.sh"]
+#    entrypoint: ["/entrypoint.sh"]
+#    command: ["./letta/server/startup.sh"]
     ports:
       - "8283:8283"
     environment:
@@ -22,23 +22,23 @@ services:
       retries: 20
       start_period: 10s
 
-  shim:
-    build:
-      context: ./shim
-      dockerfile: Dockerfile.proxy
-    environment:
-      PYTHONUNBUFFERED: "1"
-      UPSTREAM_BASE: http://letta:8283
-      ADE_ORIGINS: https://app.letta.com,http://localhost
-      ENABLE_RUNTIME_IDENTITY_INJECTION: "true"
-      LOG_LEVEL: INFO
-      WIRE_DEBUG: "false"
-    command: >
-      uvicorn proxy:app --host 0.0.0.0 --port 9283 --log-level info --no-access-log
-    ports: ["9283:9283"]
-    depends_on:
-      letta:
-        condition: service_healthy
+#  shim:
+#    build:
+#      context: ./shim
+#      dockerfile: Dockerfile.proxy
+#    environment:
+#      PYTHONUNBUFFERED: "1"
+#      UPSTREAM_BASE: http://letta:8283
+#      ADE_ORIGINS: https://app.letta.com,http://localhost
+#      ENABLE_RUNTIME_IDENTITY_INJECTION: "true"
+#      LOG_LEVEL: INFO
+#      WIRE_DEBUG: "false"
+#    command: >
+#      uvicorn proxy:app --host 0.0.0.0 --port 9283 --log-level info --no-access-log
+#    ports: ["9283:9283"]
+#    depends_on:
+#      letta:
+#        condition: service_healthy
 
   redis:
     image: redis/redis-stack:latest
