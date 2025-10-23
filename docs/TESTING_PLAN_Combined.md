@@ -170,7 +170,7 @@ This scenario demonstrates the system's behavior when faced with a novel task fo
 
 The Planner composes a Letta-ASL workflow that conforms to `schemas/letta_asl_workflow_schema_v2.2.0.json` and validates it via `validate_workflow`.
 
-[Note: ASL stands for [AWS Step Functions](https://docs.aws.amazon.com/step-functions/), a widely used syntax for defining workflows based on state machines and tasks. DCF capability/workflow schema uses a combination of Letta and ASL syntax.]
+[Note: ASL stands for Amazon States Language, a JSON-based language used to describe state machines declaratively. DCF capability/workflow schema uses a combination of Letta and ASL syntax.]
 
 ```json
 {
