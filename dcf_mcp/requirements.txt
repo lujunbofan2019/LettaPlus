@@ -1,0 +1,4 @@
+mcp>=1.2
+uvicorn>=0.30
+jsonschema>=4.22
+letta-client==0.1.324

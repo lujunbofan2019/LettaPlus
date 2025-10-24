@@ -17,7 +17,7 @@ def resolve_agent_name_to_id(agent_name: str) -> dict:
     agents_list: list = []
 
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"))
 
         # --- 1. List all agents ---
         try:

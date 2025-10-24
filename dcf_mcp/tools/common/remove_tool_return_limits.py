@@ -17,7 +17,7 @@ def remove_tool_return_limits(agent_id: str) -> dict:
     agent_tools: list = []
 
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"))
 
         # --- 1. List tools registered to the agent ---
         try:

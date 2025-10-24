@@ -17,7 +17,7 @@ def delete_agent(agent_name: str) -> dict:
     agent_id_to_delete: str | None = None
 
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"))
 
         # --- 1. Find Agent ID ---
         try:

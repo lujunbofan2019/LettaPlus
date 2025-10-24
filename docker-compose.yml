@@ -101,6 +101,21 @@ services:
       --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
     restart: unless-stopped
 
+  dcf-mcp:
+    build:
+      context: ./dcf_mcp
+      dockerfile: Dockerfile
+    ports:
+      - "7337:7337"
+    environment:
+      # Point the tool at the mounted manifests dir
+      DCF_MANIFESTS_DIR: /app/dcf_manifests
+      SKILL_PREVIEW_CHARS: "400"
+    volumes:
+      # Mount your manifests (read-only)
+      - ./manifests:/app/dcf_manifests:ro
+    restart: unless-stopped
+
 #  stub-mcp:
 #    build:
 #      context: ./stub_mcp
