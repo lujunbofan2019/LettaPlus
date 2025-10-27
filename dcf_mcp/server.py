@@ -1,41 +1,25 @@
 # server.py
 from mcp.server.fastmcp import FastMCP
 from tools.common.delete_agent import delete_agent as _delete_agent
-from tools.common.remove_tool_return_limits import (
-    remove_tool_return_limits as _remove_tool_return_limits,
-)
-from tools.common.resolve_agent_name_to_id import (
-    resolve_agent_name_to_id as _resolve_agent_name_to_id,
-)
+from tools.common.remove_tool_return_limits import remove_tool_return_limits as _remove_tool_return_limits
+from tools.common.resolve_agent_name_to_id import resolve_agent_name_to_id as _resolve_agent_name_to_id
 from tools.dcf.acquire_state_lease import acquire_state_lease as _acquire_state_lease
-from tools.dcf.create_workflow_control_plane import (
-    create_workflow_control_plane as _create_workflow_control_plane,
-)
+from tools.dcf.create_workflow_control_plane import create_workflow_control_plane as _create_workflow_control_plane
 from tools.dcf.create_worker_agents import create_worker_agents as _create_worker_agents
 from tools.dcf.csv_to_manifests import csv_to_manifests as _csv_to_manifests
 from tools.dcf.csv_to_stub_config import csv_to_stub_config as _csv_to_stub_config
 from tools.dcf.finalize_workflow import finalize_workflow as _finalize_workflow
 from tools.dcf.get_skillset import get_skillset as _get_skillset
 from tools.dcf.load_skill import load_skill as _load_skill
-from tools.dcf.load_skill_with_resolver import (
-    load_skill_with_resolver as _load_skill_with_resolver,
-)
+from tools.dcf.load_skill_with_resolver import load_skill_with_resolver as _load_skill_with_resolver
 from tools.dcf.notify_if_ready import notify_if_ready as _notify_if_ready
-from tools.dcf.notify_next_worker_agent import (
-    notify_next_worker_agent as _notify_next_worker_agent,
-)
-from tools.dcf.read_workflow_control_plane import (
-    read_workflow_control_plane as _read_workflow_control_plane,
-)
+from tools.dcf.notify_next_worker_agent import notify_next_worker_agent as _notify_next_worker_agent
+from tools.dcf.read_workflow_control_plane import read_workflow_control_plane as _read_workflow_control_plane
 from tools.dcf.release_state_lease import release_state_lease as _release_state_lease
 from tools.dcf.renew_state_lease import renew_state_lease as _renew_state_lease
 from tools.dcf.unload_skill import unload_skill as _unload_skill
-from tools.dcf.update_workflow_control_plane import (
-    update_workflow_control_plane as _update_workflow_control_plane,
-)
-from tools.dcf.validate_skill_manifest import (
-    validate_skill_manifest as _validate_skill_manifest,
-)
+from tools.dcf.update_workflow_control_plane import update_workflow_control_plane as _update_workflow_control_plane
+from tools.dcf.validate_skill_manifest import validate_skill_manifest as _validate_skill_manifest
 from tools.dcf.validate_workflow import validate_workflow as _validate_workflow
 from tools.redis_json.json_append import json_append as _json_append
 from tools.redis_json.json_copy import json_copy as _json_copy
@@ -48,21 +32,15 @@ from tools.redis_json.json_move import json_move as _json_move
 from tools.redis_json.json_read import json_read as _json_read
 from tools.redis_json.json_set import json_set as _json_set
 
+
 mcp = FastMCP(name="dcf-mcp-server")
 
 
 @mcp.tool()
 def resolve_agent_name_to_id(agent_name: str) -> dict:
-    """
-    Resolve an agent's name to its unique agent Id, often as a prerequisite for the agent to call other tools.
-
-    Args:
-        agent_name: The name of the agent to look up (case-sensitive).
-
-    Returns:
-        dict: {"agent_id": str | None, "error": str | None}
-    """
     return _resolve_agent_name_to_id(agent_name=agent_name)
+
+resolve_agent_name_to_id.__doc__ = _resolve_agent_name_to_id.__doc__
 
 
 @mcp.tool()
@@ -70,63 +48,14 @@ def get_skillset(manifests_dir: str | None = None,
                  schema_path: str | None = None,
                  include_previews: bool = True,
                  preview_chars: int | None = None) -> dict:
-    """Discover Skill Manifests from a directory and summarize their metadata.
-
-    This tool scans a directory for JSON files, parses each as a Skill Manifest,
-    optionally validates against a JSON Schema, and returns a lightweight catalog
-    to assist planning agents with fast skill selection and referencing.
-      - Schema validation requires `jsonschema`. If not installed, validation is skipped and a warning is returned.
-      - The function is resilient to partially invalid JSON files; errors are captured per-manifest so discovery can proceed for the rest.
-      - Aliases include: `name@version`, `skill://name@version`, `skill://packageId@version` (when present), and the raw `manifestId`.
-
-    Args:
-        manifests_dir (str, optional): Directory to scan. Defaults to env `DCF_MANIFESTS_DIR`.
-            The directory must exist and be readable.
-        schema_path (str, optional): Filesystem path to the Skill Manifest JSON Schema
-            (e.g., `schemas/skill-manifest-v2.0.0.json`). If provided and `jsonschema`
-            is installed, each manifest will be validated.
-        include_previews (bool, optional): When True, include a short
-            `directives_preview` for each skill to help the Planner choose without
-            loading the full skill. Defaults to True.
-        preview_chars (int, optional): Max characters for `directives_preview`.
-            Defaults to env `SKILL_PREVIEW_CHARS` (400) when None.
-
-    Returns:
-        dict: Result object:
-            {
-              "ok": bool,
-              "exit_code": int,     # 0 ok, 4 error
-              "available_skills": [
-                {
-                  "manifestId": str or None,
-                  "skillPackageId": str or None,
-                  "skillName": str or None,
-                  "skillVersion": str or None,
-                  "manifestApiVersion": str or None,
-                  "aliases": [str],
-                  "description": str or None,
-                  "tags": [str],
-                  "permissions": {"egress": "none"|"intranet"|"internet", "secrets": [str]},
-                  "toolNames": [str],
-                  "toolCount": int,
-                  "dataSourceCount": int,
-                  "directives_preview": str or None,   # present when include_previews=True
-                  "path": str,                          # absolute path to the manifest file
-                  "valid_schema": bool or None,         # None if schema validation skipped
-                  "errors": [str],                      # per-manifest errors (non-fatal overall)
-                  "warnings": [str]                     # per-manifest warnings
-                }
-              ],
-              "warnings": [str],       # global warnings
-              "error": str or None     # fatal error string or None on success
-            }
-    """
     return _get_skillset(
         manifests_dir=manifests_dir,
         schema_path=schema_path,
         include_previews=include_previews,
         preview_chars=preview_chars,
     )
+
+get_skillset.__doc__ = _get_skillset.__doc__
 
 
 @mcp.tool()
