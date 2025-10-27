@@ -29,7 +29,7 @@ def notify_next_worker_agent(
       source_state: Triggering state name (completed or firing). If None, notifies source states (no upstream deps).
       reason: Short reason for the event (e.g., "initial", "upstream_done").
       payload_json: Optional JSON string to include as event payload.
-      redis_url: Redis URL (e.g., "redis://localhost:6379/0"). Defaults to REDIS_URL env or localhost.
+      redis_url: Redis URL (e.g., "redis://redis:6379/0"). Defaults to REDIS_URL env or "redis://redis:6379/0".
       include_only_ready: When True, only notify targets whose upstream states are all status == "done".
       message_role: Letta message role (default "system").
       async_message: If True, use async messaging (background run). Otherwise sync.
@@ -66,7 +66,7 @@ def notify_next_worker_agent(
         return {"status": None, "error": f"Missing dependency: letta_client import error: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 
     # Redis
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()
@@ -112,7 +112,7 @@ def notify_next_worker_agent(
 
     # Letta client
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"), token=os.getenv("LETTA_TOKEN"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), token=os.getenv("LETTA_TOKEN"))
     except Exception as e:
         return {"status": None, "error": f"Failed to init Letta client: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 

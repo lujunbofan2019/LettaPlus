@@ -186,7 +186,7 @@ def create_worker_agents(workflow_json: str,
 
     # --- Initialize Letta client ---
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"))
     except Exception as e:
         return {
             "status": None,

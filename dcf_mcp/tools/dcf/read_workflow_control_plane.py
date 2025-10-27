@@ -20,8 +20,8 @@ def read_workflow_control_plane(workflow_id: str,
 
     Args:
       workflow_id: Workflow UUID string.
-      redis_url: Optional Redis URL (e.g., "redis://localhost:6379/0").
-                 Defaults to env REDIS_URL or "redis://localhost:6379/0".
+      redis_url: Optional Redis URL (e.g., "redis://redis:6379/0").
+                 Defaults to env REDIS_URL or "redis://redis:6379/0".
       states_json: Optional JSON string of a list of state names to fetch.
                    If omitted/invalid, we load meta and read all states in meta.states.
       include_meta: If True, include the meta document in the response.
@@ -49,7 +49,7 @@ def read_workflow_control_plane(workflow_id: str,
             "readiness": None
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()

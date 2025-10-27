@@ -31,7 +31,7 @@ def renew_state_lease(
       state (str): Target state name (ASL Task state).
       lease_token (str): The lease token currently held by the worker.
       owner_agent_id (str): If provided, must match stored lease.owner_agent_id.
-      redis_url (str): Redis URL (default env REDIS_URL or "redis://localhost:6379/0").
+      redis_url (str): Redis URL (default env REDIS_URL or "redis://redis:6379/0").
       lease_ttl_s (int): New TTL seconds to set (if touch_only is False). If omitted, keeps existing TTL.
       reject_if_expired (bool): If True, fail when lease appears expired. Default True.
       touch_only (bool): If True, only update ts, never ttl_s. Default False.
@@ -59,7 +59,7 @@ def renew_state_lease(
             "updated_state": None
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()

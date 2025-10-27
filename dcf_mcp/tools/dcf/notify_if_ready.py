@@ -24,7 +24,7 @@ def notify_if_ready(
     Args:
       workflow_id: Workflow UUID.
       state: Target state name (usually an ASL Task).
-      redis_url: Redis URL (defaults to REDIS_URL or local).
+      redis_url: Redis URL (defaults to REDIS_URL or "redis://redis:6379/0").
       reason: Reason string for the event (e.g., "initial", "upstream_done", "retry").
       payload_json: Optional JSON string included in the event payload.
       require_ready: If True (default), only notify when upstream deps are satisfied.
@@ -61,7 +61,7 @@ def notify_if_ready(
                 "ready": None, "skipped": True, "skip_reason": "dependency_missing", "agent_id": None, "message_id": None, "run_id": None}
 
     # Redis
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()
@@ -149,7 +149,7 @@ def notify_if_ready(
 
     # Send
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"), token=os.getenv("LETTA_TOKEN"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), token=os.getenv("LETTA_TOKEN"))
     except Exception as e:
         return {"status": None, "error": f"Letta init failed: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "state": state,
                 "ready": ready, "skipped": True, "skip_reason": "letta_client_init_failed", "agent_id": agent_id, "message_id": None, "run_id": None}
