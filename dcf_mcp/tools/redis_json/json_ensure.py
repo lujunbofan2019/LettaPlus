@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -7,7 +8,7 @@ def json_ensure(
     redis_key: str,
     path: str,
     default_json: str
-) -> dict:
+) -> Dict[str, Any]:
     """
     Ensure a value exists at a path; if missing or null, set it to the default.
 

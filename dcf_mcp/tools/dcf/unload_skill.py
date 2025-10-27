@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 
@@ -9,7 +10,7 @@ LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
 
 
-def unload_skill(manifest_id: str, agent_id: str) -> dict:
+def unload_skill(manifest_id: str, agent_id: str) -> Dict[str, Any]:
     """Unload a previously loaded skill from a Letta agent.
          - Idempotent: if the state block or manifest entry is missing, returns success with a descriptive status and no error.
          - This expects the loader tool to have tracked resources in a JSON block labeled by SKILL_STATE_BLOCK_LABEL (default: "dcf_active_skills").

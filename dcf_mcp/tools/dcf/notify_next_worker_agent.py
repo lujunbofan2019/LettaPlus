@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ def notify_next_worker_agent(
     message_role: str = "system",
     async_message: bool = False,
     max_steps: int = None,
-) -> dict:
+) -> Dict[str, Any]:
     """Notify downstream (or initial) worker agent(s) for a workflow state machine.
 
     Steps:

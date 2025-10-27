@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 
@@ -5,7 +6,7 @@ def read_workflow_control_plane(workflow_id: str,
                                 redis_url: str = None,
                                 states_json: str = None,
                                 include_meta: bool = True,
-                                compute_readiness: bool = False) -> dict:
+                                compute_readiness: bool = False) -> Dict[str, Any]:
     """Read workflow control-plane documents from RedisJSON and optionally compute readiness.
 
     Redis keys (per workflow):

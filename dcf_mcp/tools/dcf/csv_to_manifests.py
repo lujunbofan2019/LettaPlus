@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                      refs_csv_path: str = "skills_src/skill_tool_refs.csv",
                      out_dir: str = "generated/skills",
-                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> dict:
+                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     """
     Generate Skill Manifests (v2.0.0) from local CSV files, suitable for rapid skill prototyping.
 

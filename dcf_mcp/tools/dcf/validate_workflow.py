@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import json
 import os
 from urllib.parse import urlparse
@@ -7,7 +8,7 @@ def validate_workflow(
     schema_path: str,
     imports_base_dir: str = None,
     skills_base_dir: str = None
-) -> dict:
+) -> Dict[str, Any]:
     """Validate a Letta–ASL workflow (v2.2.0) and resolve .af and skill references.
 
     Pipeline:

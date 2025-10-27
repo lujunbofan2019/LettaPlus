@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ DEFAULT_PREVIEW_CHARS = int(os.getenv("SKILL_PREVIEW_CHARS", "400"))
 def get_skillset(manifests_dir: str = None,
                  schema_path: str = None,
                  include_previews: bool = True,
-                 preview_chars: int = None) -> dict:
+                 preview_chars: int = None) -> Dict[str, Any]:
     """Discover Skill Manifests from a directory and summarize their metadata.
 
     This tool scans a directory for JSON files, parses each as a Skill Manifest,

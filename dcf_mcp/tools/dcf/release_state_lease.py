@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ def release_state_lease(
     redis_url: str = None,
     force: bool = False,
     clear_owner: bool = True
-) -> dict:
+) -> Dict[str, Any]:
     """
     Release a held lease on a workflow state in the RedisJSON control-plane.
 

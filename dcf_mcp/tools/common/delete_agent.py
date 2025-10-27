@@ -1,8 +1,9 @@
+from typing import Any, Dict
 import os
 from letta_client import Letta
 
 # 2025.06.03.rc1
-def delete_agent(agent_name: str) -> dict:
+def delete_agent(agent_name: str) -> Dict[str, Any]:
     """
     Delete a Letta agent by exact name.
 

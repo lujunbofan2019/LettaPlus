@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ def notify_if_ready(
     message_role: str = "system",
     async_message: bool = False,
     max_steps: int = None,
-) -> dict:
+) -> Dict[str, Any]:
     """Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False).
 
     Ready := every upstream dependency (from meta.deps[state].upstream) has status == "done".

@@ -8,7 +8,7 @@ MAX_TEXT_CONTENT_CHUNK_SIZE = int(os.getenv("SKILL_MAX_TEXT_CHARS", "4900"))
 
 REGISTRY_PATH = os.getenv("SKILL_REGISTRY_PATH", "skills_src/registry.json")
 
-def load_skill_with_resolver(skill_json: str, agent_id: str) -> dict:
+def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
     """
     Load a skill into a Letta agent with local MCP resolver.
 

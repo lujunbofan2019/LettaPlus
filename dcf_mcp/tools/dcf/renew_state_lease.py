@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone, timedelta
@@ -11,7 +12,7 @@ def renew_state_lease(
     lease_ttl_s: int = None,
     reject_if_expired: bool = True,
     touch_only: bool = False
-) -> dict:
+) -> Dict[str, Any]:
     """
     Renew (heartbeat) an existing lease for a workflow state in the RedisJSON control-plane.
 

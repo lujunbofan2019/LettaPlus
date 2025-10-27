@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ def finalize_workflow(
     close_open_states: bool = True,
     overall_status: str = None,
     finalize_note: str = None
-) -> dict:
+) -> Dict[str, Any]:
     """
     Finalize a workflow execution: optionally delete worker agents, close open states, and write final audit/summary metadata.
     Control-plane / data-plane keys are preserved for audit. No Redis keys are deleted.

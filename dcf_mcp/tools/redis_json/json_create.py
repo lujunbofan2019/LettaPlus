@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -9,7 +10,7 @@ def json_create(
     initial_json: str = "{}",
     key_prefix: str = "doc:",
     overwrite: bool = False
-) -> dict:
+) -> Dict[str, Any]:
     """
     Create or reset a JSON document in Redis and return its key.
 

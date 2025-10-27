@@ -1,8 +1,9 @@
+from typing import Any, Dict
 import os
 from letta_client import Letta
 
 # 2025.06.03.rc1
-def remove_tool_return_limits(agent_id: str) -> dict:
+def remove_tool_return_limits(agent_id: str) -> Dict[str, Any]:
     """
     Sets the return_char_limit to 60,000 for all tools attached to a specific Letta agent.
 

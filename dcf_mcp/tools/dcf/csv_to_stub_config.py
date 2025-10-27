@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                        mcp_cases_csv_path: str = "skills_src/mcp_cases.csv",
-                       out_path: str = "generated/stub/stub_config.json") -> dict:
+                       out_path: str = "generated/stub/stub_config.json") -> Dict[str, Any]:
     """
     Generate a deterministic stub MCP server configuration from local CSV files.
 

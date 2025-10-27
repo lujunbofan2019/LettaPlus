@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -7,7 +8,7 @@ def json_append(
     redis_key: str,
     path: str,
     value_json: str
-) -> dict:
+) -> Dict[str, Any]:
     """
     Append a JSON value to an array at the given path.
 
