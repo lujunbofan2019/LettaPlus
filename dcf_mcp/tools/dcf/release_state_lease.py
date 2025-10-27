@@ -32,7 +32,7 @@ def release_state_lease(
       state (str): State name (ASL Task state).
       lease_token (str): The lease token currently held by the worker.
       owner_agent_id (str): If provided, must match lease.owner_agent_id unless force=True.
-      redis_url (str): Redis URL (default env REDIS_URL or "redis://localhost:6379/0").
+      redis_url (str): Redis URL (default env REDIS_URL or "redis://redis:6379/0").
       force (bool): If True, clear lease regardless of token/owner mismatch.
       clear_owner (bool): If True, null out lease.owner_agent_id when releasing.
 
@@ -59,7 +59,7 @@ def release_state_lease(
             "updated_state": None
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()

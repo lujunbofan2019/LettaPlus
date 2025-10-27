@@ -32,7 +32,7 @@ def acquire_state_lease(
       workflow_id (str): The workflow UUID.
       state (str): The state name (usually an ASL Task) to lock.
       owner_agent_id (str): The agent ID that will own the lease if acquired.
-      redis_url (str): Redis URL (e.g., "redis://localhost:6379/0"). Defaults to REDIS_URL env or local.
+      redis_url (str): Redis URL (e.g., "redis://redis:6379/0"). Defaults to REDIS_URL env or "redis://redis:6379/0".
       lease_ttl_s (int): Lease TTL seconds to store in the state (informational). Default 300 if omitted.
       require_ready (bool): If True, require all upstream dependencies to be status == "done". Default True.
       require_owner_match (bool): If True, require meta.agents[state] == owner_agent_id (when present). Default True.
@@ -71,7 +71,7 @@ def acquire_state_lease(
             "updated_state": None
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()

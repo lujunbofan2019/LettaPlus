@@ -40,7 +40,7 @@ def update_workflow_control_plane(workflow_id: str,
     Args:
       workflow_id: Workflow UUID.
       state: State name to update.
-      redis_url: Optional Redis URL. Defaults to env REDIS_URL or "redis://localhost:6379/0".
+      redis_url: Optional Redis URL. Defaults to env REDIS_URL or "redis://redis:6379/0".
       new_status: Optional new status.
       lease_token: Optional expected lease token (for ownership).
       owner_agent_id: Optional owner to set on lease when setting/refreshing.
@@ -75,7 +75,7 @@ def update_workflow_control_plane(workflow_id: str,
             "output_written": False
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()

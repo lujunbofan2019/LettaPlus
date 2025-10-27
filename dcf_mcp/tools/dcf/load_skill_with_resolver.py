@@ -2,7 +2,7 @@ import os
 import json
 from typing import Any, Dict, List
 
-LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
+LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
 MAX_TEXT_CONTENT_CHUNK_SIZE = int(os.getenv("SKILL_MAX_TEXT_CHARS", "4900"))
 

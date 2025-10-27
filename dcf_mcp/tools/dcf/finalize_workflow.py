@@ -17,7 +17,7 @@ def finalize_workflow(
 
     Args:
       workflow_id: Workflow UUID string.
-      redis_url: Redis URL (e.g., "redis://localhost:6379/0"). Defaults to env REDIS_URL or localhost.
+      redis_url: Redis URL (e.g., "redis://redis:6379/0"). Defaults to env REDIS_URL or "redis://redis:6379/0".
       delete_worker_agents: If True, delete all worker agents referenced in meta.agents.
       preserve_planner: If True, do NOT delete the planner agent (meta.planner_agent_id).
       close_open_states: If True, set any 'pending'/'running' states to 'cancelled' and stamp 'finished_at'.
@@ -60,7 +60,7 @@ def finalize_workflow(
         letta_import_error = f"Missing dependency: letta_client not importable: {e}"
 
     # --- Redis connection ---
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()
@@ -197,7 +197,7 @@ def finalize_workflow(
         else:
             try:
                 client = Letta(
-                    base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
+                    base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"),
                     token=os.getenv("LETTA_TOKEN")
                 )
             except Exception as e:

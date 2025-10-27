@@ -25,8 +25,8 @@ def create_workflow_control_plane(workflow_json: str,
         `asl.StartAt` and `asl.States`. If only `steps` exist, a linear DAG is
         inferred in order.
       redis_url (str, optional):
-        Redis connection URL (e.g., "redis://localhost:6379/0"). If not provided,
-        uses env `REDIS_URL` or "redis://localhost:6379/0".
+        Redis connection URL (e.g., "redis://redis:6379/0"). If not provided,
+        uses env `REDIS_URL` or "redis://redis:6379/0".
       expiry_secs (int, optional):
         TTL to apply to seeded keys via EXPIRE. Omit or set <=0 for no TTL.
         (Recommended: no TTL during execution.)
@@ -57,7 +57,7 @@ def create_workflow_control_plane(workflow_json: str,
             "meta_sample": {}
         }
 
-    r_url = redis_url or os.getenv("REDIS_URL") or "redis://localhost:6379/0"
+    r_url = redis_url or os.getenv("REDIS_URL") or "redis://redis:6379/0"
     try:
         r = redis.Redis.from_url(r_url, decode_responses=True)
         r.ping()
