@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -8,7 +9,7 @@ def json_increment(
     redis_key: str,
     path: str,
     delta: str
-) -> dict:
+) -> Dict[str, Any]:
     """
     Increment a numeric field by `delta`.
 

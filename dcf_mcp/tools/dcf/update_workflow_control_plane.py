@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -14,7 +15,7 @@ def update_workflow_control_plane(workflow_id: str,
                                   set_started_at: bool = False,
                                   set_finished_at: bool = False,
                                   output_json: str = None,
-                                  output_ttl_secs: int = None) -> dict:
+                                  output_ttl_secs: int = None) -> Dict[str, Any]:
     """Atomically update a state's control-plane JSON and optionally write data-plane output.
 
     Concurrency:

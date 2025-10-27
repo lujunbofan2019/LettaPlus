@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone
@@ -5,7 +6,7 @@ from datetime import datetime, timezone
 def create_workflow_control_plane(workflow_json: str,
                                   redis_url: str = None,
                                   expiry_secs: int = None,
-                                  agents_map_json: str = None) -> dict:
+                                  agents_map_json: str = None) -> Dict[str, Any]:
     """Create (idempotently) the RedisJSON control-plane for a workflow (choreography style).
 
     This seeds exactly one RedisJSON document for workflow metadata and one per state:

@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 from datetime import datetime, timezone, timedelta
@@ -15,7 +16,7 @@ def acquire_state_lease(
     set_running_on_acquire: bool = True,
     attempts_increment: int = 1,
     lease_token: str = None
-) -> dict:
+) -> Dict[str, Any]:
     """
     Atomically acquire a lease on a workflow state in the RedisJSON control-plane.
 

@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json  # <-- missing import
 import redis
@@ -5,7 +6,7 @@ import redis
 def json_delete(
     redis_key: str,
     path: str
-) -> dict:
+) -> Dict[str, Any]:
     """
     Delete a value at the given path (or reset root to `{}`).
 

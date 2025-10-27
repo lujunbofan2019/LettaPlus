@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -7,7 +8,7 @@ def json_move(
     from_path: str,
     to_path: str,
     overwrite: bool = True
-) -> dict:
+) -> Dict[str, Any]:
     """
     Move a subtree from `from_path` to `to_path`.
 

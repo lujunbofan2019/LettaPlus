@@ -1,6 +1,7 @@
+from typing import Any, Dict
 import json
 
-def validate_skill_manifest(skill_json: str, schema_path: str) -> dict:
+def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]:
     """Validate a Skill Manifest (v2.0.0) and run static sanity checks.
 
     Steps:

@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 
@@ -8,7 +9,7 @@ MAX_TEXT_CONTENT_CHUNK_SIZE = int(os.getenv("SKILL_MAX_TEXT_CHARS", "4900"))
 ALLOW_PYTHON_SOURCE = os.getenv("ALLOW_PYTHON_SOURCE_SKILLS", "0") == "1"
 ALLOW_MCP = os.getenv("ALLOW_MCP_SKILLS", "0") == "1"
 
-def load_skill(skill_json: str, agent_id: str) -> dict:
+def load_skill(skill_json: str, agent_id: str) -> Dict[str, Any]:
     """Load a skill into a Letta agent: attach directives, tools, and data sources.
 
     This function assumes:

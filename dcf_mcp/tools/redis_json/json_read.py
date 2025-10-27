@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -6,7 +7,7 @@ def json_read(
     redis_key: str,
     path: str = "$",
     pretty: bool = False
-) -> dict:
+) -> Dict[str, Any]:
     """
     Read a JSON value from a RedisJSON document.
 

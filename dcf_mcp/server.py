@@ -1,4 +1,6 @@
 # server.py
+from typing import Any, Dict
+
 from mcp.server.fastmcp import FastMCP
 from tools.common.delete_agent import delete_agent as _delete_agent
 from tools.common.remove_tool_return_limits import remove_tool_return_limits as _remove_tool_return_limits
@@ -37,7 +39,7 @@ mcp = FastMCP(name="dcf-mcp-server")
 
 
 @mcp.tool()
-def resolve_agent_name_to_id(agent_name: str) -> dict:
+def resolve_agent_name_to_id(agent_name: str) -> Dict[str, Any]:
     return _resolve_agent_name_to_id(agent_name=agent_name)
 
 resolve_agent_name_to_id.__doc__ = _resolve_agent_name_to_id.__doc__
@@ -47,7 +49,7 @@ resolve_agent_name_to_id.__doc__ = _resolve_agent_name_to_id.__doc__
 def get_skillset(manifests_dir: str | None = None,
                  schema_path: str | None = None,
                  include_previews: bool = True,
-                 preview_chars: int | None = None) -> dict:
+                 preview_chars: int | None = None) -> Dict[str, Any]:
     return _get_skillset(
         manifests_dir=manifests_dir,
         schema_path=schema_path,
@@ -59,7 +61,7 @@ get_skillset.__doc__ = _get_skillset.__doc__
 
 
 @mcp.tool()
-def remove_tool_return_limits(agent_id: str) -> dict:
+def remove_tool_return_limits(agent_id: str) -> Dict[str, Any]:
     return _remove_tool_return_limits(agent_id=agent_id)
 
 
@@ -67,7 +69,7 @@ remove_tool_return_limits.__doc__ = _remove_tool_return_limits.__doc__
 
 
 @mcp.tool()
-def delete_agent(agent_name: str) -> dict:
+def delete_agent(agent_name: str) -> Dict[str, Any]:
     return _delete_agent(agent_name=agent_name)
 
 
@@ -75,7 +77,7 @@ delete_agent.__doc__ = _delete_agent.__doc__
 
 
 @mcp.tool()
-def load_skill_with_resolver(skill_json: str, agent_id: str) -> dict:
+def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
     return _load_skill_with_resolver(skill_json=skill_json, agent_id=agent_id)
 
 
@@ -83,7 +85,7 @@ load_skill_with_resolver.__doc__ = _load_skill_with_resolver.__doc__
 
 
 @mcp.tool()
-def load_skill(skill_json: str, agent_id: str) -> dict:
+def load_skill(skill_json: str, agent_id: str) -> Dict[str, Any]:
     return _load_skill(skill_json=skill_json, agent_id=agent_id)
 
 
@@ -91,7 +93,7 @@ load_skill.__doc__ = _load_skill.__doc__
 
 
 @mcp.tool()
-def unload_skill(manifest_id: str, agent_id: str) -> dict:
+def unload_skill(manifest_id: str, agent_id: str) -> Dict[str, Any]:
     return _unload_skill(manifest_id=manifest_id, agent_id=agent_id)
 
 
@@ -99,7 +101,7 @@ unload_skill.__doc__ = _unload_skill.__doc__
 
 
 @mcp.tool()
-def validate_skill_manifest(skill_json: str, schema_path: str) -> dict:
+def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]:
     return _validate_skill_manifest(skill_json=skill_json, schema_path=schema_path)
 
 
@@ -110,7 +112,7 @@ validate_skill_manifest.__doc__ = _validate_skill_manifest.__doc__
 def create_workflow_control_plane(workflow_json: str,
                                   redis_url: str | None = None,
                                   expiry_secs: int | None = None,
-                                  agents_map_json: str | None = None) -> dict:
+                                  agents_map_json: str | None = None) -> Dict[str, Any]:
     return _create_workflow_control_plane(
         workflow_json=workflow_json,
         redis_url=redis_url,
@@ -127,7 +129,7 @@ def read_workflow_control_plane(workflow_id: str,
                                 redis_url: str | None = None,
                                 states_json: str | None = None,
                                 include_meta: bool = True,
-                                compute_readiness: bool = False) -> dict:
+                                compute_readiness: bool = False) -> Dict[str, Any]:
     return _read_workflow_control_plane(
         workflow_id=workflow_id,
         redis_url=redis_url,
@@ -153,7 +155,7 @@ def update_workflow_control_plane(workflow_id: str,
                                   set_started_at: bool = False,
                                   set_finished_at: bool = False,
                                   output_json: str | None = None,
-                                  output_ttl_secs: int | None = None) -> dict:
+                                  output_ttl_secs: int | None = None) -> Dict[str, Any]:
     return _update_workflow_control_plane(
         workflow_id=workflow_id,
         state=state,
@@ -185,7 +187,7 @@ def acquire_state_lease(workflow_id: str,
                         allow_steal_if_expired: bool = True,
                         set_running_on_acquire: bool = True,
                         attempts_increment: int = 1,
-                        lease_token: str | None = None) -> dict:
+                        lease_token: str | None = None) -> Dict[str, Any]:
     return _acquire_state_lease(
         workflow_id=workflow_id,
         state=state,
@@ -212,7 +214,7 @@ def renew_state_lease(workflow_id: str,
                       redis_url: str | None = None,
                       lease_ttl_s: int | None = None,
                       reject_if_expired: bool = True,
-                      touch_only: bool = False) -> dict:
+                      touch_only: bool = False) -> Dict[str, Any]:
     return _renew_state_lease(
         workflow_id=workflow_id,
         state=state,
@@ -235,7 +237,7 @@ def release_state_lease(workflow_id: str,
                         owner_agent_id: str | None = None,
                         redis_url: str | None = None,
                         force: bool = False,
-                        clear_owner: bool = True) -> dict:
+                        clear_owner: bool = True) -> Dict[str, Any]:
     return _release_state_lease(
         workflow_id=workflow_id,
         state=state,
@@ -254,7 +256,7 @@ release_state_lease.__doc__ = _release_state_lease.__doc__
 def create_worker_agents(workflow_json: str,
                          imports_base_dir: str | None = None,
                          agent_name_prefix: str | None = None,
-                         default_tags_json: str | None = None) -> dict:
+                         default_tags_json: str | None = None) -> Dict[str, Any]:
     return _create_worker_agents(
         workflow_json=workflow_json,
         imports_base_dir=imports_base_dir,
@@ -270,7 +272,7 @@ create_worker_agents.__doc__ = _create_worker_agents.__doc__
 def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                      refs_csv_path: str = "skills_src/skill_tool_refs.csv",
                      out_dir: str = "generated/skills",
-                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> dict:
+                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     return _csv_to_manifests(
         skills_csv_path=skills_csv_path,
         refs_csv_path=refs_csv_path,
@@ -285,7 +287,7 @@ csv_to_manifests.__doc__ = _csv_to_manifests.__doc__
 @mcp.tool()
 def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                        mcp_cases_csv_path: str = "skills_src/mcp_cases.csv",
-                       out_path: str = "generated/stub/stub_config.json") -> dict:
+                       out_path: str = "generated/stub/stub_config.json") -> Dict[str, Any]:
     return _csv_to_stub_config(
         mcp_tools_csv_path=mcp_tools_csv_path,
         mcp_cases_csv_path=mcp_cases_csv_path,
@@ -303,7 +305,7 @@ def finalize_workflow(workflow_id: str,
                       preserve_planner: bool = True,
                       close_open_states: bool = True,
                       overall_status: str | None = None,
-                      finalize_note: str | None = None) -> dict:
+                      finalize_note: str | None = None) -> Dict[str, Any]:
     return _finalize_workflow(
         workflow_id=workflow_id,
         redis_url=redis_url,
@@ -322,7 +324,7 @@ finalize_workflow.__doc__ = _finalize_workflow.__doc__
 def validate_workflow(workflow_json: str,
                       schema_path: str,
                       imports_base_dir: str | None = None,
-                      skills_base_dir: str | None = None) -> dict:
+                      skills_base_dir: str | None = None) -> Dict[str, Any]:
     return _validate_workflow(
         workflow_json=workflow_json,
         schema_path=schema_path,
@@ -344,7 +346,7 @@ def notify_if_ready(workflow_id: str,
                     skip_if_status_in_json: str | None = None,
                     message_role: str = "system",
                     async_message: bool = False,
-                    max_steps: int | None = None) -> dict:
+                    max_steps: int | None = None) -> Dict[str, Any]:
     return _notify_if_ready(
         workflow_id=workflow_id,
         state=state,
@@ -371,7 +373,7 @@ def notify_next_worker_agent(workflow_id: str,
                              include_only_ready: bool = True,
                              message_role: str = "system",
                              async_message: bool = False,
-                             max_steps: int | None = None) -> dict:
+                             max_steps: int | None = None) -> Dict[str, Any]:
     return _notify_next_worker_agent(
         workflow_id=workflow_id,
         source_state=source_state,
@@ -392,7 +394,7 @@ notify_next_worker_agent.__doc__ = _notify_next_worker_agent.__doc__
 def json_create(redis_key: str = "",
                 initial_json: str = "{}",
                 key_prefix: str = "doc:",
-                overwrite: bool = False) -> dict:
+                overwrite: bool = False) -> Dict[str, Any]:
     return _json_create(
         redis_key=redis_key,
         initial_json=initial_json,
@@ -405,7 +407,7 @@ json_create.__doc__ = _json_create.__doc__
 
 
 @mcp.tool()
-def json_set(redis_key: str, path: str, value_json: str) -> dict:
+def json_set(redis_key: str, path: str, value_json: str) -> Dict[str, Any]:
     return _json_set(redis_key=redis_key, path=path, value_json=value_json)
 
 
@@ -413,7 +415,7 @@ json_set.__doc__ = _json_set.__doc__
 
 
 @mcp.tool()
-def json_append(redis_key: str, path: str, value_json: str) -> dict:
+def json_append(redis_key: str, path: str, value_json: str) -> Dict[str, Any]:
     return _json_append(redis_key=redis_key, path=path, value_json=value_json)
 
 
@@ -421,7 +423,7 @@ json_append.__doc__ = _json_append.__doc__
 
 
 @mcp.tool()
-def json_ensure(redis_key: str, path: str, default_json: str) -> dict:
+def json_ensure(redis_key: str, path: str, default_json: str) -> Dict[str, Any]:
     return _json_ensure(redis_key=redis_key, path=path, default_json=default_json)
 
 
@@ -429,7 +431,7 @@ json_ensure.__doc__ = _json_ensure.__doc__
 
 
 @mcp.tool()
-def json_merge(redis_key: str, path: str, patch_json: str) -> dict:
+def json_merge(redis_key: str, path: str, patch_json: str) -> Dict[str, Any]:
     return _json_merge(redis_key=redis_key, path=path, patch_json=patch_json)
 
 
@@ -437,7 +439,7 @@ json_merge.__doc__ = _json_merge.__doc__
 
 
 @mcp.tool()
-def json_increment(redis_key: str, path: str, delta: str) -> dict:
+def json_increment(redis_key: str, path: str, delta: str) -> Dict[str, Any]:
     return _json_increment(redis_key=redis_key, path=path, delta=delta)
 
 
@@ -448,7 +450,7 @@ json_increment.__doc__ = _json_increment.__doc__
 def json_copy(redis_key: str,
               from_path: str,
               to_path: str,
-              overwrite: bool = True) -> dict:
+              overwrite: bool = True) -> Dict[str, Any]:
     return _json_copy(
         redis_key=redis_key,
         from_path=from_path,
@@ -464,7 +466,7 @@ json_copy.__doc__ = _json_copy.__doc__
 def json_move(redis_key: str,
               from_path: str,
               to_path: str,
-              overwrite: bool = True) -> dict:
+              overwrite: bool = True) -> Dict[str, Any]:
     return _json_move(
         redis_key=redis_key,
         from_path=from_path,
@@ -477,7 +479,7 @@ json_move.__doc__ = _json_move.__doc__
 
 
 @mcp.tool()
-def json_delete(redis_key: str, path: str) -> dict:
+def json_delete(redis_key: str, path: str) -> Dict[str, Any]:
     return _json_delete(redis_key=redis_key, path=path)
 
 
@@ -485,7 +487,7 @@ json_delete.__doc__ = _json_delete.__doc__
 
 
 @mcp.tool()
-def json_read(redis_key: str, path: str = "$", pretty: bool = False) -> dict:
+def json_read(redis_key: str, path: str = "$", pretty: bool = False) -> Dict[str, Any]:
     return _json_read(redis_key=redis_key, path=path, pretty=pretty)
 
 

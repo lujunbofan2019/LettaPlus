@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import redis
@@ -7,7 +8,7 @@ def json_merge(
     redis_key: str,
     path: str,
     patch_json: str
-) -> dict:
+) -> Dict[str, Any]:
     """
     Deep-merge an object into a path using RFC-7386 semantics.
 

@@ -1,8 +1,9 @@
+from typing import Any, Dict
 import os
 from letta_client import Letta
 
 # 2025.06.03.rc1
-def resolve_agent_name_to_id(agent_name: str) -> dict:
+def resolve_agent_name_to_id(agent_name: str) -> Dict[str, Any]:
     """
     Resolve an agent's name to its unique agent Id, often as a prerequisite for the agent to call other tools.
 

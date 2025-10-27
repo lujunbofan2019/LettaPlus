@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import os
 import json
 import uuid
@@ -6,7 +7,7 @@ from pathlib import Path
 def create_worker_agents(workflow_json: str,
                          imports_base_dir: str = None,
                          agent_name_prefix: str = None,
-                         default_tags_json: str = None) -> dict:
+                         default_tags_json: str = None) -> Dict[str, Any]:
     """Create one worker agent per ASL Task state using Letta .af v2 templates.
 
     Resolution order for agent templates:
