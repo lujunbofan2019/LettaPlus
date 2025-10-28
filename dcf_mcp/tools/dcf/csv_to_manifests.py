@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 
 DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
+DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
 
 
 def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
@@ -83,6 +84,18 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
         refs_csv = Path(refs_csv_path)
         out_dir_p = Path(out_dir)
         catalog_p = Path(catalog_path)
+        if catalog_path:
+            # Allow callers to supply a directory for the catalog path (e.g. "generated/catalogs/")
+            # or a special value like ".".  In those cases we materialise the default catalog file
+            # name inside that directory so we avoid trying to open the directory itself.
+            if (
+                catalog_p.is_dir()
+                or str(catalog_path).endswith("/")
+                or catalog_p.suffix == ""
+            ):
+                catalog_p = catalog_p / DEFAULT_CATALOG_FILENAME
+        else:
+            catalog_p = Path(DEFAULT_CATALOG_FILENAME)
 
         if not skills_csv.exists():
             out["error"] = f"skills CSV not found: {skills_csv}"

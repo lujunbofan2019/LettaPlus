@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+
+DEFAULT_STUB_CONFIG_FILENAME = "stub_config.json"
+
 def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                        mcp_cases_csv_path: str = "skills_src/mcp_cases.csv",
                        out_path: str = "generated/stub/stub_config.json") -> Dict[str, Any]:
@@ -86,6 +89,19 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
         tools_csv = Path(mcp_tools_csv_path)
         cases_csv = Path(mcp_cases_csv_path)
         out_p = Path(out_path)
+
+        if out_path:
+            # Permit callers to pass a directory (e.g. "generated/stub/" or ".")
+            # and transparently create the default stub config file within it.
+            if (
+                out_p.is_dir()
+                or str(out_path).endswith(("/", "\\"))
+                or out_p.suffix == ""
+            ):
+                out_p = out_p / DEFAULT_STUB_CONFIG_FILENAME
+        else:
+            out_p = Path(DEFAULT_STUB_CONFIG_FILENAME)
+
         out_p.parent.mkdir(parents=True, exist_ok=True)
 
         if not tools_csv.exists():
