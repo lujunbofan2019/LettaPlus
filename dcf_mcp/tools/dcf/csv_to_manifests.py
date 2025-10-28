@@ -17,7 +17,7 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
     Generate Skill Manifests (v2.0.0) from local CSV files, suitable for rapid skill prototyping.
 
     CSV inputs (no external dependencies):
-      1) skills_csv_path (default: skills_src/skills.csv)
+      1) skills_csv_path
          Columns:
            - manifestId (required)
            - skillName (required)
@@ -29,7 +29,7 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
            - skillDirectives
            - dataSources.json     (JSON array of requiredDataSources)
 
-      2) refs_csv_path (default: skills_src/skill_tool_refs.csv)
+      2) refs_csv_path
          Maps skills to logical MCP tools (no concrete endpoints here - those are resolved at load-time):
            - manifestId (required)
            - serverId   (logical MCP server id, required)

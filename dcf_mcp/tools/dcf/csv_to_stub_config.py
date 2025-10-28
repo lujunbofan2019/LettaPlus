@@ -14,7 +14,7 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv"
     Generate a deterministic stub MCP server configuration from local CSV files.
 
     Inputs:
-      1) mcp_tools_csv_path (default: skills_src/mcp_tools.csv)
+      1) mcp_tools_csv_path
          Columns (strings unless noted):
            - serverId            (logical server id; required)
            - toolName            (required)
@@ -26,7 +26,7 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv"
            - rateLimit.rps       (int; default 0)
            - latencyMs.default   (int; default 0)
 
-      2) mcp_cases_csv_path (default: skills_src/mcp_cases.csv)
+      2) mcp_cases_csv_path
          Optional; zero or more rows mapping input matching -> response overrides:
            - serverId, toolName, caseId
            - match.strategy  in {exact, jsonpath, regex}
