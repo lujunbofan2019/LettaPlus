@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                      refs_csv_path: str = "skills_src/skill_tool_refs.csv",
-                     out_dir: str = "generated/skills",
+                     out_dir: str = "generated/manifests",
                      catalog_path: str = "generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     """
     Generate Skill Manifests (v2.0.0) from local CSV files, suitable for rapid skill prototyping.
@@ -26,7 +26,7 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
            - dataSources.json     (JSON array of requiredDataSources)
 
       2) refs_csv_path (default: skills_src/skill_tool_refs.csv)
-         Maps skills to logical MCP tools (no concrete endpoints here—those are resolved at load-time):
+         Maps skills to logical MCP tools (no concrete endpoints here - those are resolved at load-time):
            - manifestId (required)
            - serverId   (logical MCP server id, required)
            - toolName   (required)
