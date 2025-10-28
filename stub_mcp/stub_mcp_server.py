@@ -54,9 +54,37 @@ WS_PORT = int(os.getenv("STUB_MCP_PORT", "8765"))
 
 # --------- config & matching helpers (stdlib only) ---------
 
-def _load_config(path: str) -> Dict[str, Any]:
+_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": None, "config": None}
+
+
+def _load_config_from_disk(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _get_config(path: str = CONFIG_PATH) -> Dict[str, Any]:
+    cache = _CONFIG_CACHE
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError as exc:
+        if cache["config"] is not None:
+            return cache["config"]
+        empty = {"servers": {}}
+        cache.update({"config": empty, "mtime": None, "path": path})
+        print(f"[stub-mcp] stub config missing at {path}: {exc}", file=sys.stderr)
+        return empty
+
+    if cache["config"] is None or cache["mtime"] != mtime or cache["path"] != path:
+        try:
+            cache["config"] = _load_config_from_disk(path)
+            cache["mtime"] = mtime
+            cache["path"] = path
+        except Exception as exc:
+            print(f"[stub-mcp] failed to load config {path}: {exc}", file=sys.stderr)
+            if cache["config"] is None:
+                cache["config"] = {"servers": {}}
+            return cache["config"]
+    return cache["config"]
 
 def _get_tool(cfg: Dict[str, Any], server_id: str, tool_name: str) -> Optional[Dict[str, Any]]:
     return (((cfg.get("servers") or {}).get(server_id) or {}).get("tools") or {}).get(tool_name)
@@ -109,11 +137,11 @@ def _pick_case(tool: Dict[str, Any], args: Dict[str, Any]) -> Tuple[Optional[Dic
 
 _last_call_at: Dict[Tuple[str, str], float] = {}  # (serverId, toolName) -> epoch seconds
 
-def _respect_rate_limit(server_id: str, tool: Dict[str, Any]) -> None:
+def _respect_rate_limit(server_id: str, tool_name: str, tool: Dict[str, Any]) -> None:
     rps = int(((tool.get("rateLimit") or {}).get("rps") or 0))
     if rps <= 0:
         return
-    key = (server_id, (tool.get("name") or ""))  # tool["name"] may be missing; harmless
+    key = (server_id, tool_name)
     now = time.time()
     min_gap = 1.0 / float(max(1, rps))
     last = _last_call_at.get(key, 0.0)
@@ -131,7 +159,7 @@ def _handle_call(cfg: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
     tool = _get_tool(cfg, server_id, tool_name)
     if not tool:
         return {"error": f"unknown tool {server_id}:{tool_name}"}
-    _respect_rate_limit(server_id, tool)
+    _respect_rate_limit(server_id, tool_name, tool)
     resp, latency_ms = _pick_case(tool, args)
     if latency_ms and latency_ms > 0:
         time.sleep(latency_ms / 1000.0)
@@ -171,7 +199,7 @@ def _rpc_response(id_, result=None, error: Optional[str] = None) -> str:
     return json.dumps({"jsonrpc": "2.0", "id": id_, "result": result})
 
 def run_stdio() -> None:
-    cfg = _load_config(CONFIG_PATH)
+    cfg = _get_config(CONFIG_PATH)
     print(json.dumps({"jsonrpc": "2.0", "method": "server/ready", "params": {"ts": datetime.utcnow().isoformat()}}), flush=True)
     for line in sys.stdin:
         line = line.strip()
@@ -182,6 +210,7 @@ def run_stdio() -> None:
             mid = req.get("id")
             meth = req.get("method")
             params = req.get("params") or {}
+            cfg = _get_config(CONFIG_PATH)
             if meth == "initialize":
                 print(_rpc_response(mid, {"ok": True, "mode": "stdio"}), flush=True)
             elif meth == "tools/list":
@@ -209,7 +238,7 @@ def run_stdio() -> None:
 # --------- optional websocket server ---------
 
 async def _ws_handler(websocket):
-    cfg = _load_config(CONFIG_PATH)
+    cfg = _get_config(CONFIG_PATH)
     await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "server/ready", "params": {"ts": datetime.utcnow().isoformat(), "mode": "ws"}}))
     async for msg in websocket:
         try:
@@ -217,6 +246,7 @@ async def _ws_handler(websocket):
             mid = req.get("id")
             meth = req.get("method")
             params = req.get("params") or {}
+            cfg = _get_config(CONFIG_PATH)
             if meth == "initialize":
                 await websocket.send(_rpc_response(mid, {"ok": True, "mode": "ws"}))
             elif meth == "tools/list":
