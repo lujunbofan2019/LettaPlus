@@ -104,6 +104,13 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
             except Exception:
                 return default
 
+        def parse_int(cell: str, default: int = 0) -> int:
+            raw = (cell or "").strip()
+            try:
+                return int(raw)
+            except Exception:
+                return default
+
         # Load tools
         servers: Dict[str, Any] = {}
         tool_rows: List[Dict[str, Any]] = []
@@ -121,8 +128,8 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                     "paramsSchema": parse_json(row.get("paramsSchema.json"), {"type": "object", "properties": {}}),
                     "resultSchema": parse_json(row.get("resultSchema.json"), {}),
                     "defaultResponse": parse_json(row.get("defaultResponse.json"), {}),
-                    "rateLimit": {"rps": int((row.get("rateLimit.rps") or "0").strip() or "0")},
-                    "latencyMs": {"default": int((row.get("latencyMs.default") or "0").strip() or "0")},
+                    "rateLimit": {"rps": parse_int(row.get("rateLimit.rps"), 0)},
+                    "latencyMs": {"default": parse_int(row.get("latencyMs.default"), 0)},
                     "cases": []
                 }
                 servers.setdefault(server_id, {"tools": {}})["tools"][tool_name] = entry
