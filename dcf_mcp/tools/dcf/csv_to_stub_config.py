@@ -181,8 +181,13 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                     case_count += 1
 
         config = {"servers": servers}
-        with out_p.open("w", encoding="utf-8") as f:
+        # Write atomically so the running stub server never reads a partial file.
+        tmp_path = out_p.with_suffix(out_p.suffix + ".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp_path.replace(out_p)
 
         out["written_file"] = str(out_p)
         out["tool_count"] = sum(len(srv["tools"]) for srv in servers.values())
