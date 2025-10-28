@@ -1,4 +1,4 @@
-serverId,toolName,caseId,match.strategy,match.expr,match.value,response.json,latencyMs.override,errorMode,weight
-search,search.query,case_python,exact,q,"python", "{""hits"":[{""title"":""Python"", ""url"":""https://www.python.org""}], ""total"":1}",,,
-llm,llm.summarize,short_text,jsonpath,$.text,"/.*?/", "{""summary"":""short text summary (stub)""}",,,
-web,web.fetch,oops_500,regex,$.url,".*/fail", "{""status"":500,""body"":""""}",,http_500,
+serverId,toolName,version,description,paramsSchema.json,resultSchema.json,defaultResponse.json,rateLimit.rps,latencyMs.default
+search,search.query,0.1.0,"Mock web search query tool","{""type"":""object"",""properties"":{""q"":{""type"":""string"",""description"":""Search query""}},""required"":[""q""]}","{""type"":""object"",""properties"":{""hits"":{""type"":""array"",""items"":{""type"":""object"",""properties"":{""title"":{""type"":""string""},""url"":{""type"":""string""}}}}}}","{""hits"":[]}",2,150
+llm,llm.summarize,0.1.0,"Mock summarisation endpoint","{""type"":""object"",""properties"":{""text"":{""type"":""string"",""description"":""Text to summarise""}},""required"":[""text""]}","{""type"":""object"",""properties"":{""summary"":{""type"":""string""}}}","{""summary"":""stub summary""}",0,50
+web,web.fetch,0.1.0,"Mock HTTP fetcher","{""type"":""object"",""properties"":{""url"":{""type"":""string"",""description"":""URL to fetch""}},""required"":[""url""]}","{""type"":""object"",""properties"":{""status"":{""type"":""integer""},""body"":{""type"":""string""}}}","{""status"":200,""body"":""stub""}",0,200
