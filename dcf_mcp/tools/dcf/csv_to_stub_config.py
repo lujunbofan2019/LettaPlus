@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+
+DEFAULT_STUB_CONFIG_FILENAME = "stub_config.json"
+
 def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                        mcp_cases_csv_path: str = "skills_src/mcp_cases.csv",
                        out_path: str = "generated/stub/stub_config.json") -> Dict[str, Any]:
@@ -86,6 +89,19 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
         tools_csv = Path(mcp_tools_csv_path)
         cases_csv = Path(mcp_cases_csv_path)
         out_p = Path(out_path)
+
+        if out_path:
+            # Permit callers to pass a directory (e.g. "generated/stub/" or ".")
+            # and transparently create the default stub config file within it.
+            if (
+                out_p.is_dir()
+                or str(out_path).endswith(("/", "\\"))
+                or out_p.suffix == ""
+            ):
+                out_p = out_p / DEFAULT_STUB_CONFIG_FILENAME
+        else:
+            out_p = Path(DEFAULT_STUB_CONFIG_FILENAME)
+
         out_p.parent.mkdir(parents=True, exist_ok=True)
 
         if not tools_csv.exists():
@@ -101,6 +117,13 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                 return default
             try:
                 return json.loads(cell)
+            except Exception:
+                return default
+
+        def parse_int(cell: str, default: int = 0) -> int:
+            raw = (cell or "").strip()
+            try:
+                return int(raw)
             except Exception:
                 return default
 
@@ -121,8 +144,8 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                     "paramsSchema": parse_json(row.get("paramsSchema.json"), {"type": "object", "properties": {}}),
                     "resultSchema": parse_json(row.get("resultSchema.json"), {}),
                     "defaultResponse": parse_json(row.get("defaultResponse.json"), {}),
-                    "rateLimit": {"rps": int((row.get("rateLimit.rps") or "0").strip() or "0")},
-                    "latencyMs": {"default": int((row.get("latencyMs.default") or "0").strip() or "0")},
+                    "rateLimit": {"rps": parse_int(row.get("rateLimit.rps"), 0)},
+                    "latencyMs": {"default": parse_int(row.get("latencyMs.default"), 0)},
                     "cases": []
                 }
                 servers.setdefault(server_id, {"tools": {}})["tools"][tool_name] = entry
@@ -174,8 +197,13 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
                     case_count += 1
 
         config = {"servers": servers}
-        with out_p.open("w", encoding="utf-8") as f:
+        # Write atomically so the running stub server never reads a partial file.
+        tmp_path = out_p.with_suffix(out_p.suffix + ".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp_path.replace(out_p)
 
         out["written_file"] = str(out_p)
         out["tool_count"] = sum(len(srv["tools"]) for srv in servers.values())

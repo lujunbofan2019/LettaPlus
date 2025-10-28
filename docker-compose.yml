@@ -109,11 +109,14 @@ services:
       - "7337:7337"
     environment:
       # Point the tool at the mounted manifests dir
-      DCF_MANIFESTS_DIR: /app/dcf_manifests
+      DCF_MANIFESTS_DIR: /app/generated/manifests
       SKILL_PREVIEW_CHARS: "400"
     volumes:
-      # Mount your manifests (read-only)
-      - ./manifests:/app/dcf_manifests:ro
+      # Mount skill authoring inputs and generated outputs
+      - ./skills_src:/app/skills_src:ro
+      - ./generated/manifests:/app/generated/manifests
+      - ./generated/catalogs:/app/generated/catalogs
+      - ./generated/stub:/app/generated/stub
     restart: unless-stopped
 
   stub-mcp:

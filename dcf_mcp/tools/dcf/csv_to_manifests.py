@@ -1,8 +1,11 @@
-import os
 import csv
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+
+DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
+DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
 
 
 def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
@@ -81,6 +84,18 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
         refs_csv = Path(refs_csv_path)
         out_dir_p = Path(out_dir)
         catalog_p = Path(catalog_path)
+        if catalog_path:
+            # Allow callers to supply a directory for the catalog path (e.g. "generated/catalogs/")
+            # or a special value like ".".  In those cases we materialise the default catalog file
+            # name inside that directory so we avoid trying to open the directory itself.
+            if (
+                catalog_p.is_dir()
+                or str(catalog_path).endswith("/")
+                or catalog_p.suffix == ""
+            ):
+                catalog_p = catalog_p / DEFAULT_CATALOG_FILENAME
+        else:
+            catalog_p = Path(DEFAULT_CATALOG_FILENAME)
 
         if not skills_csv.exists():
             out["error"] = f"skills CSV not found: {skills_csv}"
@@ -108,6 +123,14 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                 return []
             return [t.strip() for t in raw.split(",") if t.strip()]
 
+        def ensure_manifest_api_version(row: Dict[str, Any]) -> str:
+            raw = (row.get("manifestApiVersion") or "").strip()
+            return raw or DEFAULT_MANIFEST_API_VERSION
+
+        def ensure_skill_package_id(row: Dict[str, Any]) -> Optional[str]:
+            raw = (row.get("skillPackageId") or row.get("packageId") or "").strip()
+            return raw or None
+
         # Load refs index
         refs_index: Dict[str, List[Dict[str, Any]]] = {}
         if refs_csv.exists():
@@ -119,7 +142,9 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                     refs_index.setdefault(mid, []).append({
                         "serverId": (row.get("serverId") or "").strip(),
                         "toolName": (row.get("toolName") or "").strip(),
-                        "required": ((row.get("required") or "true").strip().lower() == "true")
+                        "required": ((row.get("required") or "true").strip().lower() == "true"),
+                        "description": (row.get("notes") or row.get("description") or "").strip(),
+                        "schema": parse_json_cell(row.get("json_schema"), None)
                     })
 
         # Process skills
@@ -152,8 +177,22 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                     tname = ref.get("toolName") or ""
                     if not sid or not tname:
                         continue
+                    desc_text = ref.get("description") or f"Tool '{tname}' from server '{sid}'"
+                    schema_obj = ref.get("schema")
+                    if not isinstance(schema_obj, dict):
+                        schema_obj = {
+                            "name": tname,
+                            "description": desc_text,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "required": []
+                            }
+                        }
                     required_tools.append({
                         "toolName": tname,
+                        "description": desc_text,
+                        "json_schema": schema_obj,
                         "definition": {
                             "type": "mcp_server",
                             "serverId": sid,
@@ -163,8 +202,9 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                     })
 
                 manifest = {
+                    "manifestApiVersion": ensure_manifest_api_version(row),
                     "manifestId": manifest_id,
-                    "skillPackageId": None,
+                    "skillPackageId": ensure_skill_package_id(row),
                     "skillName": name,
                     "skillVersion": ver,
                     "description": desc,

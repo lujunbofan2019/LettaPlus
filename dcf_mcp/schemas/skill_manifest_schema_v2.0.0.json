@@ -7,11 +7,11 @@
   "additionalProperties": false,
   "properties": {
     "manifestApiVersion": { "type": "string", "enum": ["v2.0.0"] },
-    "skillPackageId":     { "type": "string", "format": "uuid" },
-    "manifestId":         { "type": "string", "format": "uuid" },
+    "skillPackageId":     { "type": ["string", "null"], "minLength": 1 },
+    "manifestId":         { "type": "string", "minLength": 1 },
     "skillName":          { "type": "string", "minLength": 1 },
     "skillVersion":       { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z-.]+)?$" },
-    "description":        { "type": "string" },
+    "description":        { "type": ["string", "null"] },
     "tags":               { "type": "array", "items": { "type": "string" }, "default": [] },
     "permissions": {
       "type": "object",
@@ -53,14 +53,21 @@
       "properties": {
         "toolName":   { "type": "string", "minLength": 1 },
         "description":{ "type": "string", "minLength": 1 },
-        "json_schema":{ "$ref": "#/$defs/ToolJSONSchema" },
+        "json_schema":{
+          "anyOf": [
+            { "$ref": "#/$defs/ToolJSONSchema" },
+            { "type": "null" }
+          ]
+        },
         "definition": {
           "oneOf": [
             { "$ref": "#/$defs/ToolDefPython" },
             { "$ref": "#/$defs/ToolDefRegistered" },
-            { "$ref": "#/$defs/ToolDefMcp" }
+            { "$ref": "#/$defs/ToolDefMcp" },
+            { "$ref": "#/$defs/ToolDefMcpLogical" }
           ]
-        }
+        },
+        "required": { "type": "boolean", "default": true }
       },
       "required": ["toolName", "description", "definition"]
     },
@@ -131,12 +138,23 @@
       "required": ["type", "endpointUrl", "operationId"]
     },
 
+    "ToolDefMcpLogical": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "mcp_server" },
+        "serverId": { "type": "string", "minLength": 1 },
+        "toolName": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "serverId", "toolName"]
+    },
+
     "DataSource": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "dataSourceId": { "type": "string", "format": "uuid" },
-        "description": { "type": "string" },
+        "dataSourceId": { "type": "string", "minLength": 1 },
+        "description": { "type": ["string", "null"] },
         "destination": { "type": "string", "enum": ["archival_memory"], "default": "archival_memory" },
         "content": {
           "oneOf": [ { "$ref": "#/$defs/DS_TextContent" } ]
