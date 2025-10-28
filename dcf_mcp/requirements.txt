@@ -2,3 +2,5 @@ mcp>=1.2
 uvicorn>=0.30
 jsonschema>=4.22
 letta-client==0.1.324
+redis>=4.5.1
+rejson>=0.3.0
