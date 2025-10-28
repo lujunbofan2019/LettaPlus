@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -79,21 +80,42 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
         "warnings": []
     }
 
+    # --- helpers -------------------------------------------------------------
+    def _safe_filename(s: str) -> str:
+        """
+        Convert an arbitrary manifestId into a safe, flat filename.
+        - Replaces path separators with underscores.
+        - Keeps only [A-Za-z0-9._-]; collapses other runs to '-'.
+        - Strips leading/trailing dots/underscores/dashes.
+        """
+        s = (s or "").replace("/", "_").replace("\\", "_")
+        s = re.sub(r"[^A-Za-z0-9._-]+", "-", s).strip("-_.")
+        return s or "manifest"
+
+    def _ensure_under_dir(base: Path, p: Path) -> Path:
+        """
+        Ensure resolved path p is within resolved base directory.
+        Raises ValueError if the path escapes.
+        """
+        base_res = base.resolve()
+        p_res = p.resolve()
+        try:
+            p_res.relative_to(base_res)
+        except ValueError:
+            raise ValueError(f"Refusing to write outside of output dir: {p_res} (base {base_res})")
+        return p_res
+    # -------------------------------------------------------------------------
+
     try:
         skills_csv = Path(skills_csv_path)
         refs_csv = Path(refs_csv_path)
-        out_dir_p = Path(out_dir)
-        catalog_p = Path(catalog_path)
+        out_dir_p = Path(out_dir).resolve()
+        catalog_p = Path(catalog_path) if catalog_path else Path(DEFAULT_CATALOG_FILENAME)
+
+        # Allow callers to pass a directory-like catalog path (e.g. "generated/catalogs/" or ".")
         if catalog_path:
-            # Allow callers to supply a directory for the catalog path (e.g. "generated/catalogs/")
-            # or a special value like ".".  In those cases we materialise the default catalog file
-            # name inside that directory so we avoid trying to open the directory itself.
-            if (
-                catalog_p.is_dir()
-                or str(catalog_path).endswith("/")
-                or catalog_p.suffix == ""
-            ):
-                catalog_p = catalog_p / DEFAULT_CATALOG_FILENAME
+            if catalog_p.is_dir() or str(catalog_path).endswith("/") or catalog_p.suffix == "":
+                catalog_p = (catalog_p / DEFAULT_CATALOG_FILENAME)
         else:
             catalog_p = Path(DEFAULT_CATALOG_FILENAME)
 
@@ -102,22 +124,24 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
             return out
         if not refs_csv.exists():
             # Not fatal: allow skills with no tool refs; warn.
-            out["warnings"].append(f"refs CSV not found: {refs_csv} (continuing; skills will have no requiredTools)")
+            out["warnings"].append(
+                f"refs CSV not found: {refs_csv} (continuing; skills will have no requiredTools)"
+            )
 
         out_dir_p.mkdir(parents=True, exist_ok=True)
         catalog_p.parent.mkdir(parents=True, exist_ok=True)
 
         # Helpers (inlined)
-        def parse_json_cell(cell: str, default: Any) -> Any:
-            cell = (cell or "").strip()
-            if not cell:
+        def parse_json_cell(cell: Optional[str], default: Any) -> Any:
+            text = (cell or "").strip()
+            if not text:
                 return default
             try:
-                return json.loads(cell)
+                return json.loads(text)
             except Exception:
                 return default
 
-        def parse_tags_cell(cell: str) -> List[str]:
+        def parse_tags_cell(cell: Optional[str]) -> List[str]:
             raw = (cell or "").strip()
             if not raw:
                 return []
@@ -218,7 +242,14 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                     "requiredDataSources": data_sources if isinstance(data_sources, list) else []
                 }
 
-                out_path = out_dir_p / f"{manifest_id}.json"
+                # --- critical fix: sanitize filename and pin within out_dir ---
+                safe_name = _safe_filename(manifest_id)
+                if safe_name != manifest_id:
+                    out["warnings"].append(
+                        f"manifestId '{manifest_id}' contained path/unsafe characters; wrote as '{safe_name}.json'."
+                    )
+
+                out_path = _ensure_under_dir(out_dir_p, (out_dir_p / f"{safe_name}.json"))
                 with out_path.open("w", encoding="utf-8") as mf:
                     json.dump(manifest, mf, indent=2, ensure_ascii=False)
 

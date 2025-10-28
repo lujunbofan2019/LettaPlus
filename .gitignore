@@ -17,7 +17,6 @@ Thumbs.db
 # Build output (e.g. if using Webpack or other build tools)
 dist/
 build/
-generated/
 
 # Chrome extension-specific
 # Avoid uploading generated artifacts or packed extensions

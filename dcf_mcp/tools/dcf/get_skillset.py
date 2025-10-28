@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # --- Constants ---
-DCF_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/dcf_manifests/")
+DCF_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/generated/manifests")
 DEFAULT_PREVIEW_CHARS = int(os.getenv("SKILL_PREVIEW_CHARS", "400"))
 
 def get_skillset(manifests_dir: str = None,

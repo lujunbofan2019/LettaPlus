@@ -1,3 +1,3 @@
 manifestId,skillName,skillVersion,description,tags,permissions.egress,permissions.secrets,skillDirectives,dataSources.json
-skill.pkg.research.web@0.1.0,research.web,0.1.0,Lightweight web research capability,"research,web",internet,"[\"BING_API_KEY\"]","Follow queries precisely; extract key facts; provide citations.","[{\"dataSourceId\":\"aboutness\",\"content\":{\"type\":\"text_content\",\"text\":\"This skill extracts key facts with citations.\"}}]"
-skill.pkg.write.summary@0.1.0,write.summary,0.1.0,Short factual summary writer,"write,summary",none,"[]","Write concise, factual summaries (<150w), no speculation.","[]"
+skill.research.web@0.1.0,research.web,0.1.0,Lightweight web research capability,"research,web",internet,"[\"BING_API_KEY\"]","Follow queries precisely; extract key facts; provide citations.","[{\"dataSourceId\":\"aboutness\",\"content\":{\"type\":\"text_content\",\"text\":\"This skill extracts key facts with citations.\"}}]"
+skill.write.summary@0.1.0,write.summary,0.1.0,Short factual summary writer,"write,summary",none,"[]","Write concise, factual summaries (<150w), no speculation.","[]"
