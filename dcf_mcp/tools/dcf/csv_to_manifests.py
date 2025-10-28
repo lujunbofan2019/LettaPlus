@@ -9,10 +9,10 @@ DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
 DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
 
 
-def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
-                     refs_csv_path: str = "skills_src/skill_tool_refs.csv",
-                     out_dir: str = "generated/manifests",
-                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
+def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
+                     refs_csv_path: str = "/app/skills_src/skill_tool_refs.csv",
+                     out_dir: str = "/app/generated/manifests",
+                     catalog_path: str = "/app/generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     """
     Generate Skill Manifests (v2.0.0) from local CSV files, suitable for rapid skill prototyping.
 
@@ -80,13 +80,13 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
         "warnings": []
     }
 
-    # --- helpers -------------------------------------------------------------
+    # ---------- NEW: filename and path safety helpers ----------
     def _safe_filename(s: str) -> str:
         """
         Convert an arbitrary manifestId into a safe, flat filename.
-        - Replaces path separators with underscores.
-        - Keeps only [A-Za-z0-9._-]; collapses other runs to '-'.
-        - Strips leading/trailing dots/underscores/dashes.
+        - Replace path separators with underscores.
+        - Keep only [A-Za-z0-9._-]; collapse other runs to '-'.
+        - Strip leading/trailing dots/underscores/dashes.
         """
         s = (s or "").replace("/", "_").replace("\\", "_")
         s = re.sub(r"[^A-Za-z0-9._-]+", "-", s).strip("-_.")
@@ -97,19 +97,19 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
         Ensure resolved path p is within resolved base directory.
         Raises ValueError if the path escapes.
         """
-        base_res = base.resolve()
-        p_res = p.resolve()
+        base_res = base.resolve(strict=False)
+        p_res = p.resolve(strict=False)
         try:
             p_res.relative_to(base_res)
         except ValueError:
             raise ValueError(f"Refusing to write outside of output dir: {p_res} (base {base_res})")
         return p_res
-    # -------------------------------------------------------------------------
+    # -----------------------------------------------------------
 
     try:
         skills_csv = Path(skills_csv_path)
         refs_csv = Path(refs_csv_path)
-        out_dir_p = Path(out_dir).resolve()
+        out_dir_p = Path(out_dir)  # keep as given; verify with _ensure_under_dir on actual files
         catalog_p = Path(catalog_path) if catalog_path else Path(DEFAULT_CATALOG_FILENAME)
 
         # Allow callers to pass a directory-like catalog path (e.g. "generated/catalogs/" or ".")
@@ -242,14 +242,15 @@ def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
                     "requiredDataSources": data_sources if isinstance(data_sources, list) else []
                 }
 
-                # --- critical fix: sanitize filename and pin within out_dir ---
+                # Safe, flat filename — prevents any path escape
                 safe_name = _safe_filename(manifest_id)
                 if safe_name != manifest_id:
                     out["warnings"].append(
                         f"manifestId '{manifest_id}' contained path/unsafe characters; wrote as '{safe_name}.json'."
                     )
 
-                out_path = _ensure_under_dir(out_dir_p, (out_dir_p / f"{safe_name}.json"))
+                # Build and validate the final write path
+                out_path = _ensure_under_dir(out_dir_p, out_dir_p / f"{safe_name}.json")
                 with out_path.open("w", encoding="utf-8") as mf:
                     json.dump(manifest, mf, indent=2, ensure_ascii=False)
 

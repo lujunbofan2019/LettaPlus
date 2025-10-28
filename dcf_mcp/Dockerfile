@@ -19,7 +19,7 @@ COPY schemas ./schemas
 RUN mkdir -p /app/dcf_manifests
 
 # Environment (can be overridden via compose)
-ENV DCF_MANIFESTS_DIR=/app/dcf_manifests \
+ENV DCF_MANIFESTS_DIR=/app/generated/manifests \
     SKILL_PREVIEW_CHARS=400 \
     PYTHONUNBUFFERED=1
 

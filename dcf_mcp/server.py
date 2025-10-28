@@ -269,10 +269,10 @@ create_worker_agents.__doc__ = _create_worker_agents.__doc__
 
 
 @mcp.tool()
-def csv_to_manifests(skills_csv_path: str = "skills_src/skills.csv",
-                     refs_csv_path: str = "skills_src/skill_tool_refs.csv",
-                     out_dir: str = "generated/skills",
-                     catalog_path: str = "generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
+def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
+                     refs_csv_path: str = "/app/skills_src/skill_tool_refs.csv",
+                     out_dir: str = "/app/generated/manifests",
+                     catalog_path: str = "/app/generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     return _csv_to_manifests(
         skills_csv_path=skills_csv_path,
         refs_csv_path=refs_csv_path,
@@ -285,9 +285,9 @@ csv_to_manifests.__doc__ = _csv_to_manifests.__doc__
 
 
 @mcp.tool()
-def csv_to_stub_config(mcp_tools_csv_path: str = "skills_src/mcp_tools.csv",
-                       mcp_cases_csv_path: str = "skills_src/mcp_cases.csv",
-                       out_path: str = "generated/stub/stub_config.json") -> Dict[str, Any]:
+def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv",
+                       mcp_cases_csv_path: str = "/app/skills_src/mcp_cases.csv",
+                       out_path: str = "/app/generated/stub/stub_config.json") -> Dict[str, Any]:
     return _csv_to_stub_config(
         mcp_tools_csv_path=mcp_tools_csv_path,
         mcp_cases_csv_path=mcp_cases_csv_path,
