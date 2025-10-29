@@ -9,8 +9,16 @@ LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
 MAX_TEXT_CONTENT_CHUNK_SIZE = int(os.getenv("SKILL_MAX_TEXT_CHARS", "4900"))
 
-ALLOW_PYTHON_SOURCE = os.getenv("ALLOW_PYTHON_SOURCE_SKILLS", "0") == "1"
-ALLOW_MCP = os.getenv("ALLOW_MCP_SKILLS", "0") == "1"
+
+def _env_flag(name: str, default: bool = True) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"", "0", "false", "no", "off"}
+
+
+ALLOW_PYTHON_SOURCE = _env_flag("ALLOW_PYTHON_SOURCE_SKILLS", default=False)
+ALLOW_MCP = _env_flag("ALLOW_MCP_SKILLS", default=True)
 REGISTRY_PATH = os.getenv("SKILL_REGISTRY_PATH", "skills_src/registry.json")
 
 

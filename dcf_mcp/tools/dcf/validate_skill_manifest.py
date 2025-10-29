@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 
+DEFAULT_SCHEMA_NAME = "skill_manifest_schema_v2.0.0.json"
+
+
 def _load_manifest_text(skill_manifest: str, out: Dict[str, Any]) -> str | None:
     candidate = (skill_manifest or "").strip()
     if not candidate:
@@ -26,6 +29,41 @@ def _load_manifest_text(skill_manifest: str, out: Dict[str, Any]) -> str | None:
         out["warnings"].append(f"ManifestLoadError: failed to read '{path}': {ex}")
         out["exit_code"] = 4
         return None
+
+def _resolve_schema_path(schema_path: str, out: Dict[str, Any]) -> Path | None:
+    candidate = (schema_path or "").strip()
+    path: Path
+
+    if candidate:
+        if candidate.startswith("file://"):
+            path = Path(candidate[7:])
+        else:
+            path = Path(candidate)
+        return path.expanduser()
+
+    # Fall back to the bundled schema when none supplied.
+    base = Path(__file__).resolve().parents[2]
+    fallback = base / "schemas" / DEFAULT_SCHEMA_NAME
+    if fallback.exists():
+        out["warnings"].append(
+            "No schema_path provided; defaulting to bundled skill manifest schema",
+        )
+        return fallback
+
+    # As a last resort, check if the schema lives in the working directory
+    # (useful for runtime overrides / mounts).
+    cwd_candidate = Path.cwd() / "schemas" / DEFAULT_SCHEMA_NAME
+    if cwd_candidate.exists():
+        out["warnings"].append(
+            "No schema_path provided; defaulting to schemas/skill_manifest_schema_v2.0.0.json",
+        )
+        return cwd_candidate
+
+    out["warnings"].append(
+        "SchemaLoadError: schema_path not provided and bundled schema is missing",
+    )
+    out["exit_code"] = 4
+    return None
 
 
 def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]:
@@ -77,8 +115,12 @@ def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]
         return out
 
     # Load schema
+    schema_fs_path = _resolve_schema_path(schema_path, out)
+    if schema_fs_path is None:
+        return out
+
     try:
-        with open(schema_path, "r", encoding="utf-8") as f:
+        with open(schema_fs_path, "r", encoding="utf-8") as f:
             schema = json.load(f)
     except Exception as ex:
         out["warnings"].append(f"SchemaLoadError: {ex}")
