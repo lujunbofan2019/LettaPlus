@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.parse import urljoin
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
@@ -229,6 +230,11 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
         attached_ids = set()
 
     registry_cache: Optional[Dict[str, Any]] = None
+    try:
+        existing_servers = client.tools.list_mcp_servers() or {}
+        known_mcp_servers: Set[str] = set(existing_servers.keys())
+    except Exception:
+        known_mcp_servers = set()
 
     for requirement in (manifest.get("requiredTools") or []):
         if not isinstance(requirement, dict):
@@ -273,7 +279,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
 
                 server_id = (definition.get("serverId") or "").strip()
                 metadata: Optional[Dict[str, Any]] = None
-                description = f"MCP {tool_name}" if tool_name else "MCP tool"
+                server_name: Optional[str] = None
 
                 if server_id:
                     if registry_cache is None:
@@ -333,28 +339,102 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                             f"mcp_server '{server_id}' uses unsupported transport '{mode}'; skipped"
                         )
                         continue
-                    tool_internal_name = f"mcp:{server_id}:{tool_name or 'tool'}"
+                    server_name = server_id
                 else:
                     metadata, warn = _metadata_for_physical(definition)
                     if warn:
                         out["warnings"].append(f"{warn}; '{tool_name}' skipped")
                         continue
-                    tool_internal_name = (
-                        f"mcp:endpoint:{tool_name or definition.get('operationId') or 'tool'}"
-                    )
                     metadata["toolName"] = tool_name
+                    base_name = (
+                        tool_name
+                        or definition.get("operationId")
+                        or f"endpoint_tool_{len(known_mcp_servers) + 1}"
+                    )
+                    server_name = definition.get("serverName") or (
+                        f"skill_{skill_name}_{base_name}"
+                    )
 
-                tool = client.tools.create(
-                    name=tool_internal_name,
-                    description=description,
-                    source_type="mcp_server",
-                    metadata_=metadata,
-                )
-                tool_id = getattr(tool, "id", None)
-                if tool_id and tool_id not in attached_ids:
-                    client.agents.tools.attach(agent_id=agent_id, tool_id=tool_id)
-                    out["added"]["tool_ids"].append(tool_id)
-                    attached_ids.add(tool_id)
+                if not metadata:
+                    continue
+
+                transport = metadata.get("transport")
+                try:
+                    if transport == "streamable_http":
+                        from letta_client import StreamableHttpServerConfig
+
+                        endpoint = metadata.get("endpoint") or ""
+                        path = metadata.get("path")
+                        if path:
+                            server_url = urljoin(
+                                endpoint.rstrip("/") + "/", path.lstrip("/")
+                            )
+                        else:
+                            server_url = endpoint
+                        config = StreamableHttpServerConfig(
+                            server_name=server_name,
+                            server_url=server_url,
+                            custom_headers=(metadata.get("headers") or None),
+                        )
+                    elif transport == "stdio":
+                        from letta_client import StdioServerConfig
+
+                        command = metadata.get("command")
+                        if not command:
+                            raise ValueError(
+                                f"mcp_server '{server_name}' missing command"
+                            )
+                        config = StdioServerConfig(
+                            server_name=server_name,
+                            command=command,
+                            args=metadata.get("args") or [],
+                        )
+                    elif transport in {"ws", "sse"}:
+                        from letta_client import SseServerConfig
+
+                        endpoint = metadata.get("endpoint")
+                        if not endpoint:
+                            raise ValueError(
+                                f"mcp_server '{server_name}' missing SSE endpoint"
+                            )
+                        config = SseServerConfig(
+                            server_name=server_name,
+                            server_url=endpoint,
+                        )
+                    else:
+                        raise ValueError(
+                            f"Unsupported MCP transport '{transport}' for '{tool_name}'"
+                        )
+
+                    if not server_name:
+                        server_name = f"skill_{skill_name}_{tool_name or 'tool'}"
+
+                    if server_name not in known_mcp_servers:
+                        client.tools.add_mcp_server(request=config)
+                        known_mcp_servers.add(server_name)
+
+                    target_tool_name = metadata.get("toolName") or tool_name
+                    if not target_tool_name:
+                        raise ValueError(
+                            f"mcp_server entry missing toolName for '{server_name}'"
+                        )
+
+                    tool = client.tools.add_mcp_tool(
+                        mcp_server_name=server_name,
+                        mcp_tool_name=target_tool_name,
+                    )
+                    tool_id = getattr(tool, "id", None) or getattr(tool, "tool_id", None)
+                    if not tool_id:
+                        raise RuntimeError(
+                            f"MCP tool '{target_tool_name}' did not return an id"
+                        )
+                    if tool_id and tool_id not in attached_ids:
+                        client.agents.tools.attach(agent_id=agent_id, tool_id=tool_id)
+                        out["added"]["tool_ids"].append(tool_id)
+                        attached_ids.add(tool_id)
+                except Exception as exc:
+                    out["error"] = f"Failed processing tool '{tool_name}': {exc}"
+                    return out
 
             else:
                 out["warnings"].append(
