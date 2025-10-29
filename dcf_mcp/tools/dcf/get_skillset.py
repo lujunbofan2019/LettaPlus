@@ -53,8 +53,7 @@ def get_skillset(
             (default ``400``).
 
     Returns:
-        dict: Structured response compatible with the historical implementation::
-
+        dict:
             {
               "ok": bool,
               "exit_code": int,           # 0 on success, 4 on error

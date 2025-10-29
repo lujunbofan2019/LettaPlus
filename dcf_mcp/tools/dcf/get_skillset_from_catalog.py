@@ -31,7 +31,7 @@ def _normalise_path(entry_path: str, catalog_dir: Path) -> Path:
 def get_skillset_from_catalog(
     catalog_path: Optional[str] = None,
     schema_path: Optional[str] = None,
-    include_previews: bool = True,
+    include_previews: bool = False,
     preview_chars: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Load Skill Manifests via a pre-built catalog and mirror directory discovery.
@@ -63,10 +63,7 @@ def get_skillset_from_catalog(
             ``$SKILL_PREVIEW_CHARS`` when ``None`` or invalid.
 
     Returns:
-        dict: The exact same response contract produced by :func:`get_skillset`
-        (see that docstring for the exhaustive shape). ``available_skills`` is
-        sorted for stable UX, ``warnings`` accumulates recoverable issues, and the
-        top-level ``error`` contains a fatal message when discovery fails entirely.
+        dict: similar response contract produced by :func:`get_skillset`.
     """
     out = init_result()
 
@@ -117,10 +114,10 @@ def get_skillset_from_catalog(
             key: entry.get(key)
             for key in (
                 "manifestId",
-                "skillPackageId",
+                # "skillPackageId",
                 "skillName",
                 "skillVersion",
-                "manifestApiVersion",
+                # "manifestApiVersion",
                 "description",
             )
         }
