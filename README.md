@@ -5,33 +5,33 @@
 This project provides:
 
 - **Schemas**
-    - `schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
-    - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
-    - `schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
-    - `schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
-    - `schemas/notification-payload-v1.0.0.json`
-    - `schemas/data-plane-output-v1.0.0.json`
+  - `schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
+  - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
+  - `schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
+  - `schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
+  - `schemas/notification-payload-v1.0.0.json`
+  - `schemas/data-plane-output-v1.0.0.json`
 - **Planning tools**
-    1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
-    2) `validate_skill_manifest(manifest_json, schema_path)`
-    3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
-    4) `get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
-    5) `load_skill(manifest, agent_id)`
-    6) `unload_skill(manifest_id, agent_id)`
+  1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
+  2) `validate_skill_manifest(manifest_json, schema_path)`
+  3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
+  4) `get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
+  5) `load_skill(manifest, agent_id)`
+  6) `unload_skill(manifest_id, agent_id)`
 - **Execution tools**
-    7) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
-    8) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
-    9) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
-    10) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
-    11) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
-    12) `renew_state_lease(workflow_id, state, lease_token, ...)`
-    13) `release_state_lease(workflow_id, state, lease_token, ...)`
-    14) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
-    15) `notify_if_ready(workflow_id, state, ...)`
-    16) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
+  7) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
+  8) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
+  9) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
+  10) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
+  11) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
+  12) `renew_state_lease(workflow_id, state, lease_token, ...)`
+  13) `release_state_lease(workflow_id, state, lease_token, ...)`
+  14) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
+  15) `notify_if_ready(workflow_id, state, ...)`
+  16) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
 - **Testing tools**
-    17) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
-    18) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
+  17) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
+  18) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
 
 Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining. Skills are loaded/unloaded dynamically per worker.
 
@@ -97,8 +97,8 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 2. **Skill discovery**: call `get_skillset(...)` (optionally with validation). Optionally enrich with a knowledge graph for better selection & justification.
 3. **Draft SOP**: a linear `steps[]` plan with step names, inputs/outputs, and candidate skills.
 4. **Compile to ASL**: transmute SOP → `asl` (`StartAt`, `States`), attach `AgentBinding` per Task:
-    - `agent_template_ref`: e.g., `"agent_template_worker@1.0.0"`
-    - `skills`: e.g., `["skill://web.search@1.0.0", "skill://summarize@1.0.0"]`
+  - `agent_template_ref`: e.g., `"agent_template_worker@1.0.0"`
+  - `skills`: e.g., `["skill://web.search@1.0.0", "skill://summarize@1.0.0"]`
 5. **Validate**: `validate_workflow(workflow_json, schema_path, imports_base_dir, skills_base_dir)`.
 6. **Approval**: confirm with user; persist workflow JSON if desired.
 
@@ -317,7 +317,7 @@ This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overa
 1. `skills.csv`
 
 Purpose: the master list of **skills** (i.e., capabilities you want agents to load). Each row becomes one **skill manifest (v2.0.0)** when you run `csv_to_manifests.py`.
-  
+
 Typical columns (minimal core):
 - `manifestId` (stable UUID or slug)
 - `skillPackageId` (package/namespace)
@@ -384,20 +384,20 @@ Switch this file (or point it to prod URLs) to move from mocks to real backends.
 ### How they work together (pipeline)
 
 1. Design skills & attach tools
-  - Author skills in `skills.csv`.
-  - Map which tools each skill needs in `skill_tool_refs.csv`.
+- Author skills in `skills.csv`.
+- Map which tools each skill needs in `skill_tool_refs.csv`.
 2. Define tool interfaces & test cases
-  - Describe each tool’s **schema** in `mcp_tools.csv`.
-  - Provide deterministic test cases in `mcp_cases.csv`.
+- Describe each tool’s **schema** in `mcp_tools.csv`.
+- Provide deterministic test cases in `mcp_cases.csv`.
 3. Generate artifacts
-  - Run **`csv_to_manifests.py`** → emits JSON **skill manifests** (v2.0.0) under `skills/` using (`skills.csv` + `skill_tool_refs.csv` + `mcp_tools.csv`).
-  - Run **`csv_to_stub_config.py`** → emits `generated/stub/stub_config.json` for the stub MCP server (using `mcp_tools.csv` + `mcp_cases.csv`).
+- Run **`csv_to_manifests.py`** → emits JSON **skill manifests** (v2.0.0) under `skills/` using (`skills.csv` + `skill_tool_refs.csv` + `mcp_tools.csv`).
+- Run **`csv_to_stub_config.py`** → emits `generated/stub/stub_config.json` for the stub MCP server (using `mcp_tools.csv` + `mcp_cases.csv`).
 4. Wire endpoints
-  - Set **`registry.json`** to point each `serverId` to either the **stub MCP server** (for BDD/testing) or a **real MCP server** (for live runs).
+- Set **`registry.json`** to point each `serverId` to either the **stub MCP server** (for BDD/testing) or a **real MCP server** (for live runs).
 5. Load & run
-  - The **skill loader** reads `skills/` manifests and resolves `serverId` → endpoint via `registry.json`.
-  - During tests, the loader hits the **stub server**, which returns the canned outputs from `mcp_cases.csv`.
-  - When implementations are ready, you just update `registry.json` to point to the real MCP servers — no manifest changes required.
+- The **skill loader** reads `skills/` manifests and resolves `serverId` → endpoint via `registry.json`.
+- During tests, the loader hits the **stub server**, which returns the canned outputs from `mcp_cases.csv`.
+- When implementations are ready, you just update `registry.json` to point to the real MCP servers — no manifest changes required.
 
 ### Mental model
 

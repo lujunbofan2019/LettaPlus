@@ -34,7 +34,40 @@ def get_skillset_from_catalog(
     include_previews: bool = True,
     preview_chars: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Discover Skill Manifests using a pre-built catalog file."""
+    """Load Skill Manifests via a pre-built catalog and mirror directory discovery.
+
+    The generated ``skills_catalog.json`` file offers a curated view of available
+    skills. This tool consumes that file so agent planners can work with the same
+    response structure as :func:`get_skillset` while benefiting from the curated
+    metadata. Each entry in the catalog specifies a manifest path plus optional
+    summary fields (``manifestId``, ``skillName`` …). Those hints are used as
+    defaults but always reconciled with the manifest file on disk.
+
+    Behavioural notes:
+
+    * Catalog paths may be absolute, relative to the catalog file, or prefixed
+      with ``file://``. The helper normalises them before loading.
+    * Schema validation is identical to :func:`get_skillset`: the supplied schema
+      is loaded best-effort and validation issues surface as per-manifest errors.
+    * Catalog anomalies (missing path, wrong types) are captured as warnings and
+      do not abort processing of other entries.
+
+    Args:
+        catalog_path: Optional override for the catalog location. Defaults to
+            ``$DCF_SKILLS_CATALOG`` (``generated/catalogs/skills_catalog.json``).
+        schema_path: Optional manifest schema path for validation. See
+            :func:`get_skillset` for details.
+        include_previews: When ``True`` (default) a ``directives_preview`` is
+            included using the same truncation logic as directory-based discovery.
+        preview_chars: Optional override for the preview length. Falls back to
+            ``$SKILL_PREVIEW_CHARS`` when ``None`` or invalid.
+
+    Returns:
+        dict: The exact same response contract produced by :func:`get_skillset`
+        (see that docstring for the exhaustive shape). ``available_skills`` is
+        sorted for stable UX, ``warnings`` accumulates recoverable issues, and the
+        top-level ``error`` contains a fatal message when discovery fails entirely.
+    """
     out = init_result()
 
     if catalog_path is not None and not isinstance(catalog_path, str):

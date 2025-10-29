@@ -21,7 +21,71 @@ def get_skillset(
     include_previews: bool = True,
     preview_chars: int | None = None,
 ) -> Dict[str, Any]:
-    """Discover Skill Manifests from a directory and summarise their metadata."""
+    """Discover Skill Manifests from a directory and summarize their metadata.
+
+    This tool replicates the long-standing behaviour that planning agents rely on:
+    scan a directory for ``*.json`` files, parse each one as a skill manifest, and
+    produce a compact catalog that exposes the most relevant manifest metadata.
+    Highlights:
+
+    * Validation is optional—if ``schema_path`` is provided and ``jsonschema`` is
+      importable, each manifest is checked against the supplied schema. Missing
+      dependencies or load errors degrade gracefully by adding warnings instead of
+      failing discovery.
+    * Invalid manifests are isolated. Per-file errors are captured in the
+      corresponding entry while the rest of the directory continues to be processed.
+    * Aliases are generated for convenience (``name@version``, ``skill://`` URIs,
+      and the raw ``manifestId`` when present) so planners have multiple lookup
+      options.
+
+    Args:
+        manifests_dir: Optional override for the directory containing manifest
+            files. Defaults to ``$DCF_MANIFESTS_DIR`` (``/app/generated/manifests``).
+            The directory must exist and be readable.
+        schema_path: Optional filesystem path to the manifest JSON Schema (for
+            example ``dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json``). When
+            provided and ``jsonschema`` is installed, each manifest is validated.
+        include_previews: When ``True`` (default) the catalog includes a
+            ``directives_preview`` string trimmed to ``preview_chars`` to help the
+            agent choose a skill without loading it fully.
+        preview_chars: Optional maximum length for ``directives_preview``. If
+            ``None`` or invalid, the tool falls back to ``$SKILL_PREVIEW_CHARS``
+            (default ``400``).
+
+    Returns:
+        dict: Structured response compatible with the historical implementation::
+
+            {
+              "ok": bool,
+              "exit_code": int,           # 0 on success, 4 on error
+              "available_skills": [
+                {
+                  "manifestId": str | None,
+                  "skillPackageId": str | None,
+                  "skillName": str | None,
+                  "skillVersion": str | None,
+                  "manifestApiVersion": str | None,
+                  "aliases": list[str],
+                  "description": str | None,
+                  "tags": list[str],
+                  "permissions": {"egress": str, "secrets": list[str]},
+                  "toolNames": list[str],
+                  "toolCount": int,
+                  "dataSourceCount": int,
+                  "directives_preview": str | None,
+                  "path": str,                    # absolute filesystem path
+                  "valid_schema": bool | None,
+                  "errors": list[str],
+                  "warnings": list[str],
+                },
+              ],
+              "warnings": list[str],
+              "error": str | None,
+            }
+
+    The function never raises: fatal issues are surfaced in the ``error`` field
+    while per-manifest problems are recorded inside each catalog entry.
+    """
     out = init_result()
 
     if manifests_dir is not None and not isinstance(manifests_dir, str):

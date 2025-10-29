@@ -106,7 +106,56 @@ def _metadata_for_physical(definition: Dict[str, Any]) -> Tuple[Optional[Dict[st
 
 
 def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
-    """Load a skill manifest (JSON string or file path) into a Letta agent."""
+    """Load a skill manifest into a Letta agent (JSON string or file path).
+
+    The loader merges the historical ``load_skill`` and ``load_skill_with_resolver``
+    behaviours into a single tool while expanding the accepted manifest formats.
+    ``skill_manifest`` may now be either the literal JSON content of a manifest
+    **or** a filesystem path/URI pointing to the JSON file. When a path is supplied
+    it may be absolute, relative to the working directory, or prefixed with ``file://``.
+
+    The following operations mirror the legacy flow so existing planners keep the
+    same expectations:
+
+    1. Parse the manifest (and report JSON errors inline) before lazily importing
+       the Letta SDK. Agent existence is verified prior to making mutations.
+    2. Attach ``skillDirectives`` as a memory block when present.
+    3. Attach required tools, supporting ``registered``, ``python_source`` (when
+       enabled via ``ALLOW_PYTHON_SOURCE_SKILLS``), and ``mcp_server`` definitions.
+       ``mcp_server`` entries may describe either a physical server (via
+       ``endpointUrl``) or a logical server reference. Logical references are
+       resolved through ``skills_src/registry.json`` (override with
+       ``SKILL_REGISTRY_PATH``) to determine the actual transport/endpoint.
+    4. Attach ``text_content`` data sources chunked according to
+       ``SKILL_MAX_TEXT_CHARS``.
+    5. Update the per-agent bookkeeping block (labelled by
+       ``SKILL_STATE_BLOCK_LABEL``) so we can detect duplicate loads and allow
+       later removal flows to reverse the side effects.
+
+    Args:
+        skill_manifest: Either the raw JSON manifest string or a path/``file://``
+            URI pointing to a manifest file on disk.
+        agent_id: Target Letta agent identifier.
+
+    Returns:
+        dict: Status payload compatible with the legacy tool::
+
+            {
+              "ok": bool,
+              "exit_code": int,         # 0 on success, 4 on error
+              "status": str | None,
+              "error": str | None,
+              "added": {
+                "memory_block_ids": list[str],
+                "tool_ids": list[str],
+                "data_block_ids": list[str],
+              },
+              "warnings": list[str],
+            }
+
+    Every failure mode is captured in the response; the function does not raise
+    so that planner tool-calls can handle errors deterministically.
+    """
     out = _init_result()
 
     if not isinstance(skill_manifest, str):
