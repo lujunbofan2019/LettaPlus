@@ -12,8 +12,10 @@ from tools.dcf.csv_to_manifests import csv_to_manifests as _csv_to_manifests
 from tools.dcf.csv_to_stub_config import csv_to_stub_config as _csv_to_stub_config
 from tools.dcf.finalize_workflow import finalize_workflow as _finalize_workflow
 from tools.dcf.get_skillset import get_skillset as _get_skillset
+from tools.dcf.get_skillset_from_catalog import (
+    get_skillset_from_catalog as _get_skillset_from_catalog,
+)
 from tools.dcf.load_skill import load_skill as _load_skill
-from tools.dcf.load_skill_with_resolver import load_skill_with_resolver as _load_skill_with_resolver
 from tools.dcf.notify_if_ready import notify_if_ready as _notify_if_ready
 from tools.dcf.notify_next_worker_agent import notify_next_worker_agent as _notify_next_worker_agent
 from tools.dcf.read_workflow_control_plane import read_workflow_control_plane as _read_workflow_control_plane
@@ -61,6 +63,22 @@ get_skillset.__doc__ = _get_skillset.__doc__
 
 
 @mcp.tool()
+def get_skillset_from_catalog(catalog_path: str | None = None,
+                              schema_path: str | None = None,
+                              include_previews: bool = True,
+                              preview_chars: int | None = None) -> Dict[str, Any]:
+    return _get_skillset_from_catalog(
+        catalog_path=catalog_path,
+        schema_path=schema_path,
+        include_previews=include_previews,
+        preview_chars=preview_chars,
+    )
+
+
+get_skillset_from_catalog.__doc__ = _get_skillset_from_catalog.__doc__
+
+
+@mcp.tool()
 def remove_tool_return_limits(agent_id: str) -> Dict[str, Any]:
     return _remove_tool_return_limits(agent_id=agent_id)
 
@@ -74,14 +92,6 @@ def delete_agent(agent_name: str) -> Dict[str, Any]:
 
 
 delete_agent.__doc__ = _delete_agent.__doc__
-
-
-@mcp.tool()
-def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
-    return _load_skill_with_resolver(skill_json=skill_json, agent_id=agent_id)
-
-
-load_skill_with_resolver.__doc__ = _load_skill_with_resolver.__doc__
 
 
 @mcp.tool()
