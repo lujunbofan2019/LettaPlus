@@ -21,14 +21,15 @@ def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
       - Attaches directives (as a block).
       - Resolves and attaches tools:
           * If requiredTools[].definition.type == "registered": attach by platformToolId.
-          * If type == "mcp_server": read skills_src/registry.json to map logical serverId to a concrete endpoint.
+            * If type == "mcp_server": read skills_src/registry.json to map logical serverId to a concrete endpoint.
             Registry shape:
               {
                 "servers": {
-                  "stub-tools": { "transport": "ws", "endpoint": "ws://stub-mcp:8765" },
+                  "stub-tools": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
                   "local-stdio": { "transport": "stdio", "command": "python", "args": ["stub_mcp_server.py"] }
                 }
               }
+            - For "streamable_http": registers an MCP client that speaks Streamable HTTP.
             - For "ws": registers/attaches an MCP client pointing to endpoint.
             - For "stdio": registers/attaches an MCP client spawning command+args.
           * Duplicate attachments are skipped.
@@ -80,11 +81,16 @@ def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
         rec = (registry.get("servers") or {}).get(server_id) or {}
         # normalize
         transport = (rec.get("transport") or "").lower()
-        if transport not in ("ws", "stdio"):
-            return {}
         if transport == "ws":
             return {"mode": "ws", "endpoint": rec.get("endpoint")}
-        return {"mode": "stdio", "command": rec.get("command"), "args": rec.get("args") or []}
+        if transport == "stdio":
+            return {"mode": "stdio", "command": rec.get("command"), "args": rec.get("args") or []}
+        if transport in {"streamable_http", "http"}:
+            endpoint = rec.get("endpoint")
+            path = rec.get("path") or "/mcp"
+            headers = rec.get("headers") or {}
+            return {"mode": "streamable_http", "endpoint": endpoint, "path": path, "headers": headers}
+        return {}
 
     try:
         client = Letta(base_url=LETTA_BASE_URL)
@@ -146,7 +152,9 @@ def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
 
                 # Register (or reuse) an MCP connector at the agent level; API names vary by SDK version.
                 # We try two shapes: tools.create_mcp_ws / tools.create_mcp_stdio
-                if r["mode"] == "ws":
+                mode = r.get("mode")
+
+                if mode == "ws":
                     endpoint = r.get("endpoint")
                     if not endpoint:
                         out["warnings"].append(f"mcp_server '{server_id}' missing ws endpoint; skipped")
@@ -157,7 +165,7 @@ def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
                                                description=f"MCP WS {server_id}:{tname}",
                                                source_type="mcp_server",
                                                metadata_={"transport": "ws", "endpoint": endpoint, "serverId": server_id, "toolName": tname})
-                else:
+                elif mode == "stdio":
                     cmd = r.get("command")
                     args = r.get("args") or []
                     if not cmd:
@@ -167,6 +175,23 @@ def load_skill_with_resolver(skill_json: str, agent_id: str) -> Dict[str, Any]:
                                                description=f"MCP stdio {server_id}:{tname}",
                                                source_type="mcp_server",
                                                metadata_={"transport": "stdio", "command": cmd, "args": args, "serverId": server_id, "toolName": tname})
+                elif mode == "streamable_http":
+                    endpoint = r.get("endpoint")
+                    if not endpoint:
+                        out["warnings"].append(f"mcp_server '{server_id}' missing HTTP endpoint; skipped")
+                        continue
+                    tool = client.tools.create(name=f"mcp:{server_id}:{tname}",
+                                               description=f"MCP HTTP {server_id}:{tname}",
+                                               source_type="mcp_server",
+                                               metadata_={"transport": "streamable_http",
+                                                          "endpoint": endpoint,
+                                                          "path": r.get("path") or "/mcp",
+                                                          "headers": r.get("headers") or {},
+                                                          "serverId": server_id,
+                                                          "toolName": tname})
+                else:
+                    out["warnings"].append(f"mcp_server '{server_id}' uses unsupported transport '{mode}'; skipped")
+                    continue
 
                 tid = getattr(tool, 'id', None)
                 if tid and tid not in attached_ids:
