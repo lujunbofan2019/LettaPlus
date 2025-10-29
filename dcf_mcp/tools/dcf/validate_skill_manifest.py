@@ -1,16 +1,49 @@
-from typing import Any, Dict
+from __future__ import annotations
+
 import json
+from pathlib import Path
+from typing import Any, Dict
+
+
+def _load_manifest_text(skill_manifest: str, out: Dict[str, Any]) -> str | None:
+    candidate = (skill_manifest or "").strip()
+    if not candidate:
+        out["warnings"].append("InputError: skill_manifest is empty")
+        out["exit_code"] = 4
+        return None
+
+    if candidate.startswith("{") or candidate.startswith("["):
+        return skill_manifest
+
+    if candidate.startswith("file://"):
+        path = Path(candidate[7:])
+    else:
+        path = Path(candidate)
+
+    try:
+        return path.expanduser().read_text(encoding="utf-8")
+    except Exception as ex:  # pragma: no cover - defensive, mirrors load_skill
+        out["warnings"].append(f"ManifestLoadError: failed to read '{path}': {ex}")
+        out["exit_code"] = 4
+        return None
+
 
 def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]:
     """Validate a Skill Manifest (v2.0.0) and run static sanity checks.
 
     Steps:
-      1) JSON Schema validation against the provided schema file.
-      2) Static checks (e.g., unique tool names).
+      1) Determine the manifest source: treat ``skill_json`` as either the literal
+         JSON string *or* a filesystem/``file://`` path to a manifest file and
+         load it accordingly.
+      2) JSON Schema validation against the provided schema file.
+      3) Static checks (e.g., unique tool names).
 
     Args:
-      skill_json: String containing the skill manifest JSON to validate.
-      schema_path: Filesystem path to the skill manifest JSON Schema file.
+      skill_json: Raw JSON manifest content **or** path/``file://`` URI pointing
+        to the manifest on disk. Relative paths are resolved against the working
+        directory, matching :func:`load_skill` semantics.
+      schema_path: Filesystem path to the skill manifest JSON Schema file used
+        for validation.
 
     Returns:
       {
@@ -31,9 +64,13 @@ def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]
         out["exit_code"] = 4
         return out
 
+    manifest_text = _load_manifest_text(skill_json, out)
+    if manifest_text is None:
+        return out
+
     # Parse instance
     try:
-        inst = json.loads(skill_json)
+        inst = json.loads(manifest_text)
     except Exception as ex:
         out["warnings"].append(f"JSONDecodeError: {ex}")
         out["exit_code"] = 4

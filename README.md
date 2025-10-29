@@ -130,7 +130,7 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 
 ### Planning
 - **`validate_workflow`** — JSON Schema validation + import resolution + ASL graph checks.
-- **`validate_skill_manifest`** — Schema validation + static checks (unique tools, permissions).
+- **`validate_skill_manifest`** — Schema validation + static checks (unique tools, permissions). Accepts raw JSON or a path/``file://`` URI, mirroring `load_skill` semantics.
 - **`get_skillset`** — Scan skills directory; returns catalog with aliases and optional directive previews.
 - **`load_skill` / `unload_skill`** — Attach/detach directives, tools, data sources to an agent; maintain state in a `dcf_active_skills` block on the agent.
 
@@ -155,9 +155,9 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 - `skills/summarize.json` — pure LLM directive skill for concise summaries.  
   Validate them:
 ```python
-validate_skill_manifest(open("schemas/skill-manifest-v2.0.0.json").read(), "schemas/skill-manifest-v2.0.0.json")  # schema self-check (optional)
-# For each manifest file:
-validate_skill_manifest(open("skills/web.search.json").read(), "schemas/skill-manifest-v2.0.0.json")
+validate_skill_manifest("schemas/skill-manifest-v2.0.0.json", "schemas/skill-manifest-v2.0.0.json")  # schema self-check (optional)
+# For each manifest file (raw JSON strings or file paths work interchangeably):
+validate_skill_manifest("skills/web.search.json", "schemas/skill-manifest-v2.0.0.json")
 validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-manifest-v2.0.0.json")
 ```
 
