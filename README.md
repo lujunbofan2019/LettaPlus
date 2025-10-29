@@ -15,22 +15,23 @@ This project provides:
     1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
     2) `validate_skill_manifest(manifest_json, schema_path)`
     3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
-    4) `load_skill(manifest_id, agent_id)` and `load_skill_with_resolver(manifest_id, agent_id)`
-    5) `unload_skill(manifest_id, agent_id)`
+    4) `get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
+    5) `load_skill(manifest, agent_id)`
+    6) `unload_skill(manifest_id, agent_id)`
 - **Execution tools**
-    6) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
-    7) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
-    8) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
-    9) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
-    10) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
-    11) `renew_state_lease(workflow_id, state, lease_token, ...)`
-    12) `release_state_lease(workflow_id, state, lease_token, ...)`
-    13) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
-    14) `notify_if_ready(workflow_id, state, ...)`
-    15) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
+    7) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
+    8) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
+    9) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
+    10) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
+    11) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
+    12) `renew_state_lease(workflow_id, state, lease_token, ...)`
+    13) `release_state_lease(workflow_id, state, lease_token, ...)`
+    14) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
+    15) `notify_if_ready(workflow_id, state, ...)`
+    16) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
 - **Testing tools**
-    16) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
-    17) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
+    17) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
+    18) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
 
 Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining. Skills are loaded/unloaded dynamically per worker.
 
