@@ -259,7 +259,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
         label = f"skill_directives_{skill_name}_{manifest_id}"
         try:
             block = client.blocks.create(label=label, value=directives)
-            block_id = getattr(block, "id", None)
+            block_id = getattr(block, "id", None) or getattr(block, "block_id", None)
             if not block_id:
                 raise RuntimeError("No block id returned")
             client.agents.blocks.attach(agent_id=agent_id, block_id=block_id)
@@ -556,7 +556,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
             )
             try:
                 block = client.blocks.create(label=label, value=chunk)
-                block_id = getattr(block, "id", None)
+                block_id = getattr(block, "id", None) or getattr(block, "block_id", None)
                 if not block_id:
                     raise RuntimeError("No block id returned for data source chunk")
                 client.agents.blocks.attach(agent_id=agent_id, block_id=block_id)
@@ -620,6 +620,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
     try:
         state: Dict[str, Any] = {}
         state_block_id: Optional[str] = None
+        created_state_block_id: Optional[str] = None
         for block in blocks:
             if getattr(block, "label", "") == STATE_BLOCK_LABEL:
                 state_block_id = getattr(block, "block_id", None) or getattr(block, "id", None)
@@ -638,25 +639,35 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
             raise ValueError(
                 f"Skill '{manifest_id}' already loaded on agent '{agent_id}'."
             )
-        state[manifest_id] = {
+        state_entry = {
             "skillName": skill_name,
             "skillVersion": skill_version,
             "memoryBlockIds": out["added"]["memory_block_ids"],
             "toolIds": out["added"]["tool_ids"],
             "dataSourceBlockIds": out["added"]["data_block_ids"],
         }
+        state[manifest_id] = state_entry
         new_value = json.dumps(state, indent=2)
         if state_block_id:
             client.blocks.modify(block_id=state_block_id, value=new_value)
         else:
             state_block = client.blocks.create(label=STATE_BLOCK_LABEL, value=new_value)
-            state_block_id = getattr(state_block, "id", None)
+            state_block_id = getattr(state_block, "id", None) or getattr(state_block, "block_id", None)
             if not state_block_id:
                 raise RuntimeError("Failed to create skill state block")
             client.agents.blocks.attach(agent_id=agent_id, block_id=state_block_id)
+            created_state_block_id = state_block_id
+            if state_block_id not in state_entry["memoryBlockIds"]:
+                state_entry["memoryBlockIds"].append(state_block_id)
+            final_value = json.dumps(state, indent=2)
+            if final_value != new_value:
+                client.blocks.modify(block_id=state_block_id, value=final_value)
     except Exception as exc:
         out["error"] = f"State tracking error: {exc}"
         return out
+
+    if created_state_block_id and created_state_block_id not in out["added"]["memory_block_ids"]:
+        out["added"]["memory_block_ids"].append(created_state_block_id)
 
     out["ok"] = True
     out["exit_code"] = 0
