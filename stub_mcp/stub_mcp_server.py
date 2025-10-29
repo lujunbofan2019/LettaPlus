@@ -228,6 +228,9 @@ class StubConfigManager:
             tools_payload = (server_payload or {}).get("tools") or {}
             for raw_tool_name, tool_config in tools_payload.items():
                 tool_config = tool_config or {}
+                meta_block = tool_config.get("meta") or {}
+                original_name = (meta_block.get("originalToolName") or raw_tool_name)
+
                 if raw_tool_name in raw_seen:
                     duplicates.setdefault(raw_tool_name, set()).update({raw_seen[raw_tool_name], server_id})
                     continue
@@ -244,7 +247,7 @@ class StubConfigManager:
                 entry = StubToolEntry(
                     server_id=server_id,
                     tool_name=unique_name,
-                    raw_name=raw_tool_name,
+                    raw_name=original_name,
                     raw=tool_config,
                 )
                 new_index[unique_name] = entry

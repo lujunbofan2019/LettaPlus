@@ -1,4 +1,4 @@
 manifestId,serverId,toolName,required,notes
-skill.research.web@0.1.0,search,search.query,true,"Core search tool"
-skill.research.web@0.1.0,web,web.fetch,true,"Get page content"
-skill.write.summary@0.1.0,llm,llm.summarize,true,"Summarize input text"
+skill.research.web@0.1.0,search,search_query,true,"Core search tool"
+skill.research.web@0.1.0,web,web_fetch,true,"Get page content"
+skill.write.summary@0.1.0,llm,llm_summarize,true,"Summarize input text"

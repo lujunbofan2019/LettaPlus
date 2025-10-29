@@ -1,11 +1,30 @@
 import os
 import csv
 import json
+import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 DEFAULT_STUB_CONFIG_FILENAME = "stub_config.json"
+
+_VALID_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _sanitize_tool_name(name: str) -> str:
+    """Return a legal MCP tool identifier, replacing illegal characters early."""
+
+    name = (name or "").strip()
+    if _VALID_TOOL_NAME_RE.fullmatch(name):
+        return name
+
+    sanitized = re.sub(r"[^A-Za-z0-9_-]+", "_", name)
+    sanitized = re.sub(r"_+", "_", sanitized).strip("_")
+    if not sanitized:
+        sanitized = "tool"
+    if not _VALID_TOOL_NAME_RE.fullmatch(sanitized):
+        sanitized = "tool"
+    return sanitized
 
 def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv",
                        mcp_cases_csv_path: str = "/app/skills_src/mcp_cases.csv",
@@ -129,14 +148,30 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv"
 
         # Load tools
         servers: Dict[str, Any] = {}
-        tool_rows: List[Dict[str, Any]] = []
+        tool_aliases: Dict[str, Dict[str, str]] = {}
+        warned_tools: set[tuple[str, str]] = set()
         with tools_csv.open("r", encoding="utf-8", newline="") as f:
             for row in csv.DictReader(f):
                 server_id = (row.get("serverId") or "").strip()
-                tool_name = (row.get("toolName") or "").strip()
-                if not server_id or not tool_name:
+                tool_name_raw = (row.get("toolName") or "").strip()
+                if not server_id or not tool_name_raw:
                     out["warnings"].append(f"Skipping invalid tool row (serverId/toolName missing): {row}")
                     continue
+
+                tool_name = _sanitize_tool_name(tool_name_raw)
+                if tool_name != tool_name_raw and (server_id, tool_name_raw) not in warned_tools:
+                    out["warnings"].append(
+                        f"Sanitized tool name '{tool_name_raw}' -> '{tool_name}' for server '{server_id}'."
+                    )
+                    warned_tools.add((server_id, tool_name_raw))
+
+                server_entry = servers.setdefault(server_id, {"tools": {}})
+                if tool_name in server_entry["tools"]:
+                    out["error"] = (
+                        f"Sanitized tool name collision for server '{server_id}': '{tool_name_raw}' "
+                        f"conflicts with existing tool key '{tool_name}'."
+                    )
+                    return out
 
                 entry = {
                     "version": (row.get("version") or "").strip(),
@@ -146,10 +181,13 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv"
                     "defaultResponse": parse_json(row.get("defaultResponse.json"), {}),
                     "rateLimit": {"rps": parse_int(row.get("rateLimit.rps"), 0)},
                     "latencyMs": {"default": parse_int(row.get("latencyMs.default"), 0)},
-                    "cases": []
+                    "cases": [],
+                    "meta": {"originalToolName": tool_name_raw},
                 }
-                servers.setdefault(server_id, {"tools": {}})["tools"][tool_name] = entry
-                tool_rows.append({"serverId": server_id, "toolName": tool_name})
+                server_entry["tools"][tool_name] = entry
+                alias_map = tool_aliases.setdefault(server_id, {})
+                alias_map[tool_name_raw] = tool_name
+                alias_map[tool_name] = tool_name
 
         # Load cases (optional)
         case_count = 0
@@ -157,14 +195,19 @@ def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv"
             with cases_csv.open("r", encoding="utf-8", newline="") as f:
                 for row in csv.DictReader(f):
                     server_id = (row.get("serverId") or "").strip()
-                    tool_name = (row.get("toolName") or "").strip()
-                    if not server_id or not tool_name:
+                    tool_name_raw = (row.get("toolName") or "").strip()
+                    if not server_id or not tool_name_raw:
                         out["warnings"].append(f"Skipping invalid case row (serverId/toolName missing): {row}")
                         continue
 
-                    if server_id not in servers or tool_name not in servers[server_id]["tools"]:
+                    alias_map = tool_aliases.get(server_id, {})
+                    tool_name = alias_map.get(tool_name_raw)
+                    if tool_name is None:
+                        sanitized_guess = _sanitize_tool_name(tool_name_raw)
+                        tool_name = alias_map.get(sanitized_guess)
+                    if tool_name is None or tool_name not in servers.get(server_id, {}).get("tools", {}):
                         out["warnings"].append(
-                            f"Case row references unknown tool {server_id}:{tool_name}; skipping."
+                            f"Case row references unknown tool {server_id}:{tool_name_raw}; skipping."
                         )
                         continue
 
