@@ -1,8 +1,13 @@
 {
   "env": "test",
+  "servers": {
+    "search": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "web":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "llm":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
+  },
   "bindings": {
-    "search": { "transport": "ws", "endpoint": "ws://stub-mcp:8765" },
-    "web":    { "transport": "ws", "endpoint": "ws://stub-mcp:8765" },
-    "llm":    { "transport": "ws", "endpoint": "ws://stub-mcp:8765" }
+    "search": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "web":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "llm":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
   }
 }

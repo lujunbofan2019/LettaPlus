@@ -125,10 +125,11 @@ services:
       dockerfile: Dockerfile
     environment:
       - STUB_CONFIG=/app/generated/stub/stub_config.json
-      - STUB_MCP_WS=1            # set to "0" to use stdio (no port)
+      - STUB_MCP_HOST=0.0.0.0
       - STUB_MCP_PORT=8765
+      - STUB_MCP_PATH=/mcp
     volumes:
       - ./generated/stub:/app/generated/stub:ro
     ports:
-      - "8765:8765"              # only needed if STUB_MCP_WS=1
+      - "8765:8765"
     restart: unless-stopped
