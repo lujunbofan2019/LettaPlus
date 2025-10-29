@@ -96,7 +96,7 @@ delete_agent.__doc__ = _delete_agent.__doc__
 
 @mcp.tool()
 def load_skill(skill_json: str, agent_id: str) -> Dict[str, Any]:
-    return _load_skill(skill_json=skill_json, agent_id=agent_id)
+    return _load_skill(skill_manifest=skill_json, agent_id=agent_id)
 
 
 load_skill.__doc__ = _load_skill.__doc__
