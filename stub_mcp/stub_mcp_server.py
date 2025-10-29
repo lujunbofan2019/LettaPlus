@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -91,6 +92,17 @@ def _pick_case(tool: Dict[str, Any], arguments: Dict[str, Any]) -> tuple[Any, in
 _last_call_at: Dict[tuple[str, str], float] = {}
 _rate_lock = asyncio.Lock()
 
+_VALID_TOOL_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _sanitize_tool_name(name: str) -> str:
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+    if not sanitized:
+        return "tool"
+    if not _VALID_TOOL_NAME_RE.match(sanitized):
+        return "tool"
+    return sanitized
+
 
 async def _respect_rate_limit(server_id: str, tool_name: str, tool: Dict[str, Any]) -> None:
     rps = int(((tool.get("rateLimit") or {}).get("rps") or 0))
@@ -118,6 +130,7 @@ class StubCallOutcome:
 class StubToolEntry:
     server_id: str
     tool_name: str
+    raw_name: str
     raw: Dict[str, Any]
 
     def build_tool_definition(self) -> types.Tool:
@@ -138,6 +151,8 @@ class StubToolEntry:
         rate_limit = ((self.raw.get("rateLimit") or {}).get("rps"))
         if rate_limit is not None:
             meta["rateLimitRps"] = rate_limit
+
+        meta["originalName"] = self.raw_name
 
         return types.Tool(
             name=self.tool_name,
@@ -180,6 +195,7 @@ class StubConfigManager:
         self._path = path
         self._cache_config: Dict[str, Any] | None = None
         self._tool_index: Dict[str, StubToolEntry] = {}
+        self._raw_index: Dict[str, StubToolEntry] = {}
         self._mtime: Optional[float] = None
 
     def refresh(self) -> bool:
@@ -206,19 +222,40 @@ class StubConfigManager:
 
         servers = config.get("servers") or {}
         new_index: Dict[str, StubToolEntry] = {}
-        duplicates: Dict[str, list[str]] = {}
+        duplicates: Dict[str, set[str]] = {}
+        raw_seen: Dict[str, str] = {}
         for server_id, server_payload in servers.items():
             tools_payload = (server_payload or {}).get("tools") or {}
-            for tool_name, tool_config in tools_payload.items():
-                entry = StubToolEntry(server_id=server_id, tool_name=tool_name, raw=tool_config or {})
-                if tool_name in new_index:
-                    duplicates.setdefault(tool_name, []).append(server_id)
+            for raw_tool_name, tool_config in tools_payload.items():
+                tool_config = tool_config or {}
+                meta_block = tool_config.get("meta") or {}
+                original_name = (meta_block.get("originalToolName") or raw_tool_name)
+
+                if raw_tool_name in raw_seen:
+                    duplicates.setdefault(raw_tool_name, set()).update({raw_seen[raw_tool_name], server_id})
                     continue
-                new_index[tool_name] = entry
+
+                sanitized = _sanitize_tool_name(raw_tool_name)
+                unique_name = sanitized
+                if unique_name in new_index:
+                    counter = 2
+                    base = sanitized
+                    while f"{base}_{counter}" in new_index:
+                        counter += 1
+                    unique_name = f"{base}_{counter}"
+
+                entry = StubToolEntry(
+                    server_id=server_id,
+                    tool_name=unique_name,
+                    raw_name=original_name,
+                    raw=tool_config,
+                )
+                new_index[unique_name] = entry
+                raw_seen[raw_tool_name] = server_id
 
         if duplicates:
             for name, server_ids in duplicates.items():
-                joined = ", ".join(server_ids)
+                joined = ", ".join(sorted(server_ids))
                 print(
                     f"[stub-mcp] duplicate tool '{name}' encountered for servers: {joined}; using first definition only",
                     file=sys.stderr,
@@ -226,6 +263,7 @@ class StubConfigManager:
 
         self._cache_config = config
         self._tool_index = new_index
+        self._raw_index = {entry.raw_name: entry for entry in new_index.values()}
         self._mtime = mtime
         print(f"[stub-mcp] loaded {len(new_index)} tools from {self._path}")
         return True
@@ -236,7 +274,10 @@ class StubConfigManager:
 
     def get_tool(self, name: str) -> Optional[StubToolEntry]:
         self.refresh()
-        return self._tool_index.get(name)
+        entry = self._tool_index.get(name)
+        if entry is not None:
+            return entry
+        return self._raw_index.get(name)
 
 
 CONFIG = StubConfigManager(CONFIG_PATH)

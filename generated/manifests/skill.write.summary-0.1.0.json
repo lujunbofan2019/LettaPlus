@@ -16,10 +16,10 @@
   "skillDirectives": "Write concise, factual summaries (<150w), no speculation.",
   "requiredTools": [
     {
-      "toolName": "llm.summarize",
+      "toolName": "llm_summarize",
       "description": "Summarize input text",
       "json_schema": {
-        "name": "llm.summarize",
+        "name": "llm_summarize",
         "description": "Summarize input text",
         "parameters": {
           "type": "object",
@@ -30,7 +30,7 @@
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
-        "toolName": "llm.summarize"
+        "toolName": "llm_summarize"
       },
       "required": true
     }

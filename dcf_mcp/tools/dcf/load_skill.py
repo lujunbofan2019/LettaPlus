@@ -227,6 +227,16 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
         out["error"] = f"Agent retrieval error: {exc}"
         return out
 
+    try:
+        existing_blocks = client.agents.blocks.list(agent_id=agent_id)
+        baseline_block_labels = {
+            getattr(block, "block_id", None) or getattr(block, "id", None): getattr(block, "label", "")
+            for block in existing_blocks
+            if (getattr(block, "block_id", None) or getattr(block, "id", None))
+        }
+    except Exception:
+        baseline_block_labels = {}
+
     manifest_id = manifest.get("manifestId")
     skill_name = manifest.get("skillName")
     skill_version = manifest.get("skillVersion")
@@ -243,6 +253,8 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
 
     # 1. Attach directives
     directives = manifest.get("skillDirectives") or ""
+    created_memory_labels: Set[str] = set()
+    created_data_labels: Set[str] = set()
     if directives:
         label = f"skill_directives_{skill_name}_{manifest_id}"
         try:
@@ -252,6 +264,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                 raise RuntimeError("No block id returned")
             client.agents.blocks.attach(agent_id=agent_id, block_id=block_id)
             out["added"]["memory_block_ids"].append(block_id)
+            created_memory_labels.add(label)
         except Exception as exc:
             out["error"] = f"Failed to attach directives block: {exc}"
             return out
@@ -264,6 +277,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
         }
     except Exception:
         attached_ids = set()
+    baseline_tool_ids = set(attached_ids)
 
     registry_cache: Optional[Dict[str, Any]] = None
     try:
@@ -547,17 +561,65 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                     raise RuntimeError("No block id returned for data source chunk")
                 client.agents.blocks.attach(agent_id=agent_id, block_id=block_id)
                 out["added"]["data_block_ids"].append(block_id)
+                created_data_labels.add(label)
             except Exception as exc:
                 out["error"] = (
                     f"Failed to attach data source '{source_id}' chunk {index}: {exc}"
                 )
                 return out
 
+    # Refresh tool + block attachments to capture any IDs returned by the platform
+    try:
+        current_tools = client.agents.tools.list(agent_id=agent_id)
+        current_tool_ids = {
+            getattr(tool, "id", None) or getattr(tool, "tool_id", None)
+            for tool in current_tools
+            if getattr(tool, "id", None) or getattr(tool, "tool_id", None)
+        }
+    except Exception:
+        current_tool_ids = set()
+
+    for tool_id in sorted(current_tool_ids - baseline_tool_ids):
+        if tool_id not in out["added"]["tool_ids"]:
+            out["added"]["tool_ids"].append(tool_id)
+
+    try:
+        blocks = client.agents.blocks.list(agent_id=agent_id)
+    except Exception as exc:
+        out["error"] = f"State tracking error: {exc}"
+        return out
+
+    new_block_candidates: List[Tuple[str, str]] = []
+    for block in blocks:
+        block_id = getattr(block, "block_id", None) or getattr(block, "id", None)
+        if not block_id:
+            continue
+        label = getattr(block, "label", "")
+        if block_id not in baseline_block_labels:
+            new_block_candidates.append((block_id, label))
+        baseline_block_labels.setdefault(block_id, label)
+
+    for block_id, label in new_block_candidates:
+        if block_id in out["added"]["memory_block_ids"] or block_id in out["added"]["data_block_ids"]:
+            continue
+        if label == STATE_BLOCK_LABEL:
+            continue
+        if label in created_memory_labels:
+            out["added"]["memory_block_ids"].append(block_id)
+            continue
+        if label in created_data_labels or label.startswith("skill_ds_"):
+            out["added"]["data_block_ids"].append(block_id)
+        else:
+            out["added"]["memory_block_ids"].append(block_id)
+
+    out["added"]["memory_block_ids"] = list(dict.fromkeys(out["added"]["memory_block_ids"]))
+    out["added"]["tool_ids"] = list(dict.fromkeys(out["added"]["tool_ids"]))
+    out["added"]["data_block_ids"] = list(dict.fromkeys(out["added"]["data_block_ids"]))
+
     # 4. Update skill state
     try:
         state: Dict[str, Any] = {}
         state_block_id: Optional[str] = None
-        blocks = client.agents.blocks.list(agent_id=agent_id)
         for block in blocks:
             if getattr(block, "label", "") == STATE_BLOCK_LABEL:
                 state_block_id = getattr(block, "block_id", None) or getattr(block, "id", None)

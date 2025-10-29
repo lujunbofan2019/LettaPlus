@@ -8,6 +8,22 @@ from typing import Any, Dict, List, Optional
 DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
 DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
 
+_VALID_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _sanitize_tool_name(name: str) -> str:
+    name = (name or "").strip()
+    if _VALID_TOOL_NAME_RE.fullmatch(name):
+        return name
+
+    sanitized = re.sub(r"[^A-Za-z0-9_-]+", "_", name)
+    sanitized = re.sub(r"_+", "_", sanitized).strip("_")
+    if not sanitized:
+        sanitized = "tool"
+    if not _VALID_TOOL_NAME_RE.fullmatch(sanitized):
+        sanitized = "tool"
+    return sanitized
+
 
 def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                      refs_csv_path: str = "/app/skills_src/skill_tool_refs.csv",
@@ -157,15 +173,41 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
 
         # Load refs index
         refs_index: Dict[str, List[Dict[str, Any]]] = {}
+        sanitized_tracker: Dict[str, Dict[str, Dict[str, str]]] = {}
         if refs_csv.exists():
             with refs_csv.open("r", encoding="utf-8", newline="") as f:
                 for row in csv.DictReader(f):
                     mid = (row.get("manifestId") or "").strip()
                     if not mid:
                         continue
+                    server_id = (row.get("serverId") or "").strip()
+                    tool_name_raw = (row.get("toolName") or "").strip()
+                    if not server_id or not tool_name_raw:
+                        out["warnings"].append(
+                            f"Skipping invalid tool ref row (serverId/toolName missing): {row}"
+                        )
+                        continue
+
+                    tool_name = _sanitize_tool_name(tool_name_raw)
+                    if tool_name != tool_name_raw:
+                        out["warnings"].append(
+                            f"Sanitized tool name '{tool_name_raw}' -> '{tool_name}' for manifest '{mid}' server '{server_id}'."
+                        )
+
+                    used = sanitized_tracker.setdefault(mid, {}).setdefault(server_id, {})
+                    existing_raw = used.get(tool_name)
+                    if existing_raw and existing_raw != tool_name_raw:
+                        out["error"] = (
+                            f"Sanitized tool name collision for manifest '{mid}' and server '{server_id}': "
+                            f"'{tool_name_raw}' conflicts with '{existing_raw}'."
+                        )
+                        return out
+                    used[tool_name] = tool_name_raw
+
                     refs_index.setdefault(mid, []).append({
-                        "serverId": (row.get("serverId") or "").strip(),
-                        "toolName": (row.get("toolName") or "").strip(),
+                        "serverId": server_id,
+                        "toolName": tool_name,
+                        "originalToolName": tool_name_raw,
                         "required": ((row.get("required") or "true").strip().lower() == "true"),
                         "description": (row.get("notes") or row.get("description") or "").strip(),
                         "schema": parse_json_cell(row.get("json_schema"), None)
@@ -199,9 +241,10 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                 for ref in refs_index.get(manifest_id, []):
                     sid = ref.get("serverId") or ""
                     tname = ref.get("toolName") or ""
+                    original_tname = ref.get("originalToolName") or tname
                     if not sid or not tname:
                         continue
-                    desc_text = ref.get("description") or f"Tool '{tname}' from server '{sid}'"
+                    desc_text = ref.get("description") or f"Tool '{original_tname}' from server '{sid}'"
                     schema_obj = ref.get("schema")
                     if not isinstance(schema_obj, dict):
                         schema_obj = {
@@ -213,7 +256,10 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                                 "required": []
                             }
                         }
-                    required_tools.append({
+                    schema_obj["name"] = tname
+                    if original_tname and original_tname != tname:
+                        schema_obj.setdefault("meta", {})["originalToolName"] = original_tname
+                    tool_entry = {
                         "toolName": tname,
                         "description": desc_text,
                         "json_schema": schema_obj,
@@ -223,7 +269,10 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                             "toolName": tname
                         },
                         "required": bool(ref.get("required"))
-                    })
+                    }
+                    if original_tname and original_tname != tname:
+                        tool_entry["originalToolName"] = original_tname
+                    required_tools.append(tool_entry)
 
                 manifest = {
                     "manifestApiVersion": ensure_manifest_api_version(row),

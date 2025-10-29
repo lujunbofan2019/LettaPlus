@@ -1,4 +1,4 @@
 serverId,toolName,caseId,match.strategy,match.expr,match.value,response.json,latencyMs.override,errorMode,weight
-search,search.query,case_python,exact,q,python,"{""hits"":[{""title"":""Python"",""url"":""https://www.python.org""}],""total"":1}",,,
-llm,llm.summarize,short_text,regex,$.text,.*,"{""summary"":""short text summary (stub)""}",,,
-web,web.fetch,oops_500,regex,$.url,.*/fail,"{""status"":500,""body"":""""}",,http_500,
+search,search_query,case_python,exact,q,python,"{""hits"":[{""title"":""Python"",""url"":""https://www.python.org""}],""total"":1}",,,
+llm,llm_summarize,short_text,regex,$.text,.*,"{""summary"":""short text summary (stub)""}",,,
+web,web_fetch,oops_500,regex,$.url,.*/fail,"{""status"":500,""body"":""""}",,http_500,

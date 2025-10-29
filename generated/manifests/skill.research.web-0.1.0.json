@@ -16,10 +16,10 @@
   "skillDirectives": "Follow queries precisely; extract key facts; provide citations.",
   "requiredTools": [
     {
-      "toolName": "search.query",
+      "toolName": "search_query",
       "description": "Core search tool",
       "json_schema": {
-        "name": "search.query",
+        "name": "search_query",
         "description": "Core search tool",
         "parameters": {
           "type": "object",
@@ -30,15 +30,15 @@
       "definition": {
         "type": "mcp_server",
         "serverId": "search",
-        "toolName": "search.query"
+        "toolName": "search_query"
       },
       "required": true
     },
     {
-      "toolName": "web.fetch",
+      "toolName": "web_fetch",
       "description": "Get page content",
       "json_schema": {
-        "name": "web.fetch",
+        "name": "web_fetch",
         "description": "Get page content",
         "parameters": {
           "type": "object",
@@ -49,7 +49,7 @@
       "definition": {
         "type": "mcp_server",
         "serverId": "web",
-        "toolName": "web.fetch"
+        "toolName": "web_fetch"
       },
       "required": true
     }
