@@ -1,81 +1,92 @@
-from typing import Any, Dict
+from __future__ import annotations
+
 import os
-import json
 from pathlib import Path
+from typing import Any, Dict
 
-# --- Constants ---
+from ._skillset_common import (
+    init_result,
+    load_schema_validator,
+    resolve_preview_length,
+    sort_available_skills,
+    summarise_manifest,
+)
+
 DCF_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/generated/manifests")
-DEFAULT_PREVIEW_CHARS = int(os.getenv("SKILL_PREVIEW_CHARS", "400"))
 
-def get_skillset(manifests_dir: str = None,
-                 schema_path: str = None,
-                 include_previews: bool = True,
-                 preview_chars: int = None) -> Dict[str, Any]:
+
+def get_skillset(
+    manifests_dir: str | None = None,
+    schema_path: str | None = None,
+    include_previews: bool = True,
+    preview_chars: int | None = None,
+) -> Dict[str, Any]:
     """Discover Skill Manifests from a directory and summarize their metadata.
 
-    This tool scans a directory for JSON files, parses each as a Skill Manifest,
-    optionally validates against a JSON Schema, and returns a lightweight catalog
-    to assist planning agents with fast skill selection and referencing.
-      - Schema validation requires `jsonschema`. If not installed, validation is skipped and a warning is returned.
-      - The function is resilient to partially invalid JSON files; errors are captured per-manifest so discovery can proceed for the rest.
-      - Aliases include: `name@version`, `skill://name@version`, `skill://packageId@version` (when present), and the raw `manifestId`.
+    This tool replicates the long-standing behaviour that planning agents rely on:
+    scan a directory for ``*.json`` files, parse each one as a skill manifest, and
+    produce a compact catalog that exposes the most relevant manifest metadata.
+    Highlights:
+
+    * Validation is optional—if ``schema_path`` is provided and ``jsonschema`` is
+      importable, each manifest is checked against the supplied schema. Missing
+      dependencies or load errors degrade gracefully by adding warnings instead of
+      failing discovery.
+    * Invalid manifests are isolated. Per-file errors are captured in the
+      corresponding entry while the rest of the directory continues to be processed.
+    * Aliases are generated for convenience (``name@version``, ``skill://`` URIs,
+      and the raw ``manifestId`` when present) so planners have multiple lookup
+      options.
 
     Args:
-        manifests_dir (str, optional): Directory to scan. Defaults to env `DCF_MANIFESTS_DIR`.
+        manifests_dir: Optional override for the directory containing manifest
+            files. Defaults to ``$DCF_MANIFESTS_DIR`` (``/app/generated/manifests``).
             The directory must exist and be readable.
-        schema_path (str, optional): Filesystem path to the Skill Manifest JSON Schema
-            (e.g., `schemas/skill-manifest-v2.0.0.json`). If provided and `jsonschema`
-            is installed, each manifest will be validated.
-        include_previews (bool, optional): When True, include a short
-            `directives_preview` for each skill to help the Planner choose without
-            loading the full skill. Defaults to True.
-        preview_chars (int, optional): Max characters for `directives_preview`.
-            Defaults to env `SKILL_PREVIEW_CHARS` (400) when None.
+        schema_path: Optional filesystem path to the manifest JSON Schema (for
+            example ``dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json``). When
+            provided and ``jsonschema`` is installed, each manifest is validated.
+        include_previews: When ``True`` (default) the catalog includes a
+            ``directives_preview`` string trimmed to ``preview_chars`` to help the
+            agent choose a skill without loading it fully.
+        preview_chars: Optional maximum length for ``directives_preview``. If
+            ``None`` or invalid, the tool falls back to ``$SKILL_PREVIEW_CHARS``
+            (default ``400``).
 
     Returns:
-        dict: Result object:
+        dict: Structured response compatible with the historical implementation::
+
             {
               "ok": bool,
-              "exit_code": int,     # 0 ok, 4 error
+              "exit_code": int,           # 0 on success, 4 on error
               "available_skills": [
                 {
-                  "manifestId": str or None,
-                  "skillPackageId": str or None,
-                  "skillName": str or None,
-                  "skillVersion": str or None,
-                  "manifestApiVersion": str or None,
-                  "aliases": [str],
-                  "description": str or None,
-                  "tags": [str],
-                  "permissions": {"egress": "none"|"intranet"|"internet", "secrets": [str]},
-                  "toolNames": [str],
+                  "manifestId": str | None,
+                  "skillPackageId": str | None,
+                  "skillName": str | None,
+                  "skillVersion": str | None,
+                  "manifestApiVersion": str | None,
+                  "aliases": list[str],
+                  "description": str | None,
+                  "tags": list[str],
+                  "permissions": {"egress": str, "secrets": list[str]},
+                  "toolNames": list[str],
                   "toolCount": int,
                   "dataSourceCount": int,
-                  "directives_preview": str or None,   # present when include_previews=True
-                  "path": str,                          # absolute path to the manifest file
-                  "valid_schema": bool or None,         # None if schema validation skipped
-                  "errors": [str],                      # per-manifest errors (non-fatal overall)
-                  "warnings": [str]                     # per-manifest warnings
-                }
+                  "directives_preview": str | None,
+                  "path": str,                    # absolute filesystem path
+                  "valid_schema": bool | None,
+                  "errors": list[str],
+                  "warnings": list[str],
+                },
               ],
-              "warnings": [str],       # global warnings
-              "error": str or None     # fatal error string or None on success
+              "warnings": list[str],
+              "error": str | None,
             }
-    """
-    out = {
-        "ok": False,
-        "exit_code": 4,
-        "available_skills": [],
-        "warnings": [],
-        "error": None
-    }
 
-    # Resolve inputs and basic checks
-    base_dir = manifests_dir or DCF_MANIFESTS_DIR
-    try:
-        preview_len = int(preview_chars) if preview_chars is not None else DEFAULT_PREVIEW_CHARS
-    except Exception:
-        preview_len = DEFAULT_PREVIEW_CHARS
+    The function never raises: fatal issues are surfaced in the ``error`` field
+    while per-manifest problems are recorded inside each catalog entry.
+    """
+    out = init_result()
 
     if manifests_dir is not None and not isinstance(manifests_dir, str):
         out["error"] = "TypeError: manifests_dir must be a string path or None"
@@ -87,151 +98,38 @@ def get_skillset(manifests_dir: str = None,
         out["error"] = "TypeError: include_previews must be a boolean"
         return out
 
-    # Verify directory
+    base_dir = manifests_dir or DCF_MANIFESTS_DIR
+    preview_len = resolve_preview_length(preview_chars)
+
     try:
-        p = Path(base_dir)
-        if not p.is_dir():
-            raise FileNotFoundError("Manifest directory '%s' not found or not a directory." % base_dir)
-    except Exception as ex:
-        out["error"] = str(ex)
+        directory = Path(base_dir)
+        if not directory.is_dir():
+            raise FileNotFoundError(
+                f"Manifest directory '{base_dir}' not found or not a directory."
+            )
+    except Exception as exc:
+        out["error"] = str(exc)
         return out
 
-    # Optional schema load
-    do_schema = False
-    validator = None
-    if schema_path:
-        try:
-            from jsonschema import Draft202012Validator
-            with open(schema_path, "r", encoding="utf-8") as f:
-                schema = json.load(f)
-            validator = Draft202012Validator(schema)
-            do_schema = True
-        except ImportError:
-            out["warnings"].append("jsonschema not installed; skipping schema validation.")
-        except Exception as ex:
-            out["warnings"].append("Failed to load schema '%s': %s" % (schema_path, ex))
+    validator, schema_requested = load_schema_validator(schema_path, out["warnings"])
 
-    # Scan *.json
     try:
-        files = sorted(p.glob("*.json"))
-    except Exception as ex:
-        out["error"] = "Failed to scan directory: %s" % ex
+        manifest_files = sorted(directory.glob("*.json"))
+    except Exception as exc:
+        out["error"] = f"Failed to scan directory: {exc}"
         return out
 
-    for fp in files:
-        item = {
-            "manifestId": None,
-            "skillPackageId": None,
-            "skillName": None,
-            "skillVersion": None,
-            "manifestApiVersion": None,
-            "aliases": [],
-            "description": None,
-            "tags": [],
-            "permissions": {"egress": "none", "secrets": []},
-            "toolNames": [],
-            "toolCount": 0,
-            "dataSourceCount": 0,
-            "directives_preview": None,
-            "path": str(fp.resolve()),
-            "valid_schema": None,
-            "errors": [],
-            "warnings": []
-        }
-
-        # Parse JSON
-        try:
-            with open(fp, "r", encoding="utf-8") as f:
-                doc = json.load(f)
-        except Exception as ex:
-            item["errors"].append("JSONDecodeError: %s" % ex)
-            out["available_skills"].append(item)
-            continue
-
-        # Schema validation if enabled
-        if do_schema and validator is not None:
-            try:
-                errs = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
-                if errs:
-                    item["valid_schema"] = False
-                    for e in errs:
-                        path = "/".join(map(str, e.path)) or "<root>"
-                        item["errors"].append("%s: %s" % (path, e.message))
-                else:
-                    item["valid_schema"] = True
-            except Exception as ex:
-                item["valid_schema"] = False
-                item["errors"].append("SchemaValidationError: %s" % ex)
-
-        # Minimal key extraction (inline, no helpers)
-        v = doc.get("manifestId"); item["manifestId"] = v if isinstance(v, str) else None
-        v = doc.get("skillPackageId"); item["skillPackageId"] = v if isinstance(v, str) else None
-        v = doc.get("skillName"); item["skillName"] = v if isinstance(v, str) else None
-        v = doc.get("skillVersion"); item["skillVersion"] = v if isinstance(v, str) else None
-        v = doc.get("manifestApiVersion"); item["manifestApiVersion"] = v if isinstance(v, str) else None
-        v = doc.get("description"); item["description"] = v if isinstance(v, str) else None
-
-        tags = doc.get("tags") or []
-        if isinstance(tags, list):
-            item["tags"] = [t for t in tags if isinstance(t, str)]
-
-        perms = doc.get("permissions") or {}
-        if isinstance(perms, dict):
-            eg = perms.get("egress")
-            if eg in ("none", "intranet", "internet"):
-                item["permissions"]["egress"] = eg
-            secrets = perms.get("secrets")
-            if isinstance(secrets, list):
-                item["permissions"]["secrets"] = [s for s in secrets if isinstance(s, str)]
-
-        tools = doc.get("requiredTools") or []
-        if isinstance(tools, list):
-            for t in tools:
-                if isinstance(t, dict):
-                    tn = t.get("toolName")
-                    if isinstance(tn, str) and tn:
-                        item["toolNames"].append(tn)
-            item["toolCount"] = len([t for t in tools if isinstance(t, dict)])
-
-        dsrc = doc.get("requiredDataSources") or []
-        if isinstance(dsrc, list):
-            item["dataSourceCount"] = len([d for d in dsrc if isinstance(d, dict)])
-
-        if include_previews:
-            directives = doc.get("skillDirectives")
-            if isinstance(directives, str) and directives:
-                preview = directives.strip().replace("\n", " ").replace("\r", " ")
-                if len(preview) > preview_len:
-                    preview = preview[:preview_len].rstrip() + "…"
-                item["directives_preview"] = preview
-
-        # Basic required checks
-        missing = []
-        if not item["manifestId"]: missing.append("manifestId")
-        if not item["skillName"]: missing.append("skillName")
-        if not item["skillVersion"]: missing.append("skillVersion")
-        if missing:
-            item["errors"].append("Missing required fields: %s" % ", ".join(missing))
-
-        # Aliases (inline, no helpers)
-        name = (item["skillName"] or "").lower()
-        ver = item["skillVersion"] or ""
-        pkg = item["skillPackageId"] or ""
-        if name and ver:
-            item["aliases"].append("%s@%s" % (name, ver))
-            item["aliases"].append("skill://%s@%s" % (name, ver))
-        if pkg and ver:
-            item["aliases"].append("skill://%s@%s" % (pkg, ver))
-        if item["manifestId"]:
-            item["aliases"].append(item["manifestId"])
-
+    for manifest_path in manifest_files:
+        item = summarise_manifest(
+            manifest_path,
+            include_previews=include_previews,
+            preview_len=preview_len,
+            validator=validator,
+            schema_requested=schema_requested,
+        )
         out["available_skills"].append(item)
 
-    # Sort for stable UX (inline lambda, no helper)
-    out["available_skills"].sort(
-        key=lambda x: ((x.get("skillName") or "").lower(),
-                       (x.get("skillVersion") or ""),
-                       (x.get("manifestId") or "")))
+    sort_available_skills(out["available_skills"])
     out["ok"] = True
     out["exit_code"] = 0
     return out
