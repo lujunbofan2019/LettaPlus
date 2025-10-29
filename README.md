@@ -304,67 +304,6 @@ This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overa
 
 ---
 
-## Background Notes - why this works
-
-- **ASL semantics** give a well-understood contract for branching, retries, and data paths. Our JSON schema keeps a strict subset and adds `AgentBinding` to bind states to Letta agents/skills.
-- **DAG + choreography** avoids a single orchestrator bottleneck. Each worker owns its lifecycle, which scales naturally and tolerates partial failures.
-- **RedisJSON** provides atomic, partial updates and fast reads for lots of small state docs. WATCH/MULTI gives optimistic concurrency for leases and status transitions.
-- **Skills as manifests** decouple “how to do things” (tools, prompts, data) from “when” (workflow). They can be versioned, discovered, and reasoned about (via a knowledge graph or tags).
-- **Auditability**: keeping control/data planes post-run enables traceability, benchmarking, and post-mortems.
-
----
-
-## Project Layout
-```
-project/
-├─ schemas/
-│  ├─ letta-asl-workflow-2.2.0.json
-│  ├─ skill-manifest-v2.0.0.json
-│  ├─ data-plane-output-1.0.0.json
-│  ├─ notification-payload-1.0.0.json
-│  ├─ control-plane-meta.json
-│  └─ control-plane-state.json
-├─ af/
-│  └─ agent_template.json
-├─ skills/
-│  ├─ <skillName>@<version>.json
-│  └─ ...
-├─ workflows/
-│  └─ example_workflow_v2.2.0.json
-└─ tools/
-   ├─ acquire_state_lease.py
-   ├─ create_worker_agents.py
-   ├─ create_workflow_control_plane.py
-   ├─ finalize_workflow.py
-   ├─ get_skillset.py
-   ├─ load_skill.py
-   ├─ notify_if_ready.py
-   ├─ notify_next_worker_agent.py
-   ├─ unload_skill.py
-   ├─ read_workflow_control_plane.py
-   ├─ update_workflow_control_plane.py
-   ├─ renew_state_lease.py
-   ├─ release_state_lease.py
-   ├─ validate_skill_manifest.py
-   ├─ validate_workflow.py
-   └─ ...   
-```
-
----
-
-## Operational Tips & FAQ
-
-- **Many workers from the same .af template?** No conflict: Letta de-duplicates registered tools by name/ID. If your template includes source-defined tools, our `load_skill` checks platform registry by name first.
-- **When to use `notify_if_ready` vs `notify_next_worker_agent`?**
-    - Use `notify_next_worker_agent` after a state completes to fan-out to neighbors.
-    - Use `notify_if_ready` as a guard when something “external” nudges a state early.
-- **Leases & TTLs**: pick TTL ≥ 2× your heartbeat; renew at 1/3 TTL. On long tool calls, renew between sub-steps.
-- **Error policy**: workers set `status="failed"` with `error_message` → Planner can decide to retry (re-notify), skip, or finalize as failed.
-- **Security**: skills can declare `permissions.egress` and `permissions.secrets`. Enforce on load or at tool boundary.
-- **Cleanup**: `finalize_workflow` deletes agents (optional) but preserves Redis keys for audits.
-
----
-
 ## Update Oct-2025: CSV-first prototyping & stub MCP server
 
 **CSV-first rapid skill prototyping**
@@ -372,129 +311,100 @@ project/
 - Generate validated skill manifests plus a registry for discovery
 - Stand up a stub MCP server that exposes deterministic tools for BDD-style tests
 
-**Stub MCP server to exercise workflows end-to-end before real tool implementations exist**
-- `stub_mcp/stub_mcp_server.py` — trivial stdio/WebSocket MCP that reads `generated/stub/stub_config.json`
-- `stub_mcp/Dockerfile` — containerize the stub for docker-compose
-- `docker-compose.yaml` — example compose file including Letta and the stub MCP
+### What each file is for
 
-**Local resolver in the skill loader to choose real vs. stub endpoints without editing manifests.**
-- `skills_src/registry.json` — generated registry of skills
-- `skills_src/resolver.json` — maps logical serverId → transport/endpoint; consumed by `load_skill_with_resolver`
+1. `skills.csv`
 
----
+Purpose: the master list of **skills** (i.e., capabilities you want agents to load). Each row becomes one **skill manifest (v2.0.0)** when you run `csv_to_manifests.py`.
+  
+Typical columns (minimal core):
+- `manifestId` (stable UUID or slug)
+- `skillPackageId` (package/namespace)
+- `skillName` and `skillVersion`
+- `description`, `tags` (comma-sep)
+- Optional policy fields (e.g., `permissions.secrets`)
 
-## Change to Directory Layout
+You **do not** list tools here in detail - just define the skill itself.
 
-```
-project/
-├─ schemas/
-│  ├─ ...
-├─ tools/
-│  ├─ csv_to_manifests.py
-│  ├─ csv_to_stub_config.py
-│  ├─ ... (other DCF tools)
-├─ skills_src/                 # input CSVs + generated artifacts
-│  ├─ skills.csv               # one row per skill
-│  ├─ mcp_tools.csv            # one row per MCP tool
-│  ├─ skill_tool_refs.csv
-│  └─ registry.json            # generated: catalog of skills (for Planner/loader)
-├─ skills/                     # generated manifests
-│  ├─ <skillName>@<version>.json
-│  └─ ...
-├─ generated/
-│  └─ stub/
-│     ├─ stub_config.json      # generated MCP tool behavior config
-│     └─ ...
-├─ stub_mcp/
-│  ├─ stub_mcp_server.py
-│  └─ Dockerfile
-├─ docker-compose.yaml         # runs Letta + stub MCP
-└─ workflows/                  # your workflows (ASL + Letta bindings)
-   └─ example_workflow_v2.2.0.json
-```
+2. `skill_tool_refs.csv`
 
----
+Purpose: maps **skills → tools** (many-to-many). This is how you attach tools to a given skill without duplicating tool definitions. `csv_to_manifests.py` joins this file to `skills.csv` to populate each manifest’s `requiredTools`.
 
-## CSV specs
+Typical columns:
+- `manifestId` (or `skillName@skillVersion`)
+- `toolKey` (a stable logical reference to a tool defined in `mcp_tools.csv`)
+- Optional flags (e.g., “required”, “notes”, “alias”)
 
-### skills_src/skills.csv
-Columns
-- manifestId (optional; otherwise auto)
-- skillPackageId (optional)
-- skillName (required)
-- skillVersion (required, semver)
-- description
-- tags (space or comma separated)
-- permissions_egress (none|intranet|internet)
-- permissions_secrets (comma separated)
-- skillDirectives (free text)
-- requiredTools (comma-separated tool keys; see below)
-- requiredDataSources (optional; JSON list or blank)
+3. `mcp_tools.csv`
 
-Each row → one manifest in `skills/` and an entry in `skills_src/registry.json` (with aliases and path).
+Purpose: declares the **MCP tools** available from logical MCP servers. These are “real” tools in the sense of their **interfaces** (names + JSON schemas), but during testing they’ll be served by the stub server.
 
-### skills_src/tools.csv
-Columns
-- key (required; unique row id referenced by skills.csv requiredTools)
-- name (tool name exposed to the agent)
-- description
-- serverId (logical MCP server id; NOT a URL)
-- transport (stdio|websocket)
-- endpoint (ignored for stdio; ws URL for websocket)
-- args_schema_json (optional; JSON schema for parameters)
-- behavior_type (stub|echo|fail) — testing behavior
-- behavior_inputs (optional; JSON switch/case inputs for stub)
-- behavior_output (optional; JSON to return)
-- error_message (when behavior_type=fail)
+Typical columns:
+- `serverId` (logical, e.g., `pricing-tools`, `etl-tools`)
+- `toolName` (the function name the agent calls)
+- `description`
+- `json_schema` (OpenAI-style tool schema as JSON text; parameters + required)
+- Optional: `tags`, `return_char_limit`, `notes`
 
-Each row → an MCP tool definition for the stub server. The stub uses the behavior columns to respond deterministically.
+This is the **source of truth** for tool signatures. Multiple skills can reference the same `toolKey`/`toolName` here.
 
----
+4. `mcp_cases.csv`
 
-## Quickstart
+Purpose: deterministic **stub/mocked I/O** for tools — lets you do BDD/end-to-end tests before real implementations exist. `csv_to_stub_config.py` reads this to build the stub server’s behavior.
 
-1) Prepare CSVs
-```
-skills_src/skills.csv
-skills_src/tools.csv
-```
+Typical columns:
+- `serverId`, `toolName` (join to `mcp_tools.csv`)
+- `caseId` or `scenario` (a label for the test)
+- `inputs_json` (exact args object the tool will be called with)
+- `output_json` (the canned return)
+- Optional: `delay_ms`, `error` (to simulate failures), `notes`
 
-2) Generate manifests + registry
-```
-python tools/csv_to_manifests.py   --skills_csv skills_src/skills.csv   --tools_csv skills_src/tools.csv   --schema schemas/skill-manifest-v2.0.0.json   --out_dir skills   --registry_out skills_src/registry.json
-```
+The stub MCP server matches incoming calls to `(serverId, toolName, inputs_json)` and returns the pre-canned result.
 
-3) Generate stub MCP config
-```
-python tools/csv_to_stub_config.py   --tools_csv skills_src/tools.csv   --out generated/stub/stub_config.json
-```
+5. `registry.json`
 
-4) Create resolver for the loader (choose stub endpoints)
-   Create `skills_src/resolver.json`:
+Purpose: **resolver map** from `serverId` → runtime endpoint info. Your **skill loader** uses this to decide where to call each MCP server (stub vs real), without changing manifests.
+
+Typical shape:
+
 ```json
 {
   "servers": {
-    "stub://default": { "transport": "websocket", "endpoint": "ws://stub-mcp:8765" }
+    "pricing-tools": { "transport": "ws", "endpoint": "ws://stub-mcp:8765" },
+    "etl-tools":     { "transport": "ws", "endpoint": "ws://stub-mcp:8765" }
   },
-  "aliases": {
-    "web.search.svc": "stub://default",
-    "db.ops.svc": "stub://default"
-  }
+  "env": "dev"
 }
+
 ```
 
-5) Run services
-- Ensure your Letta server is reachable (e.g., http://letta:8283).
-- Bring up the stub MCP with docker-compose.
+Switch this file (or point it to prod URLs) to move from mocks to real backends.
 
-6) Load a skill that references logical server IDs
-- Ensure your `load_skill_with_resolver` tool reads `skills_src/registry.json` and `skills_src/resolver.json`.
-- When it sees a required tool with source_type=mcp_server + serverId, it maps serverId → (transport, endpoint) using the resolver and attaches the tool to the agent.
+### How they work together (pipeline)
 
-7) Execute a workflow end-to-end
-- Use the Planner to validate a workflow (validate_workflow), seed the control-plane, create workers, and notify source states.
-- Workers acquire leases, load skills, call MCP tools (stubbed), write outputs, and notify downstream.
-- Finalize when terminals are done.
+1. Design skills & attach tools
+  - Author skills in `skills.csv`.
+  - Map which tools each skill needs in `skill_tool_refs.csv`.
+2. Define tool interfaces & test cases
+  - Describe each tool’s **schema** in `mcp_tools.csv`.
+  - Provide deterministic test cases in `mcp_cases.csv`.
+3. Generate artifacts
+  - Run **`csv_to_manifests.py`** → emits JSON **skill manifests** (v2.0.0) under `skills/` using (`skills.csv` + `skill_tool_refs.csv` + `mcp_tools.csv`).
+  - Run **`csv_to_stub_config.py`** → emits `generated/stub/stub_config.json` for the stub MCP server (using `mcp_tools.csv` + `mcp_cases.csv`).
+4. Wire endpoints
+  - Set **`registry.json`** to point each `serverId` to either the **stub MCP server** (for BDD/testing) or a **real MCP server** (for live runs).
+5. Load & run
+  - The **skill loader** reads `skills/` manifests and resolves `serverId` → endpoint via `registry.json`.
+  - During tests, the loader hits the **stub server**, which returns the canned outputs from `mcp_cases.csv`.
+  - When implementations are ready, you just update `registry.json` to point to the real MCP servers — no manifest changes required.
+
+### Mental model
+
+- `skills.csv` = “What skills exist?”
+- `skill_tool_refs.csv` = “Which tools do those skills require?”
+- `mcp_tools.csv` = “What are the tools’ interfaces?”
+- `mcp_cases.csv` = “What should those tools return in test scenarios?”
+- `registry.json` = “Where do those tools live right now (stub or real)?”
 
 ---
 
@@ -502,7 +412,7 @@ python tools/csv_to_stub_config.py   --tools_csv skills_src/tools.csv   --out ge
 
 Runtime behavior
 - Reads `generated/stub/stub_config.json` on start.
-- Exposes each tool from tools.csv.
+- Exposes each tool from mcp_tools.csv.
 - Behavior modes:
   - stub: match on behavior_inputs (exact or pattern) and return behavior_output
   - echo: return the input arguments under `{ "ok": true, "echo": { ... } }`
