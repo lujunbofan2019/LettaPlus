@@ -102,11 +102,11 @@ MINIMAL EXAMPLE TEMPLATE:
   "version": "1.0.0",
   "workflow_schema_version": "2.2.0",
   "af_imports": [
-    { "uri": "file://app/agents/agent_template_worker@1.0.0.json", "version": "1.0.0" }
+    { "uri": "/app/agents/worker.af", "version": "2" }
   ],
   "skill_imports": [
-    { "uri": "file://generated/manifests/web.search.json" },
-    { "uri": "file://generated/manifests/summarize.json" }
+    { "uri": "/app/generated/manifests/skill.research.web-0.1.0.json" },
+    { "uri": "/app/generated/manifests/skill.write.summary-0.1.0.json" }
   ],
   "asl": {
     "StartAt": "Research",
@@ -120,9 +120,9 @@ MINIMAL EXAMPLE TEMPLATE:
         "ResultPath": "$.research_output",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
-          "skills": ["web.search@1.0.0"]
+          "skills": ["skill://research.web@0.1.0"]
         },
         "Retry": [{
           "ErrorEquals": ["States.Timeout"],
@@ -140,9 +140,9 @@ MINIMAL EXAMPLE TEMPLATE:
         "ResultPath": "$.summary",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
-          "skills": ["summarize@1.0.0"]
+          "skills": ["skill://write.summary@0.1.0"]
         },
         "End": true
       }
