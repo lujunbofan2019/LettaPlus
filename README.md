@@ -1,37 +1,37 @@
 # Letta–ASL Workflows + Skills (DAG + Ephemeral Workers)
 
-> **Goal**: Plan, validate, and execute multi-step workflows using AWS Step Functions–style (ASL) state machines and **ephemeral Letta agents** equipped with **dynamically loadable skills**. Execution is **choreography-first**: workers self-coordinate via a RedisJSON control-plane—no central orchestrator loop.
+> **Goal**: Plan, validate, and execute multi-step workflows using AWS Step Functions–style (ASL) state machines and **ephemeral Letta agents** equipped with **dynamically loadable skills**. Execution is **choreography-first**: workers self-coordinate via a RedisJSON control-plane - no central orchestrator loop.
 
 This project provides:
 
 - **Schemas**
-  - `schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
-  - `schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
-  - `schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
-  - `schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
-  - `schemas/notification-payload-v1.0.0.json`
-  - `schemas/data-plane-output-v1.0.0.json`
+  - `dcf_mcp/schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
+  - `dcf_mcp/schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
+  - `dcf_mcp/schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
+  - `dcf_mcp/schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
+  - `dcf_mcp/schemas/notification-payload-v1.0.0.json`
+  - `dcf_mcp/schemas/data-plane-output-v1.0.0.json`
 - **Planning tools**
-  1) `validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
-  2) `validate_skill_manifest(manifest_json, schema_path)`
-  3) `get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
-  4) `get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
-  5) `load_skill(manifest, agent_id)`
-  6) `unload_skill(manifest_id, agent_id)`
+  1) `dcf_mcp/tools/dcf/validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
+  2) `dcf_mcp/tools/dcf/validate_skill_manifest(manifest_json, schema_path)`
+  3) `dcf_mcp/tools/dcf/get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
+  4) `dcf_mcp/tools/dcf/get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
+  5) `dcf_mcp/tools/dcf/load_skill(manifest, agent_id)`
+  6) `dcf_mcp/tools/dcf/unload_skill(manifest_id, agent_id)`
 - **Execution tools**
-  7) `create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
-  8) `create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
-  9) `read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
-  10) `update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
-  11) `acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
-  12) `renew_state_lease(workflow_id, state, lease_token, ...)`
-  13) `release_state_lease(workflow_id, state, lease_token, ...)`
-  14) `notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
-  15) `notify_if_ready(workflow_id, state, ...)`
-  16) `finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
+  7) `dcf_mcp/tools/dcf/create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
+  8) `dcf_mcp/tools/dcf/create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
+  9) `dcf_mcp/tools/dcf/read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
+  10) `dcf_mcp/tools/dcf/update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
+  11) `dcf_mcp/tools/dcf/acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
+  12) `dcf_mcp/tools/dcf/renew_state_lease(workflow_id, state, lease_token, ...)`
+  13) `dcf_mcp/tools/dcf/release_state_lease(workflow_id, state, lease_token, ...)`
+  14) `dcf_mcp/tools/dcf/notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
+  15) `dcf_mcp/tools/dcf/notify_if_ready(workflow_id, state, ...)`
+  16) `dcf_mcp/tools/dcf/finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
 - **Testing tools**
-  17) `csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
-  18) `csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
+  17) `dcf_mcp/tools/dcf/csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
+  18) `dcf_mcp/tools/dcf/csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
 
 Everything is designed for **composition**: workflows import `.af v2` bundles and skill manifests by file path (`file://` allowed) without inlining. Skills are loaded/unloaded dynamically per worker.
 
@@ -41,7 +41,7 @@ Everything is designed for **composition**: workflows import `.af v2` bundles an
 
 ### Key concepts
 - **Planner agent**: converses with the user, gathers intent and constraints, proposes & iterates the plan, then compiles SOP steps into an **ASL** state machine inside the workflow JSON (validated against `letta-asl-workflow-2.2.0.json`). The Planner never micromanages workers—workers run autonomously.
-- **Ephemeral workers**: short-lived Letta agents instantiated from a shared **.af v2 template** (e.g., `agent_template_worker@1.0.0`). Before each Task, the worker **loads skills** relevant to that Task and **unloads** them after.
+- **Ephemeral workers**: short-lived Letta agents instantiated from a shared **.af v2 template**. Before each Task, the worker **loads skills** relevant to that Task and **unloads** them after.
 - **Skills**: packaged capabilities described by `skill-manifest-v2.0.0.json` (directives, required tools, required data sources, permissions). Reusable across workflows.
 - **Choreography**: workers coordinate via messages and a **RedisJSON control-plane**. Each worker checks readiness (all upstream `done`), acquires a lease, runs, writes output, releases lease, and notifies downstream.
 - **Knowledge graph** *(optional but recommended)*: the skill catalog (from `get_skillset`) can be ingested into a lightweight KG (tags → tools → capabilities → success metrics). The Planner queries it to select candidate skills and to justify the plan (traceability).
@@ -82,7 +82,7 @@ We keep two logical spaces in Redis:
 
 - **Data-plane outputs** — `dp:wf:{workflow_id}:output:{state}`  
   Arbitrary JSON written by the worker for downstream consumption.  
-  Example: `{ "urls": [...], "notes": "…" }`
+  Example: `{ "urls": [...], "notes": "..." }`
 
 > We **do not** delete control-plane/data-plane keys after execution (audit trail). `finalize_workflow` optionally deletes worker agents only.
 
@@ -95,8 +95,8 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 
 1. **Conversation**: collect objective, inputs, outputs, guardrails, budget/time, egress policy.
 2. **Skill discovery**: call `get_skillset(...)` (optionally with validation). Optionally enrich with a knowledge graph for better selection & justification.
-3. **Draft SOP**: a linear `steps[]` plan with step names, inputs/outputs, and candidate skills.
-4. **Compile to ASL**: transmute SOP → `asl` (`StartAt`, `States`), attach `AgentBinding` per Task:
+3. **Draft Workflow**: a linear `steps[]` plan with step names, inputs/outputs, and candidate skills.
+4. **Compile to ASL**: transmute workflow → `asl` (`StartAt`, `States`), attach `AgentBinding` per Task:
   - `agent_template_ref`: e.g., `"agent_template_worker@1.0.0"`
   - `skills`: e.g., `["skill://web.search@1.0.0", "skill://summarize@1.0.0"]`
 5. **Validate**: `validate_workflow(workflow_json, schema_path, imports_base_dir, skills_base_dir)`.
@@ -155,8 +155,7 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 - `skills/summarize.json` — pure LLM directive skill for concise summaries.  
   Validate them:
 ```python
-validate_skill_manifest("schemas/skill-manifest-v2.0.0.json", "schemas/skill-manifest-v2.0.0.json")  # schema self-check (optional)
-# For each manifest file (raw JSON strings or file paths work interchangeably):
+# For each manifest file (raw JSON strings or file paths work interchangeably, but prefer file paths):
 validate_skill_manifest("skills/web.search.json", "schemas/skill-manifest-v2.0.0.json")
 validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-manifest-v2.0.0.json")
 ```
