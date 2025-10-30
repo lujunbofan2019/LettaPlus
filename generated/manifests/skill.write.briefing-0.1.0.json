@@ -1,0 +1,47 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.write.briefing@0.1.0",
+  "skillPackageId": null,
+  "skillName": "write.briefing",
+  "skillVersion": "0.1.0",
+  "description": "Produces executive-ready strategic briefings",
+  "tags": [
+    "write",
+    "briefing"
+  ],
+  "permissions": {
+    "egress": "none",
+    "secrets": []
+  },
+  "skillDirectives": "Write in crisp executive tone with sections for Opportunities and Risks.",
+  "requiredTools": [
+    {
+      "toolName": "llm_briefing",
+      "description": "Draft executive briefing",
+      "json_schema": {
+        "name": "llm_briefing",
+        "description": "Draft executive briefing",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "llm",
+        "toolName": "llm_briefing"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": [
+    {
+      "dataSourceId": "tone",
+      "content": {
+        "type": "text_content",
+        "text": "Tone: executive concise."
+      }
+    }
+  ]
+}

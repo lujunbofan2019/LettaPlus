@@ -1,0 +1,39 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.analyze.synthesis@0.1.0",
+  "skillPackageId": null,
+  "skillName": "analyze.synthesis",
+  "skillVersion": "0.1.0",
+  "description": "Synthesizes multi-source research into themes and risks",
+  "tags": [
+    "analysis",
+    "synthesis"
+  ],
+  "permissions": {
+    "egress": "none",
+    "secrets": []
+  },
+  "skillDirectives": "Cluster insights into 2-4 dominant themes and enumerate explicit risks.",
+  "requiredTools": [
+    {
+      "toolName": "insight_compare",
+      "description": "Cluster insights into themes",
+      "json_schema": {
+        "name": "insight_compare",
+        "description": "Cluster insights into themes",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "analysis",
+        "toolName": "insight_compare"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": []
+}

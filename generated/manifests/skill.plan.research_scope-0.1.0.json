@@ -1,0 +1,48 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.plan.research_scope@0.1.0",
+  "skillPackageId": null,
+  "skillName": "plan.research_scope",
+  "skillVersion": "0.1.0",
+  "description": "Drafts research scopes and clarifies objectives",
+  "tags": [
+    "plan",
+    "research",
+    "outline"
+  ],
+  "permissions": {
+    "egress": "none",
+    "secrets": []
+  },
+  "skillDirectives": "Capture stakeholder objectives, guardrails, and key questions.",
+  "requiredTools": [
+    {
+      "toolName": "llm_outline",
+      "description": "LLM-generated research outline",
+      "json_schema": {
+        "name": "llm_outline",
+        "description": "LLM-generated research outline",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "llm",
+        "toolName": "llm_outline"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": [
+    {
+      "dataSourceId": "prompt",
+      "content": {
+        "type": "text_content",
+        "text": "Use MECE bulleting. Output numbered steps."
+      }
+    }
+  ]
+}

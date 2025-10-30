@@ -66,7 +66,7 @@ def _resolve_schema_path(schema_path: str, out: Dict[str, Any]) -> Path | None:
     return None
 
 
-def validate_skill_manifest(skill_json: str, schema_path: str) -> Dict[str, Any]:
+def validate_skill_manifest(skill_json: str, schema_path: str = "/app/schemas/skill_manifest_schema_v2.0.0.json") -> Dict[str, Any]:
     """Validate a Skill Manifest (v2.0.0) and run static sanity checks.
 
     Steps:

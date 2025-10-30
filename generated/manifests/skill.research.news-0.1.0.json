@@ -1,28 +1,26 @@
 {
   "manifestApiVersion": "v2.0.0",
-  "manifestId": "skill.research.web@0.1.0",
+  "manifestId": "skill.research.news@0.1.0",
   "skillPackageId": null,
-  "skillName": "research.web",
+  "skillName": "research.news",
   "skillVersion": "0.1.0",
-  "description": "Lightweight web research capability",
+  "description": "Collects topical headlines and supporting web snippets",
   "tags": [
     "research",
-    "web"
+    "news"
   ],
   "permissions": {
     "egress": "internet",
-    "secrets": [
-      "BING_API_KEY"
-    ]
+    "secrets": []
   },
-  "skillDirectives": "Follow queries precisely; extract key facts; provide citations.",
+  "skillDirectives": "Return at least three diverse sources when available; include source attribution.",
   "requiredTools": [
     {
-      "toolName": "search_query",
-      "description": "Core search tool",
+      "toolName": "news_headlines",
+      "description": "Pull relevant headlines",
       "json_schema": {
-        "name": "search_query",
-        "description": "Core search tool",
+        "name": "news_headlines",
+        "description": "Pull relevant headlines",
         "parameters": {
           "type": "object",
           "properties": {},
@@ -32,16 +30,16 @@
       "definition": {
         "type": "mcp_server",
         "serverId": "search",
-        "toolName": "search_query"
+        "toolName": "news_headlines"
       },
       "required": true
     },
     {
       "toolName": "web_fetch",
-      "description": "Get page content",
+      "description": "Optional deep-dive on selected headline",
       "json_schema": {
         "name": "web_fetch",
-        "description": "Get page content",
+        "description": "Optional deep-dive on selected headline",
         "parameters": {
           "type": "object",
           "properties": {},
@@ -53,16 +51,8 @@
         "serverId": "web",
         "toolName": "web_fetch"
       },
-      "required": true
+      "required": false
     }
   ],
-  "requiredDataSources": [
-    {
-      "dataSourceId": "aboutness",
-      "content": {
-        "type": "text_content",
-        "text": "This skill extracts key facts with citations."
-      }
-    }
-  ]
+  "requiredDataSources": []
 }

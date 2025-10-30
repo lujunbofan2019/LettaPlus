@@ -33,37 +33,37 @@
   },
   "af_imports": [
     {
-      "uri": "file://af/agent_templates.json",
+      "uri": "/app/agents/worker.af",
       "version": "2"
     }
   ],
   "skill_imports": [
     {
-      "uri": "file://skills/plan.research_scope.json"
+      "uri": "/app/generated/manifests/skill.plan.research_scope-0.1.0.json"
     },
     {
-      "uri": "file://skills/research.news.json"
+      "uri": "/app/generated/manifests/skill.research.news-0.1.0.json"
     },
     {
-      "uri": "file://skills/research.web.json"
+      "uri": "/app/generated/manifests/skill.research.web-0.1.0.json"
     },
     {
-      "uri": "file://skills/research.company.json"
+      "uri": "/app/generated/manifests/skill.research.company-0.1.0.json"
     },
     {
-      "uri": "file://skills/analyze.synthesis.json"
+      "uri": "/app/generated/manifests/skill.analyze.synthesis-0.1.0.json"
     },
     {
-      "uri": "file://skills/write.briefing.json"
+      "uri": "/app/generated/manifests/skill.write.briefing-0.1.0.json"
     },
     {
-      "uri": "file://skills/plan.actions.json"
+      "uri": "/app/generated/manifests/skill.plan.actions-0.1.0.json"
     },
     {
-      "uri": "file://skills/qa.review.json"
+      "uri": "/app/generated/manifests/skill.qa.review-0.1.0.json"
     },
     {
-      "uri": "file://skills/write.summary.json"
+      "uri": "/app/generated/manifests/skill.write.summary-0.1.0.json"
     }
   ],
   "asl": {
@@ -76,7 +76,7 @@
         "Comment": "Clarify the research scope and success metrics",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://plan.research_scope@0.1.0"
@@ -94,7 +94,7 @@
         "Comment": "Collect relevant news coverage and supporting context",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://research.news@0.1.0",
@@ -113,7 +113,7 @@
         "Comment": "Pull structured intel on the focal company",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://research.company@0.1.0"
@@ -130,7 +130,7 @@
         "Comment": "Derive themes and risks from research artifacts",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://analyze.synthesis@0.1.0"
@@ -151,7 +151,7 @@
         "Comment": "Prepare executive briefing for stakeholders",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://write.briefing@0.1.0"
@@ -169,7 +169,7 @@
         "Comment": "Recommend prioritized next steps",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://plan.actions@0.1.0"
@@ -187,7 +187,7 @@
         "Comment": "Run QA review on briefing and action plan",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://qa.review@0.1.0"
@@ -209,7 +209,7 @@
         "Comment": "Create short executive digest of outputs",
         "AgentBinding": {
           "agent_template_ref": {
-            "name": "agent_template_worker@1.0.0"
+            "name": "worker"
           },
           "skills": [
             "skill://write.summary@0.1.0"

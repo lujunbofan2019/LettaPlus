@@ -1,0 +1,39 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.qa.review@0.1.0",
+  "skillPackageId": null,
+  "skillName": "qa.review",
+  "skillVersion": "0.1.0",
+  "description": "Reviews deliverables for completeness and gaps",
+  "tags": [
+    "qa",
+    "review"
+  ],
+  "permissions": {
+    "egress": "none",
+    "secrets": []
+  },
+  "skillDirectives": "Check clarity, quantify claims, and flag missing metrics.",
+  "requiredTools": [
+    {
+      "toolName": "llm_quality_review",
+      "description": "Review deliverable quality",
+      "json_schema": {
+        "name": "llm_quality_review",
+        "description": "Review deliverable quality",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "llm",
+        "toolName": "llm_quality_review"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": []
+}

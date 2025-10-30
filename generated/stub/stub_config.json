@@ -31,10 +31,23 @@
                     "url": {
                       "type": "string"
                     }
-                  }
+                  },
+                  "required": [
+                    "title",
+                    "url"
+                  ]
                 }
+              },
+              "total": {
+                "type": "integer"
+              },
+              "generated_at": {
+                "type": "string"
               }
-            }
+            },
+            "required": [
+              "hits"
+            ]
           },
           "defaultResponse": {
             "hits": []
@@ -56,11 +69,77 @@
               "response": {
                 "hits": [
                   {
-                    "title": "Python",
+                    "title": "Python Software Foundation - Official Site",
                     "url": "https://www.python.org"
+                  },
+                  {
+                    "title": "PyPI - the Python Package Index",
+                    "url": "https://pypi.org"
+                  },
+                  {
+                    "title": "Real Python Tutorials",
+                    "url": "https://realpython.com"
                   }
                 ],
-                "total": 1
+                "total": 3
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_market_scan",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.q",
+                "value": ".*sustainable robotics market.*"
+              },
+              "response": {
+                "hits": [
+                  {
+                    "title": "CB Insights: Sustainable Robotics Market Forecast 2025",
+                    "url": "https://cbinsights.example/reports/sustainable-robotics-2025"
+                  },
+                  {
+                    "title": "Gartner: Warehouse Automation Leaders",
+                    "url": "https://gartner.example/automation-leaders"
+                  },
+                  {
+                    "title": "MIT Tech Review: Green Robotics Innovation",
+                    "url": "https://mittr.example/green-robotics"
+                  },
+                  {
+                    "title": "Logistics Today Podcast: Decarbonising Fulfilment",
+                    "url": "https://logistics.example/decarbonising-fulfilment"
+                  }
+                ],
+                "total": 4,
+                "generated_at": "2025-03-04T08:20:00Z"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_competitor_signal",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.q",
+                "value": ".*Acme Robotics competitor.*"
+              },
+              "response": {
+                "hits": [
+                  {
+                    "title": "Bloomberg: Rivals Accelerate in Modular Automation",
+                    "url": "https://bloomberg.example/rivals-modular-automation"
+                  },
+                  {
+                    "title": "PitchBook: Funding Round - SwiftLift Robotics",
+                    "url": "https://pitchbook.example/swiftlift-series-b"
+                  }
+                ],
+                "total": 2,
+                "notes": "Sorted by recency"
               },
               "latencyMsOverride": null,
               "errorMode": null,
@@ -70,53 +149,125 @@
           "meta": {
             "originalToolName": "search_query"
           }
-        }
-      }
-    },
-    "llm": {
-      "tools": {
-        "llm_summarize": {
+        },
+        "news_headlines": {
           "version": "0.1.0",
-          "description": "Mock summarisation endpoint",
+          "description": "Mock top headlines search",
           "paramsSchema": {
             "type": "object",
             "properties": {
-              "text": {
+              "topic": {
                 "type": "string",
-                "description": "Text to summarise"
+                "description": "Topic to fetch headlines for"
               }
             },
             "required": [
-              "text"
+              "topic"
             ]
           },
           "resultSchema": {
             "type": "object",
             "properties": {
-              "summary": {
-                "type": "string"
+              "headlines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "url"
+                  ]
+                }
               }
-            }
+            },
+            "required": [
+              "headlines"
+            ]
           },
           "defaultResponse": {
-            "summary": "stub summary"
+            "headlines": []
           },
           "rateLimit": {
-            "rps": 0
+            "rps": 1
           },
           "latencyMs": {
-            "default": 50
+            "default": 200
           },
           "cases": [
             {
-              "caseId": "short_text",
+              "caseId": "case_market_news",
               "match": {
                 "strategy": "regex",
-                "expr": "$.text",
-                "value": ".*"
+                "expr": "$.topic",
+                "value": ".*market.*"
               },
               "response": {
-                "summary": "short text summary (stub)"
+                "headlines": [
+                  {
+                    "title": "Market shifts toward sustainable tech",
+                    "url": "https://news.example/sustainable-tech",
+                    "source": "TechWire",
+                    "publishedAt": "2025-03-03T11:00:00Z"
+                  },
+                  {
+                    "title": "Analysts predict growth in AI tooling",
+                    "url": "https://news.example/ai-tools",
+                    "source": "MarketBeat",
+                    "publishedAt": "2025-03-02T09:30:00Z"
+                  },
+                  {
+                    "title": "Supply chains prioritise carbon accounting",
+                    "url": "https://news.example/carbon-ledgers",
+                    "source": "GlobalSupply",
+                    "publishedAt": "2025-03-01T16:10:00Z"
+                  }
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_robotics_news",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.topic",
+                "value": ".*robotics.*"
+              },
+              "response": {
+                "headlines": [
+                  {
+                    "title": "Retailers pilot modular warehouse robots",
+                    "url": "https://retailnews.example/pilot-modular-robots",
+                    "source": "RetailNews",
+                    "publishedAt": "2025-03-04T07:45:00Z"
+                  },
+                  {
+                    "title": "Venture funding accelerates robotics startups",
+                    "url": "https://vcwatch.example/robotics-funding",
+                    "source": "VCWatch",
+                    "publishedAt": "2025-03-03T12:25:00Z"
+                  },
+                  {
+                    "title": "Analysts flag interoperability as adoption hurdle",
+                    "url": "https://industryinsight.example/interoperability",
+                    "source": "IndustryInsight",
+                    "publishedAt": "2025-03-02T05:15:00Z"
+                  }
+                ]
               },
               "latencyMsOverride": null,
               "errorMode": null,
@@ -124,7 +275,7 @@
             }
           ],
           "meta": {
-            "originalToolName": "llm_summarize"
+            "originalToolName": "news_headlines"
           }
         }
       }
@@ -167,25 +318,640 @@
           "latencyMs": {
             "default": 200
           },
+          "cases": [],
+          "meta": {
+            "originalToolName": "web_fetch"
+          }
+        }
+      }
+    },
+    "datasets": {
+      "tools": {
+        "company_profile": {
+          "version": "0.1.0",
+          "description": "Mock company intelligence lookup",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "company": {
+                "type": "string",
+                "description": "Company name"
+              }
+            },
+            "required": [
+              "company"
+            ]
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "overview": {
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "value"
+                      ]
+                    }
+                  },
+                  "customerSegments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "productLines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  },
+                  "recentMilestones": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string"
+                        },
+                        "detail": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "detail"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "overview"
+                ]
+              }
+            },
+            "required": [
+              "profile"
+            ]
+          },
+          "defaultResponse": {
+            "profile": {
+              "overview": "stub overview",
+              "metrics": []
+            }
+          },
+          "rateLimit": {
+            "rps": 1
+          },
+          "latencyMs": {
+            "default": 120
+          },
           "cases": [
             {
-              "caseId": "oops_500",
+              "caseId": "case_acme",
               "match": {
-                "strategy": "regex",
-                "expr": "$.url",
-                "value": ".*/fail"
+                "strategy": "exact",
+                "expr": "$.company",
+                "value": "Acme Robotics"
               },
               "response": {
-                "status": 500,
-                "body": ""
+                "profile": {
+                  "overview": "Acme Robotics builds modular warehouse automation systems with sustainability telemetry.",
+                  "metrics": [
+                    {
+                      "label": "Employees",
+                      "value": "240"
+                    },
+                    {
+                      "label": "HQ",
+                      "value": "Austin, TX"
+                    },
+                    {
+                      "label": "Funding",
+                      "value": "$85M Series C (2024)"
+                    },
+                    {
+                      "label": "ARR",
+                      "value": "$62M"
+                    }
+                  ],
+                  "customerSegments": [
+                    "Mid-market eCommerce",
+                    "3PLs"
+                  ],
+                  "productLines": [
+                    {
+                      "name": "Atlas Grid",
+                      "description": "Modular picking and storage robotics"
+                    },
+                    {
+                      "name": "Helios Insight",
+                      "description": "Energy optimisation and carbon tracking software"
+                    }
+                  ],
+                  "recentMilestones": [
+                    {
+                      "date": "2025-02-18",
+                      "detail": "Signed national rollout with OmniShop"
+                    },
+                    {
+                      "date": "2024-12-04",
+                      "detail": "ISO 14001 certification achieved"
+                    }
+                  ]
+                }
               },
               "latencyMsOverride": null,
-              "errorMode": "http_500",
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_swiftlift",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.company",
+                "value": ".*SwiftLift.*"
+              },
+              "response": {
+                "profile": {
+                  "overview": "SwiftLift Robotics provides plug-and-play autonomous lift modules for high-throughput warehouses.",
+                  "metrics": [
+                    {
+                      "label": "Employees",
+                      "value": "120"
+                    },
+                    {
+                      "label": "HQ",
+                      "value": "Seattle, WA"
+                    },
+                    {
+                      "label": "Funding",
+                      "value": "$55M Series B (2025)"
+                    }
+                  ],
+                  "customerSegments": [
+                    "Enterprise retailers",
+                    "Grocery fulfillment"
+                  ],
+                  "productLines": [
+                    {
+                      "name": "SwiftLift Core",
+                      "description": "Autonomous pallet movement system"
+                    }
+                  ],
+                  "recentMilestones": [
+                    {
+                      "date": "2025-01-29",
+                      "detail": "Announced partnership with FreshCart"
+                    }
+                  ]
+                }
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
               "weight": null
             }
           ],
           "meta": {
-            "originalToolName": "web_fetch"
+            "originalToolName": "company_profile"
+          }
+        }
+      }
+    },
+    "analysis": {
+      "tools": {
+        "insight_compare": {
+          "version": "0.1.0",
+          "description": "Mock synthesis tool combining research",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "insights": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "required": [
+              "insights"
+            ]
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "themes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "risks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "confidence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "themes",
+              "risks"
+            ]
+          },
+          "defaultResponse": {
+            "themes": [],
+            "risks": []
+          },
+          "rateLimit": {
+            "rps": 1
+          },
+          "latencyMs": {
+            "default": 180
+          },
+          "cases": [
+            {
+              "caseId": "case_themes",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.insights[*].category",
+                "value": ".*"
+              },
+              "response": {
+                "themes": [
+                  "Sustainability positioning",
+                  "AI-enabled optimisation",
+                  "Partnership momentum"
+                ],
+                "risks": [
+                  "High capital expenditure",
+                  "Crowded vendor landscape",
+                  "Integration complexity"
+                ],
+                "confidence": "medium"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "insight_compare"
+          }
+        }
+      }
+    },
+    "llm": {
+      "tools": {
+        "llm_outline": {
+          "version": "0.1.0",
+          "description": "Mock planning LLM",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string"
+              },
+              "constraints": {
+                "type": "string"
+              }
+            }
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "outline": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "defaultResponse": {
+            "outline": []
+          },
+          "rateLimit": {
+            "rps": 0
+          },
+          "latencyMs": {
+            "default": 80
+          },
+          "cases": [
+            {
+              "caseId": "case_outline",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.topic",
+                "value": ".*"
+              },
+              "response": {
+                "outline": [
+                  "Clarify stakeholder questions",
+                  "Prioritise research focus areas",
+                  "Define success metrics",
+                  "List required deliverables",
+                  "Identify data and tooling needs"
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "llm_outline"
+          }
+        },
+        "llm_briefing": {
+          "version": "0.1.0",
+          "description": "Mock briefing writer",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "themes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "audience": {
+                "type": "string"
+              }
+            }
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "briefing": {
+                "type": "string"
+              }
+            }
+          },
+          "defaultResponse": {
+            "briefing": "stub briefing"
+          },
+          "rateLimit": {
+            "rps": 0
+          },
+          "latencyMs": {
+            "default": 100
+          },
+          "cases": [
+            {
+              "caseId": "case_briefing",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.themes[*]",
+                "value": ".*"
+              },
+              "response": {
+                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Sustainability positioning resonates with enterprise RFP criteria.\n- AI-enabled optimisation reduces fulfilment cost by 18% in pilots.\nRisks:\n- Capital expenditure remains a barrier for mid-market prospects.\n- Integration complexity demands stronger SI partnerships.\nRecommended watch-outs: monitor interoperability roadmap and quantify carbon savings."
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "llm_briefing"
+          }
+        },
+        "llm_action_plan": {
+          "version": "0.1.0",
+          "description": "Mock action plan generator",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "objectives": {
+                "type": "string"
+              },
+              "insights": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "ownerRecommendations": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "actions"
+            ]
+          },
+          "defaultResponse": {
+            "actions": []
+          },
+          "rateLimit": {
+            "rps": 0
+          },
+          "latencyMs": {
+            "default": 90
+          },
+          "cases": [
+            {
+              "caseId": "case_actions",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.objectives",
+                "value": ".*"
+              },
+              "response": {
+                "actions": [
+                  "Schedule briefing with product leadership to align on sustainability messaging",
+                  "Commission deeper cost benchmarking study across top 5 target segments",
+                  "Initiate pilot with sustainability-focused client to gather quantified carbon reduction data",
+                  "Engage systems integrator partners to develop integration playbooks"
+                ],
+                "ownerRecommendations": {
+                  "product": "Own interoperability roadmap update",
+                  "marketing": "Publish sustainability proof-points"
+                }
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "llm_action_plan"
+          }
+        },
+        "llm_quality_review": {
+          "version": "0.1.0",
+          "description": "Mock quality assurance reviewer",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "string"
+              },
+              "criteria": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "draft"
+            ]
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "issues": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "status": {
+                "type": "string"
+              },
+              "suggestedFixes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "issues",
+              "status"
+            ]
+          },
+          "defaultResponse": {
+            "issues": [],
+            "status": "pass"
+          },
+          "rateLimit": {
+            "rps": 0
+          },
+          "latencyMs": {
+            "default": 60
+          },
+          "cases": [
+            {
+              "caseId": "case_review",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.draft",
+                "value": ".*"
+              },
+              "response": {
+                "issues": [
+                  "Add quantitative metric for market size",
+                  "Clarify responsible team for integration risk mitigation"
+                ],
+                "status": "revise",
+                "suggestedFixes": [
+                  "Reference 2025 market TAM estimate from CB Insights",
+                  "Assign partner management lead to SI playbook development"
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "llm_quality_review"
+          }
+        },
+        "llm_summarize": {
+          "version": "0.1.0",
+          "description": "Mock summarisation endpoint",
+          "paramsSchema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Text to summarise"
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string"
+              }
+            }
+          },
+          "defaultResponse": {
+            "summary": "stub summary"
+          },
+          "rateLimit": {
+            "rps": 0
+          },
+          "latencyMs": {
+            "default": 50
+          },
+          "cases": [
+            {
+              "caseId": "short_text",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.text",
+                "value": ".*"
+              },
+              "response": {
+                "summary": "Executive digest: Market momentum is accelerating for sustainable modular automation; top opportunities lie in enterprise retail pilots while capital intensity and integration remain key risks. Next steps focus on quantifying ROI and formalising partner enablement."
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            }
+          ],
+          "meta": {
+            "originalToolName": "llm_summarize"
           }
         }
       }

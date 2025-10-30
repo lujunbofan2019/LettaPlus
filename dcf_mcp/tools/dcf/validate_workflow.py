@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 def validate_workflow(
     workflow_json: str,
-    schema_path: str,
+    schema_path: str = "/app/schemas/letta_asl_workflow_schema_v2.2.0.json",
     imports_base_dir: str = None,
     skills_base_dir: str = None
 ) -> Dict[str, Any]:
