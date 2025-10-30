@@ -5,30 +5,30 @@
 This project provides:
 
 - **Schemas**
-  - `dcf_mcp/schemas/letta-asl-workflow-2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
-  - `dcf_mcp/schemas/skill-manifest-v2.0.0.json` — Skill manifest JSON schema
-  - `dcf_mcp/schemas/control-plane-meta-v1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
-  - `dcf_mcp/schemas/control-plane-state-v1.0.0.json` — *Documented shape* of per-state docs
-  - `dcf_mcp/schemas/notification-payload-v1.0.0.json`
-  - `dcf_mcp/schemas/data-plane-output-v1.0.0.json`
+  - `dcf_mcp/schemas/letta_asl_workflow_schema_v2.2.0.json` — Workflow JSON schema (ASL + Letta bindings)
+  - `dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json` — Skill manifest JSON schema
+  - `dcf_mcp/schemas/control-plane-meta-1.0.0.json` — *Documented shape* of control-plane meta (see “Control Plane & Data Plane”)
+  - `dcf_mcp/schemas/control-plane-state-1.0.0.json` — *Documented shape* of per-state docs
+  - `dcf_mcp/schemas/notification-payload-1.0.0.json`
+  - `dcf_mcp/schemas/data-plane-output-1.0.0.json`
 - **Planning tools**
   1) `dcf_mcp/tools/dcf/validate_workflow(workflow_json, schema_path, imports_base_dir=None, skills_base_dir=None)`
-  2) `dcf_mcp/tools/dcf/validate_skill_manifest(manifest_json, schema_path)`
-  3) `dcf_mcp/tools/dcf/get_skillset(manifests_dir=None, schema_path=None, include_previews=False, preview_chars=None)`
+  2) `dcf_mcp/tools/dcf/validate_skill_manifest(skill_json, schema_path)`
+  3) `dcf_mcp/tools/dcf/get_skillset(manifests_dir=None, schema_path=None, include_previews=True, preview_chars=None)`
   4) `dcf_mcp/tools/dcf/get_skillset_from_catalog(catalog_path=None, schema_path=None, include_previews=False, preview_chars=None)`
-  5) `dcf_mcp/tools/dcf/load_skill(manifest, agent_id)`
+  5) `dcf_mcp/tools/dcf/load_skill(skill_manifest, agent_id)`
   6) `dcf_mcp/tools/dcf/unload_skill(manifest_id, agent_id)`
 - **Execution tools**
-  7) `dcf_mcp/tools/dcf/create_workflow_control_plane(workflow_id, asl_json, agents_map_json=None, redis_url=None)`
-  8) `dcf_mcp/tools/dcf/create_worker_agents(workflow_id, af_bundle_path, agent_template_ref, skills_dir=None, planner_agent_id=None, redis_url=None)`
-  9) `dcf_mcp/tools/dcf/read_workflow_control_plane(workflow_id, state=None, redis_url=None, include_meta=True)`
-  10) `dcf_mcp/tools/dcf/update_workflow_control_plane(workflow_id, state, status, output_json=None, lease_token=None, error_message=None, redis_url=None)`
-  11) `dcf_mcp/tools/dcf/acquire_state_lease(workflow_id, state, owner_agent_id, lease_ttl_s=300, ...)`
-  12) `dcf_mcp/tools/dcf/renew_state_lease(workflow_id, state, lease_token, ...)`
-  13) `dcf_mcp/tools/dcf/release_state_lease(workflow_id, state, lease_token, ...)`
-  14) `dcf_mcp/tools/dcf/notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, ...)`
-  15) `dcf_mcp/tools/dcf/notify_if_ready(workflow_id, state, ...)`
-  16) `dcf_mcp/tools/dcf/finalize_workflow(workflow_id, delete_worker_agents=True, ...)`
+  7) `dcf_mcp/tools/dcf/create_workflow_control_plane(workflow_json, redis_url=None, expiry_secs=None, agents_map_json=None)`
+  8) `dcf_mcp/tools/dcf/create_worker_agents(workflow_json, imports_base_dir=None, agent_name_prefix=None, default_tags_json=None)`
+  9) `dcf_mcp/tools/dcf/read_workflow_control_plane(workflow_id, redis_url=None, states_json=None, include_meta=True, compute_readiness=False)`
+  10) `dcf_mcp/tools/dcf/update_workflow_control_plane(workflow_id, state, redis_url=None, new_status=None, lease_token=None, owner_agent_id=None, lease_ttl_s=None, attempts_increment=None, error_message=None, set_started_at=False, set_finished_at=False, output_json=None, output_ttl_secs=None)`
+  11) `dcf_mcp/tools/dcf/acquire_state_lease(workflow_id, state, owner_agent_id, redis_url=None, lease_ttl_s=None, require_ready=True, require_owner_match=True, allow_steal_if_expired=True, set_running_on_acquire=True, attempts_increment=1, lease_token=None)`
+  12) `dcf_mcp/tools/dcf/renew_state_lease(workflow_id, state, lease_token, owner_agent_id=None, redis_url=None, lease_ttl_s=None, reject_if_expired=True, touch_only=False)`
+  13) `dcf_mcp/tools/dcf/release_state_lease(workflow_id, state, lease_token, owner_agent_id=None, redis_url=None, force=False, clear_owner=True)`
+  14) `dcf_mcp/tools/dcf/notify_next_worker_agent(workflow_id, source_state=None, reason=None, payload_json=None, redis_url=None, include_only_ready=True, message_role="system", async_message=False, max_steps=None)`
+  15) `dcf_mcp/tools/dcf/notify_if_ready(workflow_id, state, redis_url=None, reason=None, payload_json=None, require_ready=True, skip_if_status_in_json=None, message_role="system", async_message=False, max_steps=None)`
+  16) `dcf_mcp/tools/dcf/finalize_workflow(workflow_id, redis_url=None, delete_worker_agents=True, preserve_planner=True, close_open_states=True, overall_status=None, finalize_note=None)`
 - **Testing tools**
   17) `dcf_mcp/tools/dcf/csv_to_manifests(skills_csv_path="skills_src/skills.csv", refs_csv_path="skills_src/skill_tool_refs.csv", ...)`
   18) `dcf_mcp/tools/dcf/csv_to_stub_config(mcp_tools_csv_path="skills_src/mcp_tools.csv", mcp_cases_csv_path="skills_src/mcp_cases.csv", ...)`
@@ -40,48 +40,49 @@ Everything is designed for **composition**: workflows import `.af v2` bundles an
 ## Architectural Overview
 
 ### Key concepts
-- **Planner agent**: converses with the user, gathers intent and constraints, proposes & iterates the plan, then compiles SOP steps into an **ASL** state machine inside the workflow JSON (validated against `letta-asl-workflow-2.2.0.json`). The Planner never micromanages workers—workers run autonomously.
+- **Planner agent**: converses with the user, gathers intent and constraints, proposes & iterates the plan, then compiles SOP steps into an **ASL** state machine inside the workflow JSON (validated against `dcf_mcp/schemas/letta_asl_workflow_schema_v2.2.0.json`). The Planner never micromanages workers—workers run autonomously.
 - **Ephemeral workers**: short-lived Letta agents instantiated from a shared **.af v2 template**. Before each Task, the worker **loads skills** relevant to that Task and **unloads** them after.
-- **Skills**: packaged capabilities described by `skill-manifest-v2.0.0.json` (directives, required tools, required data sources, permissions). Reusable across workflows.
+- **Skills**: packaged capabilities described by `dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json` (directives, required tools, required data sources, permissions). Reusable across workflows.
 - **Choreography**: workers coordinate via messages and a **RedisJSON control-plane**. Each worker checks readiness (all upstream `done`), acquires a lease, runs, writes output, releases lease, and notifies downstream.
 - **Knowledge graph** *(optional but recommended)*: the skill catalog (from `get_skillset`) can be ingested into a lightweight KG (tags → tools → capabilities → success metrics). The Planner queries it to select candidate skills and to justify the plan (traceability).
 
 ### Control Plane & Data Plane (RedisJSON)
 We keep two logical spaces in Redis:
 
-- **Control-plane meta** — `cp:wf:{workflow_id}:meta`  
+- **Control-plane meta** — `cp:wf:{workflow_id}:meta`
   Minimal JSON document with:
   ```jsonc
   {
     "workflow_id": "…",
-    "states": ["Research", "Summarize", "..."],
+    "workflow_name": "Web Research and Summary",
+    "schema_version": "2.2.0",
+    "created_at": "ISO-8601",
+    "start_at": "Research",
+    "terminal_states": ["Summarize"],
+    "states": ["Research", "Summarize"],
+    "agents": { "Research": "agent_id_…", "Summarize": "agent_id_…" },
+    "skills": { "Research": ["skill://web.search@1.0.0"] },
     "deps": {
       "Research":   { "upstream": [],           "downstream": ["Summarize"] },
       "Summarize":  { "upstream": ["Research"], "downstream": [] }
-    },
-    "agents": { "Research": "agent_id_…", "Summarize": "agent_id_…" },
-    "planner_agent_id": "agent_id_planner",
-    "created_at": "ISO-8601",
-    "finalized_at": null,
-    "status": "active" // updates to succeeded|failed|partial|cancelled on finalize
+    }
   }
   ```
 
 - **Per-state doc** — `cp:wf:{workflow_id}:state:{state}`
   ```jsonc
   {
-    "state": "Research",
-    "status": "pending", // -> running|done|failed|cancelled
+    "status": "pending", // -> running|done|failed (helpers treat "done" as the success sentinel)
     "attempts": 0,
-    "lease": { "token": null, "owner_agent_id": null, "ts": null, "ttl_s": 300 },
+    "lease": { "token": null, "owner_agent_id": null, "ts": null, "ttl_s": null },
     "started_at": null,
     "finished_at": null,
-    "errors": []
+    "last_error": null
   }
   ```
 
-- **Data-plane outputs** — `dp:wf:{workflow_id}:output:{state}`  
-  Arbitrary JSON written by the worker for downstream consumption.  
+- **Data-plane outputs** — `dp:wf:{workflow_id}:output:{state}`
+  Arbitrary JSON written by the worker for downstream consumption.
   Example: `{ "urls": [...], "notes": "..." }`
 
 > We **do not** delete control-plane/data-plane keys after execution (audit trail). `finalize_workflow` optionally deletes worker agents only.
@@ -113,14 +114,14 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 3. **Load skills**: for this Task’s `AgentBinding.skills`, call `load_skill(manifest_id, agent_id)`.
 4. **Read inputs** (if needed): `read_workflow_control_plane(wf_id, upstream_state)` or read `dp:wf:{id}:output:{up}`.
 5. **Do the work**: run tools; follow directives.
-6. **Write output + status**: `update_workflow_control_plane(wf_id, state, status="done", output_json=...)`.
+6. **Write output + status**: `update_workflow_control_plane(wf_id, state, new_status="done", output_json=...)` (helpers still treat `"done"` as the success sentinel; the tool will store the canonical form).
 7. **Unload skills**: `unload_skill(manifest_id, agent_id)` (best-effort; agent may also be ephemeral).
 8. **Release lease**: `release_state_lease(wf_id, state, lease_token)`.
 9. **Notify downstream**: `notify_next_worker_agent(wf_id, source_state=state, reason="upstream_done")`.
 
 **On long tasks**: periodically `renew_state_lease(...)` until done.
 
-**On errors**: `update_workflow_control_plane(..., status="failed", error_message=...)`, release lease, (optionally) notify downstream or planner for compensating logic.
+**On errors**: `update_workflow_control_plane(..., new_status="failed", error_message=...)`, release lease, (optionally) notify downstream or planner for compensating logic.
 
 ---
 
@@ -151,24 +152,35 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 **Scenario**: “Research a topic and produce a concise summary.”
 
 ### 1) Skills
-- `skills/web.search.json` — registered `web_search` tool, directives for querying and URL selection.
-- `skills/summarize.json` — pure LLM directive skill for concise summaries.  
-  Validate them:
+- Generate manifests from the CSV scaffolding (see “CSV-first rapid skill prototyping”): for this example, run `csv_to_manifests(out_dir="skills", catalog_path="generated/catalogs/skills_catalog.json")` so the files land where the workflow expects them.
+- After generation, `skills/web.search.json` and `skills/summarize.json` describe the two example skills.
+  Validate them against the bundled schema:
 ```python
-# For each manifest file (raw JSON strings or file paths work interchangeably, but prefer file paths):
-validate_skill_manifest("skills/web.search.json", "schemas/skill-manifest-v2.0.0.json")
-validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-manifest-v2.0.0.json")
+validate_skill_manifest(
+    "skills/web.search.json",
+    "dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json",
+)
+validate_skill_manifest(
+    open("skills/summarize.json").read(),
+    "dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json",
+)
 ```
 
 ### 2) Workflow (ASL + Letta bindings)
-`workflows/example_workflow_v220.json` (highlights):
+`workflows/v2.2.0/example/web_search_and_summary.workflow.json` (highlights):
 ```jsonc
 {
-  "workflow_id": "58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
-  "workflow_name": "Research & Summarize",
+  "workflow_schema_version": "2.2.0",
+  "workflow_id": "71c76b4d-c004-4910-a789-466241d1170c",
+  "workflow_name": "Web Research and Summary",
   "version": "1.0.0",
-  "af_imports": ["file://af/agent_templates.json"],
-  "skill_imports": ["file://skills/web.search.json", "file://skills/summarize.json"],
+  "af_imports": [
+    { "uri": "file://af/agent_templates.json", "version": "2" }
+  ],
+  "skill_imports": [
+    { "uri": "file://skills/web.search.json" },
+    { "uri": "file://skills/summarize.json" }
+  ],
   "asl": {
     "StartAt": "Research",
     "States": {
@@ -178,7 +190,7 @@ validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-man
         "Parameters": {"query.$": "$.topic"},
         "ResultPath": "$.research",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://web.search@1.0.0"]
         },
         "Next": "Summarize"
@@ -189,7 +201,7 @@ validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-man
         "Parameters": {"max_words": 200, "sources.$": "$.research.urls"},
         "ResultPath": "$.summary",
         "AgentBinding": {
-          "agent_template_ref": "agent_template_worker@1.0.0",
+          "agent_template_ref": {"name": "agent_template_worker@1.0.0"},
           "skills": ["skill://summarize@1.0.0"]
         },
         "End": true
@@ -199,35 +211,39 @@ validate_skill_manifest(open("skills/summarize.json").read(), "schemas/skill-man
 }
 ```
 
+> ℹ️ If you keep the generated manifests under `generated/manifests/`, update the `skill_imports[*].uri` values accordingly (for example, `file://generated/manifests/web.search.json`).
+
 Validate:
 ```python
-validate_workflow(open("workflows/example_workflow_v220.json").read(),
-                  "schemas/letta-asl-workflow-2.2.0.json",
-                  imports_base_dir=".", skills_base_dir="./skills")
+validate_workflow(
+    open("workflows/v2.2.0/example/web_search_and_summary.workflow.json").read(),
+    "dcf_mcp/schemas/letta_asl_workflow_schema_v2.2.0.json",
+    imports_base_dir="./workflows/v2.2.0/example",
+    skills_base_dir="./skills",
+)
 ```
 
 ### 3) Create control-plane + workers
 ```python
 # Seed control-plane from ASL
 create_workflow_control_plane(
-  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
-  asl_json=json.dumps(json.load(open("workflows/example_workflow_v220.json"))["asl"])
+  workflow_json=open("workflows/v2.2.0/example/web_search_and_summary.workflow.json").read()
 )
 
-# Create workers from .af v2 template (planner can pass its own id)
+# Create workers from .af v2 template
 create_worker_agents(
-  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
-  af_bundle_path="af/agent_templates.json",
-  agent_template_ref="agent_template_worker@1.0.0",
-  skills_dir="./skills"
+  workflow_json=open("workflows/v2.2.0/example/web_search_and_summary.workflow.json").read(),
+  imports_base_dir="./workflows/v2.2.0/example"
 )
 ```
+
+> ⚠️ `create_worker_agents` currently resolves templates via `AgentBinding.agent_ref`. If your workflow only supplies `agent_template_ref`, embed the matching template under `af_v2_entities` or transform the binding before invoking the tool.
 
 ### 4) Kick off
 ```python
 # Notify source states (no upstream) or call notify_if_ready for each start state:
 notify_next_worker_agent(
-  workflow_id="58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+  workflow_id="71c76b4d-c004-4910-a789-466241d1170c",
   reason="initial"
 )
 ```
@@ -236,10 +252,10 @@ notify_next_worker_agent(
 Inside the **Research** worker agent’s message handler (conceptual sequence):
 ```python
 # 1) Ensure ready (if self-notified)
-notify_if_ready("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research")
+notify_if_ready("71c76b4d-c004-4910-a789-466241d1170c", "Research")
 
 # 2) Acquire lease
-lease = acquire_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research", owner_agent_id=self.id)
+lease = acquire_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Research", owner_agent_id=self.id)
 token = lease["lease"]["token"]
 
 # 3) Load skills
@@ -249,52 +265,52 @@ load_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
 research_output = {"urls": ["https://example.com/a", "https://example.com/b"], "notes": "…"}
 
 # 5) Update control-plane + data-plane
-update_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research",
-                              status="done",
+update_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", "Research",
+                              new_status="done",
                               output_json=json.dumps(research_output),
                               lease_token=token)
 
 # 6) Unload skill (best-effort) + release lease
 unload_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
-release_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Research", token)
+release_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Research", token)
 
 # 7) Notify downstream (Summarize)
-notify_next_worker_agent("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", source_state="Research", reason="upstream_done")
+notify_next_worker_agent("71c76b4d-c004-4910-a789-466241d1170c", source_state="Research", reason="upstream_done")
 ```
 
 ### 6) Worker loop (Summarize)
 ```python
 # 1) Wait for notify, then (optionally) ensure ready
-notify_if_ready("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize")
+notify_if_ready("71c76b4d-c004-4910-a789-466241d1170c", "Summarize")
 
 # 2) Acquire lease
-lease = acquire_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize", owner_agent_id=self.id)
+lease = acquire_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Summarize", owner_agent_id=self.id)
 token = lease["lease"]["token"]
 
 # 3) Load skill
 load_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
 
 # 4) Read upstream output
-cp = read_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", state="Research")
+cp = read_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", states_json='["Research"]')
 sources = cp.get("outputs", {}).get("Research", {}).get("urls", [])
 
 # 5) Summarize and produce output
 summary = {"text": "Here’s a 200-word synthesis...", "sources": sources}
 
 # 6) Update + release
-update_workflow_control_plane("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize",
-                              status="done",
+update_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", "Summarize",
+                              new_status="done",
                               output_json=json.dumps(summary),
                               lease_token=token)
 unload_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
-release_state_lease("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1", "Summarize", token)
+release_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Summarize", token)
 
 # 7) Since this is terminal, the Planner can call finalize_workflow
 ```
 
 ### 7) Finalize
 ```python
-finalize_workflow("58b1c4cc-74c1-4a6f-bd5b-8c6b9779d4a1",
+finalize_workflow("71c76b4d-c004-4910-a789-466241d1170c",
                   delete_worker_agents=True,
                   preserve_planner=True,
                   close_open_states=True,
