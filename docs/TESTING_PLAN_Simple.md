@@ -414,10 +414,10 @@ python tools/csv_to_stub_config.py --tools_csv skills_src/tools.csv --out_json g
 # 2) Start stub MCP server
 docker compose up -d stub-mcp
 
-# 3) (Planner) Validate workflow
+# 3) (Planner_Combined.md) Validate workflow
 # -> call validate_workflow(workflow_json=..., schema_path=schemas/letta-asl-workflow-2.2.0.json)
 
-# 4) (Planner) Create control-plane + workers + kickoff
+# 4) (Planner_Combined.md) Create control-plane + workers + kickoff
 # -> create_workflow_control_plane(...)
 # -> create_worker_agents(...)
 # -> create_workflow_control_plane(..., agents_map_json=...)
@@ -425,7 +425,7 @@ docker compose up -d stub-mcp
 
 # 5) (Workers) Execute automatically on notifications
 
-# 6) (Planner) Finalize
+# 6) (Planner_Combined.md) Finalize
 # -> finalize_workflow(...)
 ```
 

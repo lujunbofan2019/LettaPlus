@@ -1658,7 +1658,7 @@ The system doesn't just recover from failure; it learns from it. By persistently
         "embedding_model": "letta-free",
         "embedding_dim": 1536
       },
-      "description": "DCF Planner Agent with a sleep-time companion.",
+      "description": "DCF Planner_Combined.md Agent with a sleep-time companion.",
       "id": "agent-0",
       "group_ids": [
         "group-0"
@@ -2056,7 +2056,7 @@ The system doesn't just recover from failure; it learns from it. By persistently
         "embedding_model": "letta-free",
         "embedding_dim": 1536
       },
-      "description": "DCF Worker Agent with a sleep-time companion.",
+      "description": "DCF Worker_Combined.md Agent with a sleep-time companion.",
       "id": "agent-0",
       "group_ids": [
         "group-0"
