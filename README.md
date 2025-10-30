@@ -53,14 +53,14 @@ We keep two logical spaces in Redis:
   Minimal JSON document with:
   ```jsonc
   {
-    "workflow_id": "…",
+    "workflow_id": "...",
     "workflow_name": "Web Research and Summary",
     "schema_version": "2.2.0",
     "created_at": "ISO-8601",
     "start_at": "Research",
     "terminal_states": ["Summarize"],
     "states": ["Research", "Summarize"],
-    "agents": { "Research": "agent_id_…", "Summarize": "agent_id_…" },
+    "agents": { "Research": "agent_id_...", "Summarize": "agent_id_..." },
     "skills": { "Research": ["skill://web.search@1.0.0"] },
     "deps": {
       "Research":   { "upstream": [],           "downstream": ["Summarize"] },
@@ -259,10 +259,10 @@ lease = acquire_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Research", 
 token = lease["lease"]["token"]
 
 # 3) Load skills
-load_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
+load_skill(manifest_id="...manifest-id-of-web.search...", agent_id=self.id)
 
 # 4) Do work (call registered web_search tool, etc.) and produce output JSON
-research_output = {"urls": ["https://example.com/a", "https://example.com/b"], "notes": "…"}
+research_output = {"urls": ["https://example.com/a", "https://example.com/b"], "notes": "..."}
 
 # 5) Update control-plane + data-plane
 update_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", "Research",
@@ -271,7 +271,7 @@ update_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", "Research"
                               lease_token=token)
 
 # 6) Unload skill (best-effort) + release lease
-unload_skill(manifest_id="…manifest-id-of-web.search…", agent_id=self.id)
+unload_skill(manifest_id="...manifest-id-of-web.search...", agent_id=self.id)
 release_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Research", token)
 
 # 7) Notify downstream (Summarize)
@@ -288,7 +288,7 @@ lease = acquire_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Summarize",
 token = lease["lease"]["token"]
 
 # 3) Load skill
-load_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
+load_skill(manifest_id="...manifest-id-of-summarize...", agent_id=self.id)
 
 # 4) Read upstream output
 cp = read_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", states_json='["Research"]')
@@ -302,7 +302,7 @@ update_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", "Summarize
                               new_status="done",
                               output_json=json.dumps(summary),
                               lease_token=token)
-unload_skill(manifest_id="…manifest-id-of-summarize…", agent_id=self.id)
+unload_skill(manifest_id="...manifest-id-of-summarize...", agent_id=self.id)
 release_state_lease("71c76b4d-c004-4910-a789-466241d1170c", "Summarize", token)
 
 # 7) Since this is terminal, the Planner can call finalize_workflow
