@@ -1,13 +1,17 @@
 {
   "env": "test",
   "servers": {
-    "search": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
-    "web":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
-    "llm":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
+    "search":   { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "web":      { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "llm":      { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "datasets": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "analysis": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
   },
   "bindings": {
-    "search": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
-    "web":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
-    "llm":    { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
+    "search":   { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "web":      { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "llm":      { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "datasets": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" },
+    "analysis": { "transport": "streamable_http", "endpoint": "http://stub-mcp:8765", "path": "/mcp" }
   }
 }

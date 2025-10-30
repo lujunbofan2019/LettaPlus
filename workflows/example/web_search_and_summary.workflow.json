@@ -1,25 +1,34 @@
 {
   "workflow_schema_version": "2.2.0",
-  "workflow_id": "71c76b4d-c004-4910-a789-466241d1170c",
-  "workflow_name": "Web Research and Summary",
-  "description": "DAG + ephemeral workers. Spawns a worker from .af v2 template and loads two skills per Task.",
+  "workflow_id": "b2a6321f-4d41-4b17-9fef-5cb89c981b60",
+  "workflow_name": "Market Intelligence and Action Plan",
+  "description": "Multi-stage research, synthesis, and planning workflow using diverse skills and MCP tools.",
   "version": "1.0.0",
   "created_at": "2025-09-22T12:00:00Z",
   "updated_at": "2025-09-22T12:00:00Z",
   "author": "example",
   "tags": [
     "demo",
-    "research"
+    "research",
+    "planning"
   ],
   "workflow_input_schema": {
     "type": "object",
     "properties": {
       "topic": {
         "type": "string"
+      },
+      "company": {
+        "type": "string"
+      },
+      "audience": {
+        "type": "string"
       }
     },
     "required": [
-      "topic"
+      "topic",
+      "company",
+      "audience"
     ]
   },
   "af_imports": [
@@ -30,49 +39,186 @@
   ],
   "skill_imports": [
     {
-      "uri": "file://skills/web.search.json"
+      "uri": "file://skills/plan.research_scope.json"
     },
     {
-      "uri": "file://skills/summarize.json"
+      "uri": "file://skills/research.news.json"
+    },
+    {
+      "uri": "file://skills/research.web.json"
+    },
+    {
+      "uri": "file://skills/research.company.json"
+    },
+    {
+      "uri": "file://skills/analyze.synthesis.json"
+    },
+    {
+      "uri": "file://skills/write.briefing.json"
+    },
+    {
+      "uri": "file://skills/plan.actions.json"
+    },
+    {
+      "uri": "file://skills/qa.review.json"
+    },
+    {
+      "uri": "file://skills/write.summary.json"
     }
   ],
   "asl": {
-    "Comment": "Two-step plan: Research -> Summarize",
-    "StartAt": "Research",
+    "Comment": "End-to-end market intelligence brief creation",
+    "StartAt": "DefineScope",
     "Version": "1.0",
     "States": {
-      "Research": {
+      "DefineScope": {
         "Type": "Task",
-        "Comment": "Search the web for the topic and collect sources",
+        "Comment": "Clarify the research scope and success metrics",
         "AgentBinding": {
           "agent_template_ref": {
             "name": "agent_template_worker@1.0.0"
           },
           "skills": [
-            "skill://web.search@1.0.0"
+            "skill://plan.research_scope@0.1.0"
           ]
         },
         "Parameters": {
-          "query": "$.topic"
+          "topic.$": "$.topic",
+          "constraints": "Focus on near-term go-to-market decisions"
         },
-        "ResultPath": "$.research",
-        "Next": "Summarize"
+        "ResultPath": "$.scope",
+        "Next": "GatherHeadlines"
       },
-      "Summarize": {
+      "GatherHeadlines": {
         "Type": "Task",
-        "Comment": "Summarize the collected sources into a brief memo",
+        "Comment": "Collect relevant news coverage and supporting context",
         "AgentBinding": {
           "agent_template_ref": {
             "name": "agent_template_worker@1.0.0"
           },
           "skills": [
-            "skill://summarize@1.0.0"
+            "skill://research.news@0.1.0",
+            "skill://research.web@0.1.0"
           ]
         },
         "Parameters": {
-          "sources": "$.research.results"
+          "topic.$": "$.topic",
+          "maxResults": 5
         },
-        "ResultPath": "$.summary",
+        "ResultPath": "$.news",
+        "Next": "FetchCompanyProfile"
+      },
+      "FetchCompanyProfile": {
+        "Type": "Task",
+        "Comment": "Pull structured intel on the focal company",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://research.company@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "company.$": "$.company"
+        },
+        "ResultPath": "$.companyProfile",
+        "Next": "SynthesizeInsights"
+      },
+      "SynthesizeInsights": {
+        "Type": "Task",
+        "Comment": "Derive themes and risks from research artifacts",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://analyze.synthesis@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "insights": {
+            "news.$": "$.news",
+            "company.$": "$.companyProfile",
+            "scope.$": "$.scope"
+          }
+        },
+        "ResultPath": "$.analysis",
+        "Next": "DraftBriefing"
+      },
+      "DraftBriefing": {
+        "Type": "Task",
+        "Comment": "Prepare executive briefing for stakeholders",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://write.briefing@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "themes.$": "$.analysis.themes",
+          "audience.$": "$.audience"
+        },
+        "ResultPath": "$.briefing",
+        "Next": "PlanActions"
+      },
+      "PlanActions": {
+        "Type": "Task",
+        "Comment": "Recommend prioritized next steps",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://plan.actions@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "objectives.$": "$.topic",
+          "insights.$": "$.analysis.themes"
+        },
+        "ResultPath": "$.actionPlan",
+        "Next": "QualityReview"
+      },
+      "QualityReview": {
+        "Type": "Task",
+        "Comment": "Run QA review on briefing and action plan",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://qa.review@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "draft.$": "States.Format('Briefing: {0}\nActions: {1}', $.briefing.briefing, $.actionPlan.actions)",
+          "criteria": [
+            "Clarity",
+            "Quantitative support",
+            "Actionability"
+          ]
+        },
+        "ResultPath": "$.qa",
+        "Next": "SummarizePackage"
+      },
+      "SummarizePackage": {
+        "Type": "Task",
+        "Comment": "Create short executive digest of outputs",
+        "AgentBinding": {
+          "agent_template_ref": {
+            "name": "agent_template_worker@1.0.0"
+          },
+          "skills": [
+            "skill://write.summary@0.1.0"
+          ]
+        },
+        "Parameters": {
+          "text.$": "States.Format('Briefing: {0}\nActions: {1}\nQA Status: {2}', $.briefing.briefing, $.actionPlan.actions, $.qa.status)"
+        },
+        "ResultPath": "$.digest",
         "End": true
       }
     }
