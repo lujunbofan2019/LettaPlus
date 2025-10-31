@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY server.py ./server.py
 COPY tools ./tools
 COPY schemas ./schemas
+COPY agents ./agents
 
 # Create default manifests dir inside container
 RUN mkdir -p /app/dcf_manifests
