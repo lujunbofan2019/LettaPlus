@@ -122,11 +122,823 @@ class Procedure(BaseModel):
     )
 
 
+class Location(BaseModel):
+    """A Location represents a physical or virtual place where activities occur.
+
+    Instructions for identifying and extracting locations:
+    1. Look for mentions of physical places (offices, cities, buildings, rooms)
+    2. Identify virtual locations (URLs, servers, cloud regions, repositories)
+    3. Extract location-specific details like addresses or coordinates if mentioned
+    4. Link locations to events or activities that happen there
+    5. Capture the purpose or context of the location
+    """
+
+    name: str = Field(
+        ...,
+        description="Name of the location (e.g., 'Seattle Office', 'AWS us-east-1')."
+    )
+    location_type: str | None = Field(
+        None,
+        description="Type of location (physical, virtual, hybrid)."
+    )
+    address: str | None = Field(
+        None,
+        description="Physical address or URL if applicable."
+    )
+    context: str | None = Field(
+        None,
+        description="Why this location is relevant (e.g., 'primary office', 'production server')."
+    )
+
+
+class Event(BaseModel):
+    """An Event represents a time-bound activity, occurrence, or experience.
+
+    Instructions for identifying and extracting events:
+    1. Look for scheduled activities (meetings, launches, deadlines, milestones)
+    2. Identify past occurrences worth remembering (incidents, releases, changes)
+    3. Extract temporal information (dates, times, durations)
+    4. Note participants or stakeholders involved
+    5. Capture outcomes or significance of the event
+    """
+
+    name: str = Field(
+        ...,
+        description="Name or title of the event (e.g., 'Sprint Planning', 'Product Launch')."
+    )
+    event_type: str | None = Field(
+        None,
+        description="Type of event (meeting, deadline, milestone, incident, release)."
+    )
+    date: str | None = Field(
+        None,
+        description="When the event occurred or will occur (ISO format preferred)."
+    )
+    participants: str | None = Field(
+        None,
+        description="Who was or will be involved (comma-separated names or roles)."
+    )
+    outcome: str | None = Field(
+        None,
+        description="Result or significance of the event if known."
+    )
+
+
+class Organization(BaseModel):
+    """An Organization represents a company, institution, group, or formal entity.
+
+    Instructions for identifying and extracting organizations:
+    1. Look for company names, institutions, or formal groups
+    2. Identify departments, teams, or organizational units
+    3. Extract relationship context (client, vendor, partner, competitor)
+    4. Note industry, size, or other relevant characteristics
+    5. Capture the organization's role or significance in the context
+    """
+
+    name: str = Field(
+        ...,
+        description="Name of the organization (e.g., 'Acme Corp', 'Engineering Team')."
+    )
+    org_type: str | None = Field(
+        None,
+        description="Type of organization (company, team, department, institution)."
+    )
+    relationship: str | None = Field(
+        None,
+        description="Relationship to the user or project (client, vendor, partner, internal)."
+    )
+    industry: str | None = Field(
+        None,
+        description="Industry or domain if mentioned (e.g., 'fintech', 'healthcare')."
+    )
+
+
+class Document(BaseModel):
+    """A Document represents information content in various forms.
+
+    Instructions for identifying and extracting documents:
+    1. Look for references to specific documents (files, articles, books, videos)
+    2. Identify document titles, authors, or unique identifiers
+    3. Extract format information (PDF, video, article, code, specification)
+    4. Note document location (URL, file path, repository) if mentioned
+    5. Capture the document's purpose or relevance
+    """
+
+    title: str = Field(
+        ...,
+        description="Title or name of the document."
+    )
+    document_type: str | None = Field(
+        None,
+        description="Type of document (article, book, video, specification, code, report)."
+    )
+    author: str | None = Field(
+        None,
+        description="Author or creator if mentioned."
+    )
+    location: str | None = Field(
+        None,
+        description="Where the document can be found (URL, file path, repository)."
+    )
+    summary: str | None = Field(
+        None,
+        description="Brief summary of the document's content or purpose."
+    )
+
+
+class Topic(BaseModel):
+    """A Topic represents a subject of conversation, interest, or knowledge domain.
+
+    This is a FALLBACK entity type - use more specific types when possible.
+
+    Instructions for identifying and extracting topics:
+    1. Use this when no more specific entity type applies
+    2. Identify subjects, themes, or areas of discussion
+    3. Capture conceptual categories or knowledge domains
+    4. Extract relationships between topics (subtopics, related topics)
+    5. Note why this topic is relevant in the context
+    """
+
+    name: str = Field(
+        ...,
+        description="Name of the topic (e.g., 'Machine Learning', 'API Design')."
+    )
+    category: str | None = Field(
+        None,
+        description="Broader category this topic belongs to."
+    )
+    relevance: str | None = Field(
+        None,
+        description="Why this topic matters in the current context."
+    )
+
+
+class Object(BaseModel):
+    """An Object represents a physical item, tool, device, or possession.
+
+    This is a FALLBACK entity type - use more specific types when possible.
+
+    Instructions for identifying and extracting objects:
+    1. Use this when no more specific entity type applies
+    2. Look for mentions of physical items (devices, tools, equipment)
+    3. Identify possessions or assets being discussed
+    4. Extract relevant attributes (model, version, condition)
+    5. Note the object's purpose or significance
+    """
+
+    name: str = Field(
+        ...,
+        description="Name or identifier of the object."
+    )
+    object_type: str | None = Field(
+        None,
+        description="Type or category of object (device, tool, equipment, asset)."
+    )
+    model: str | None = Field(
+        None,
+        description="Model or version if applicable."
+    )
+    owner: str | None = Field(
+        None,
+        description="Who owns or is responsible for this object."
+    )
+
+
+class Person(BaseModel):
+    """A Person represents an individual mentioned in conversations or documents.
+
+    Instructions for identifying and extracting people:
+    1. Look for names of individuals (teammates, clients, stakeholders, users)
+    2. Capture their role, title, or relationship when mentioned
+    3. Extract contact information if provided (email, phone, username)
+    4. Link people to projects they work on, requirements they own, or events they attend
+    5. Note any preferences, expertise, or responsibilities associated with them
+    """
+
+    name: str = Field(
+        ...,
+        description="Full name of the person."
+    )
+    role: str | None = Field(
+        None,
+        description="Their role, title, or position (e.g., 'Product Manager', 'Senior Developer')."
+    )
+    email: str | None = Field(
+        None,
+        description="Email address if mentioned."
+    )
+    team: str | None = Field(
+        None,
+        description="Team, department, or organization they belong to."
+    )
+    expertise: str | None = Field(
+        None,
+        description="Areas of expertise or specialization if mentioned."
+    )
+
+
+class Project(BaseModel):
+    """A Project represents a software project, product, initiative, or major effort.
+
+    Instructions for identifying and extracting projects:
+    1. Look for project names mentioned explicitly (e.g., "working on ProjectX", "CloudSync initiative")
+    2. Identify codebases, repositories, products, or services being developed
+    3. Extract project metadata like status, timeline, or technology stack
+    4. Link projects to requirements, people working on them, and organizations owning them
+    5. Capture the project's purpose, goals, or business value when mentioned
+    """
+
+    name: str = Field(
+        ...,
+        description="The name of the project."
+    )
+    description: str = Field(
+        ...,
+        description="Brief description of what the project does or aims to achieve."
+    )
+    status: str | None = Field(
+        None,
+        description="Current status (e.g., 'Active', 'Planning', 'On Hold', 'Completed', 'Cancelled')."
+    )
+    tech_stack: str | None = Field(
+        None,
+        description="Primary technologies, frameworks, or platforms used (e.g., 'Python, FastAPI, Neo4j')."
+    )
+    timeline: str | None = Field(
+        None,
+        description="Timeline information if mentioned (e.g., 'Q4 2024', '6-month project')."
+    )
+
+
+class Technology(BaseModel):
+    """A Technology represents a tool, library, framework, platform, language, or technical system.
+
+    Instructions for identifying and extracting technologies:
+    1. Look for mentions of programming languages, frameworks, libraries, or tools
+    2. Identify platforms, databases, cloud services, or infrastructure components
+    3. Extract version numbers or specifications if mentioned
+    4. Note the use case or purpose in the context
+    5. Capture relationships with projects or preferences about the technology
+    """
+
+    name: str = Field(
+        ...,
+        description="Name of the technology (e.g., 'Python', 'Neo4j', 'AWS Lambda')."
+    )
+    category: str | None = Field(
+        None,
+        description="Category (e.g., 'programming language', 'database', 'framework', 'cloud service')."
+    )
+    version: str | None = Field(
+        None,
+        description="Version number or specification if mentioned (e.g., 'Python 3.11', 'Neo4j 5.x')."
+    )
+    use_case: str | None = Field(
+        None,
+        description="What it's used for in this context (e.g., 'backend API', 'knowledge graph storage')."
+    )
+
+
+class Bug(BaseModel):
+    """A Bug represents a defect, issue, error, or problem in a system or project.
+
+    Instructions for identifying and extracting bugs:
+    1. Look for mentions of errors, defects, issues, or problems in systems
+    2. Extract bug descriptions including symptoms and error messages
+    3. Identify severity or priority when mentioned
+    4. Note the current status (open, in progress, fixed, verified, closed)
+    5. Link bugs to affected components, projects, or people assigned to fix them
+    """
+
+    description: str = Field(
+        ...,
+        description="Clear description of the bug, including symptoms or error messages."
+    )
+    severity: str | None = Field(
+        None,
+        description="Severity level (e.g., 'Critical', 'High', 'Medium', 'Low', 'Blocker')."
+    )
+    status: str | None = Field(
+        None,
+        description="Current status (e.g., 'Open', 'In Progress', 'Fixed', 'Verified', 'Closed')."
+    )
+    affected_component: str | None = Field(
+        None,
+        description="Which component, feature, or system is affected (e.g., '/api/sync endpoint')."
+    )
+    assigned_to: str | None = Field(
+        None,
+        description="Person or team assigned to fix this bug."
+    )
+
+
+class APIEndpoint(BaseModel):
+    """An APIEndpoint represents a specific API endpoint or route in a system.
+
+    Instructions for identifying and extracting API endpoints:
+    1. Look for URL paths or route definitions (e.g., "/api/users", "GET /projects/{id}")
+    2. Extract HTTP methods (GET, POST, PUT, DELETE, PATCH)
+    3. Capture authentication or authorization requirements if mentioned
+    4. Note rate limits, request/response formats, or special behaviors
+    5. Link endpoints to projects, services, or documentation they belong to
+    """
+
+    path: str = Field(
+        ...,
+        description="The URL path of the endpoint (e.g., '/api/v1/users', '/sync/{file_id}')."
+    )
+    method: str = Field(
+        ...,
+        description="HTTP method (GET, POST, PUT, DELETE, PATCH, OPTIONS)."
+    )
+    description: str = Field(
+        ...,
+        description="What this endpoint does (e.g., 'Retrieves user profile information')."
+    )
+    auth_required: bool | None = Field(
+        None,
+        description="Whether authentication is required (true/false)."
+    )
+    rate_limit: str | None = Field(
+        None,
+        description="Rate limiting info if mentioned (e.g., '100 requests per minute', '1000/hour')."
+    )
+
+
+class Skill(BaseModel):
+    """A Skill represents a transferable, version-controlled capability that can be loaded into agents.
+
+    Instructions for identifying and extracting skills:
+    1. Look for mentions of reusable capabilities, tools, or functions agents can use
+    2. Extract skill identity (name, version, UUID, manifest ID)
+    3. Capture skill metadata (author, tags, risk level, permissions)
+    4. Note which tools, directives, or data sources the skill requires
+    5. Track skill lifecycle events (discovery, loading, execution, unloading)
+    6. Link skills to workflows that use them and agents that load them
+    7. Record performance metrics (success rate, latency, error types)
+    """
+
+    manifest_id: str = Field(
+        ...,
+        description="Unique manifest identifier (e.g., 'web.search@1.0.0')."
+    )
+    name: str = Field(
+        ...,
+        description="Human-readable skill name (e.g., 'web.search')."
+    )
+    version: str = Field(
+        ...,
+        description="Semantic version (e.g., '1.0.0', '2.1.3-beta')."
+    )
+    uuid: str | None = Field(
+        None,
+        description="UUID for this specific skill version."
+    )
+    description: str = Field(
+        ...,
+        description="What this skill does and when to use it."
+    )
+    author: str | None = Field(
+        None,
+        description="Team or individual who authored this skill."
+    )
+    risk_level: str | None = Field(
+        None,
+        description="Risk assessment (low, medium, high, critical)."
+    )
+    tags: str | None = Field(
+        None,
+        description="Comma-separated tags for categorization (e.g., 'search, research, web')."
+    )
+
+
+class Workflow(BaseModel):
+    """A Workflow represents a state machine that orchestrates multi-step tasks using skills.
+
+    Instructions for identifying and extracting workflows:
+    1. Look for mentions of multi-step processes, SOPs, or orchestrated tasks
+    2. Extract workflow identity (name, version, starting state)
+    3. Identify the states/steps in the workflow and their sequencing
+    4. Note which skills each state requires
+    5. Track workflow execution history (success/failure, duration, bottlenecks)
+    6. Link workflows to the problems they solve and the skills they compose
+    7. Capture adaptations (workflow forked, states added/removed, skills swapped)
+    """
+
+    name: str = Field(
+        ...,
+        description="Workflow name (e.g., 'research-and-summarize', 'invoice-reconciliation')."
+    )
+    version: str = Field(
+        ...,
+        description="Semantic version of this workflow (e.g., '1.0.0')."
+    )
+    description: str = Field(
+        ...,
+        description="What problem this workflow solves."
+    )
+    starting_state: str | None = Field(
+        None,
+        description="The initial state/step where execution begins."
+    )
+    total_states: int | None = Field(
+        None,
+        description="Number of states/steps in this workflow."
+    )
+    complexity: str | None = Field(
+        None,
+        description="Workflow complexity (simple, moderate, complex, highly-complex)."
+    )
+    status: str | None = Field(
+        None,
+        description="Workflow status (draft, approved, deprecated, archived)."
+    )
+
+
+class WorkflowExecution(BaseModel):
+    """A WorkflowExecution represents a specific run instance of a workflow.
+
+    Instructions for identifying and extracting workflow executions:
+    1. Look for mentions of workflow runs, executions, or instantiations
+    2. Extract execution metadata (execution ID, start/end time, duration)
+    3. Identify the workflow being executed and its version
+    4. Track execution outcomes (success, failure, partial completion)
+    5. Note which agents participated and which skills were loaded
+    6. Capture performance metrics (latency per state, retries, errors)
+    7. Link executions to their parent workflows and resulting knowledge
+    """
+
+    execution_id: str = Field(
+        ...,
+        description="Unique identifier for this execution instance."
+    )
+    workflow_name: str = Field(
+        ...,
+        description="Name of the workflow being executed."
+    )
+    workflow_version: str = Field(
+        ...,
+        description="Version of the workflow executed."
+    )
+    status: str = Field(
+        ...,
+        description="Execution status (pending, running, completed, failed, timeout)."
+    )
+    start_time: str | None = Field(
+        None,
+        description="When execution started (ISO timestamp)."
+    )
+    end_time: str | None = Field(
+        None,
+        description="When execution completed or failed (ISO timestamp)."
+    )
+    duration_seconds: float | None = Field(
+        None,
+        description="Total execution duration in seconds."
+    )
+    outcome: str | None = Field(
+        None,
+        description="Summary of execution outcome or result."
+    )
+
+
+class WorkflowState(BaseModel):
+    """A WorkflowState represents a single step or state within a workflow.
+
+    Instructions for identifying and extracting workflow states:
+    1. Look for mentions of workflow steps, tasks, or states
+    2. Extract state identity (name, type: task/choice/parallel/wait)
+    3. Note which skills this state requires
+    4. Track state dependencies (which states must complete before this one)
+    5. Capture state performance (execution time, retry count, failure patterns)
+    6. Link states to their parent workflow and the agents that execute them
+    """
+
+    state_name: str = Field(
+        ...,
+        description="Name of this state/step (e.g., 'Research', 'Summarize')."
+    )
+    state_type: str = Field(
+        ...,
+        description="State type (task, choice, parallel, map, wait, succeed, fail)."
+    )
+    workflow_name: str = Field(
+        ...,
+        description="Parent workflow this state belongs to."
+    )
+    required_skills: str | None = Field(
+        None,
+        description="Comma-separated list of skills required (e.g., 'web.search@1.0.0, summarize@2.1.0')."
+    )
+    next_state: str | None = Field(
+        None,
+        description="The next state to transition to upon success."
+    )
+    is_terminal: bool | None = Field(
+        None,
+        description="Whether this is a terminal state (end of workflow)."
+    )
+
+
+class Agent(BaseModel):
+    """An Agent represents a fungible worker that can load skills and execute tasks.
+
+    Instructions for identifying and extracting agents:
+    1. Look for mentions of worker agents, agent instances, or agent templates
+    2. Extract agent identity (agent ID, template reference)
+    3. Note whether the agent is ephemeral or persistent
+    4. Track which skills the agent currently has loaded
+    5. Capture agent lifecycle events (provisioning, task acquisition, completion)
+    6. Link agents to workflow executions they participated in
+    7. Record agent performance (tasks completed, success rate, average latency)
+    """
+
+    agent_id: str = Field(
+        ...,
+        description="Unique identifier for this agent instance."
+    )
+    agent_template: str | None = Field(
+        None,
+        description="Template this agent was derived from (e.g., 'agent-template@worker@1.0.0')."
+    )
+    agent_type: str | None = Field(
+        None,
+        description="Type of agent (planner, worker, reviewer, reflector, curator)."
+    )
+    lifecycle_status: str | None = Field(
+        None,
+        description="Current lifecycle status (provisioning, idle, executing, completed, terminated)."
+    )
+    loaded_skills: str | None = Field(
+        None,
+        description="Comma-separated list of currently loaded skills."
+    )
+    is_ephemeral: bool | None = Field(
+        None,
+        description="Whether this agent is ephemeral (created for one workflow) or persistent."
+    )
+
+
+class ProblemDecomposition(BaseModel):
+    """A ProblemDecomposition represents breaking a complex problem into subtasks.
+
+    Instructions for identifying and extracting problem decompositions:
+    1. Look for discussions of complex problems being analyzed
+    2. Extract the high-level problem statement
+    3. Identify the subtasks or components identified
+    4. Note the decomposition strategy used (sequential, parallel, hierarchical)
+    5. Track which skills or workflows address each subtask
+    6. Link decompositions to the resulting workflows they inspired
+    7. Capture learning (what decomposition patterns work for which problem types)
+    """
+
+    problem_statement: str = Field(
+        ...,
+        description="The original complex problem being decomposed."
+    )
+    decomposition_strategy: str | None = Field(
+        None,
+        description="Strategy used (divide-and-conquer, pipeline, map-reduce, dependency-graph)."
+    )
+    num_subtasks: int | None = Field(
+        None,
+        description="Number of subtasks identified."
+    )
+    subtasks: str | None = Field(
+        None,
+        description="List or description of subtasks identified."
+    )
+    complexity_estimate: str | None = Field(
+        None,
+        description="Estimated complexity (low, medium, high)."
+    )
+    resulting_workflow: str | None = Field(
+        None,
+        description="Name of workflow created to solve this decomposed problem."
+    )
+
+
+class SkillPerformanceMetric(BaseModel):
+    """Performance metrics and telemetry for a specific skill usage.
+
+    Instructions for identifying and extracting skill performance metrics:
+    1. Look for execution outcomes linked to specific skills
+    2. Extract quantitative metrics (success rate, latency, error count)
+    3. Note the context (which workflow, which problem type)
+    4. Track trends over time (improving, degrading, stable)
+    5. Link metrics to skill versions for comparison
+    6. Identify failure patterns or common error types
+    """
+
+    skill_manifest_id: str = Field(
+        ...,
+        description="The skill being measured (e.g., 'web.search@1.0.0')."
+    )
+    metric_type: str = Field(
+        ...,
+        description="Type of metric (success_rate, avg_latency, error_rate, retry_count)."
+    )
+    value: float = Field(
+        ...,
+        description="The metric value (e.g., 0.95 for 95% success rate, 2.5 for 2.5s latency)."
+    )
+    context: str | None = Field(
+        None,
+        description="Context where measured (e.g., 'invoice-reconciliation workflow')."
+    )
+    measurement_period: str | None = Field(
+        None,
+        description="Time period for this measurement (e.g., 'last 30 days', 'Q4 2024')."
+    )
+    sample_size: int | None = Field(
+        None,
+        description="Number of executions measured."
+    )
+
+
+class CapabilityGap(BaseModel):
+    """A CapabilityGap represents an identified need for a skill the system doesn't have.
+
+    Instructions for identifying and extracting capability gaps:
+    1. Look for situations where agents couldn't complete tasks
+    2. Extract what capability was missing (skill name, function needed)
+    3. Note the context (which problem, which workflow step)
+    4. Track resolution status (identified, skill-discovered, skill-acquired, gap-closed)
+    5. Link gaps to newly acquired skills that filled them
+    6. Capture the trigger event (failure, manual identification, planning analysis)
+    """
+
+    missing_capability: str = Field(
+        ...,
+        description="Description of the missing capability (e.g., 'PDF parsing', 'SQL query generation')."
+    )
+    context: str = Field(
+        ...,
+        description="Where this gap was identified (workflow name, problem type)."
+    )
+    status: str = Field(
+        ...,
+        description="Gap status (identified, searching, skill-found, skill-acquired, closed)."
+    )
+    trigger_event: str | None = Field(
+        None,
+        description="What triggered identification (task-failure, planning-analysis, manual-report)."
+    )
+    proposed_skill: str | None = Field(
+        None,
+        description="Skill that could fill this gap if identified."
+    )
+    priority: str | None = Field(
+        None,
+        description="Priority level (critical, high, medium, low)."
+    )
+
+
+class WorkflowAdaptation(BaseModel):
+    """A WorkflowAdaptation represents modifying an existing workflow for a new use case.
+
+    Instructions for identifying and extracting workflow adaptations:
+    1. Look for situations where existing workflows are being reused or modified
+    2. Extract source workflow (what was adapted) and target workflow (result)
+    3. Identify what changed (skills swapped, states added/removed, sequencing altered)
+    4. Note the reason for adaptation (new problem type, skill upgrade, performance issue)
+    5. Track adaptation success (did it work better, worse, or equivalently)
+    6. Link adaptations to learning about workflow patterns
+    """
+
+    source_workflow: str = Field(
+        ...,
+        description="Original workflow that was adapted (name@version)."
+    )
+    target_workflow: str = Field(
+        ...,
+        description="New workflow created through adaptation (name@version)."
+    )
+    adaptation_type: str = Field(
+        ...,
+        description="Type of adaptation (skill-swap, state-addition, state-removal, resequencing, parallelization)."
+    )
+    changes_description: str = Field(
+        ...,
+        description="What specifically changed in the adaptation."
+    )
+    reason: str | None = Field(
+        None,
+        description="Why this adaptation was needed (new-problem-type, performance-issue, skill-upgrade)."
+    )
+    outcome: str | None = Field(
+        None,
+        description="Result of adaptation (successful, failed, improved-performance, degraded-performance)."
+    )
+
+
+class LearningInsight(BaseModel):
+    """A LearningInsight represents accumulated knowledge about what works and why.
+
+    Instructions for identifying and extracting learning insights:
+    1. Look for reflections, post-mortems, or analysis of past executions
+    2. Extract the insight (a pattern, best practice, or lesson learned)
+    3. Note the evidence supporting this insight (execution data, metrics)
+    4. Track confidence level (how certain are we this is correct)
+    5. Link insights to the workflows/skills they inform
+    6. Capture applicability (when does this insight apply)
+    """
+
+    insight_statement: str = Field(
+        ...,
+        description="The insight or lesson learned (e.g., 'Skill X works better than Y for problem type Z')."
+    )
+    insight_type: str = Field(
+        ...,
+        description="Type of insight (best-practice, failure-pattern, optimization-opportunity, skill-comparison)."
+    )
+    confidence: str | None = Field(
+        None,
+        description="Confidence level (low, medium, high, validated)."
+    )
+    supporting_evidence: str | None = Field(
+        None,
+        description="Evidence supporting this insight (execution IDs, metric summaries)."
+    )
+    applicability: str | None = Field(
+        None,
+        description="When/where this insight applies (problem types, workflows, contexts)."
+    )
+    source: str | None = Field(
+        None,
+        description="How this insight was derived (human-observation, automated-analysis, reflector-agent)."
+    )
+
+
 ENTITY_TYPES: dict[str, BaseModel] = {
-    'Requirement': Requirement,  # type: ignore
-    'Preference': Preference,  # type: ignore
-    'Procedure': Procedure,  # type: ignore
+    # User-centric
+    "Preference": Preference,         # type: ignore
+    "Person": Person,                 # type: ignore
+
+    # Work-related
+    "Requirement": Requirement,       # type: ignore
+    "Procedure": Procedure,           # type: ignore
+    "Project": Project,               # type: ignore
+    "Organization": Organization,     # type: ignore
+
+    # Technical
+    "Technology": Technology,         # type: ignore
+    "APIEndpoint": APIEndpoint,       # type: ignore
+    "Bug": Bug,                       # type: ignore
+    "Document": Document,             # type: ignore
+
+    # Contextual
+    "Location": Location,             # type: ignore
+    "Event": Event,                   # type: ignore
+
+    # Fallbacks
+    "Topic": Topic,                   # type: ignore
+    "Object": Object,                 # type: ignore
+
+    # DCF
+    "Skill": Skill,                                     # type: ignore
+    "SkillPerformanceMetric": SkillPerformanceMetric,   # type: ignore
+    "CapabilityGap": CapabilityGap,                     # type: ignore
+    "Workflow": Workflow,                               # type: ignore
+    "WorkflowExecution": WorkflowExecution,             # type: ignore
+    "WorkflowState": WorkflowState,                     # type: ignore
+    "WorkflowAdaptation": WorkflowAdaptation,           # type: ignore
+    "Agent": Agent,                                     # type: ignore
+    "ProblemDecomposition": ProblemDecomposition,       # type: ignore
+    "LearningInsight": LearningInsight,                 # type: ignore
 }
+
+
+'''
+1. Skill relationships:
+
+Workflow --USES_SKILL--> Skill
+WorkflowState --REQUIRES_SKILL--> Skill
+Agent --HAS_LOADED--> Skill
+Skill --HAS_PERFORMANCE_METRIC--> SkillPerformanceMetric
+CapabilityGap --FILLED_BY--> Skill
+
+2. Workflow relationships:
+
+Workflow --HAS_STATE--> WorkflowState
+WorkflowExecution --INSTANTIATES--> Workflow
+Agent --EXECUTED--> WorkflowExecution
+Workflow --ADAPTED_FROM--> Workflow (via WorkflowAdaptation)
+ProblemDecomposition --RESULTED_IN--> Workflow
+
+3. Learning relationships:
+
+LearningInsight --APPLIES_TO--> Workflow
+LearningInsight --INFORMS--> Skill
+SkillPerformanceMetric --SUPPORTS--> LearningInsight
+WorkflowExecution --GENERATED--> LearningInsight
+
+4. Problem-solving relationships:
+
+ProblemDecomposition --USES_SKILL--> Skill (for each subtask)
+CapabilityGap --IDENTIFIED_IN--> WorkflowExecution
+WorkflowAdaptation --ADDRESSES--> CapabilityGap
+'''
 
 
 # Type definitions for API responses

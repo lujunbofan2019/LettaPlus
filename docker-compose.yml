@@ -1,6 +1,6 @@
 services:
   letta:
-    image: letta/letta:0.13.0
+    image: letta/letta:0.14.0
     entrypoint: ["/entrypoint.sh"]
     command: ["./letta/server/startup.sh"]
     ports:
@@ -14,7 +14,7 @@ services:
     volumes:
       - ./requirements.txt:/app/requirements.txt
       - ./entrypoint.sh:/entrypoint.sh
-      - ~/.letta+/pgdata:/var/lib/postgresql/data
+      - ${HOME}/.letta+/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8283/v1/health/ || exit 1"]
       interval: 5s
@@ -45,22 +45,24 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ~/.letta+/redis-data:/data
+      - ${HOME}/.letta+/redis-data:/data
     restart: unless-stopped
 
   neo4j:
     image: neo4j:5.26.9
     ports:
-      - "7474:7474" # HTTP
-      - "7687:7687" # Bolt
+    # only updated external ports to avoid windows preserved port range
+    # internal ports remain the same, and services in the same stack consume internal ports
+      - "8484:7474" # HTTP
+      - "8687:7687" # Bolt
     environment:
       - NEO4J_AUTH=neo4j/demodemo
       - NEO4J_server_memory_heap_initial__size=512m
       - NEO4J_server_memory_heap_max__size=1G
       - NEO4J_server_memory_pagecache_size=512m
     volumes:
-      - ~/.letta+/neo4j_data:/data
-      - ~/.letta+/neo4j_logs:/logs
+      - ${HOME}/.letta+/neo4j_data:/data
+      - ${HOME}/.letta+/neo4j_logs:/logs
     healthcheck:
       test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:7474" ]
       interval: 10s
@@ -83,7 +85,7 @@ services:
       - NEO4J_PASSWORD=demodemo
     ports:
       - "8000:8000"
-    command: [ "uv", "run", "graphiti_mcp_server_v2.py", "--transport", "sse", "--host", "0.0.0.0" ]
+    command: [ "uv", "run", "graphiti_mcp_server_v2.py", "--transport", "sse", "--host", "0.0.0.0", "--use-custom-entities" ]
 
   chroma-mcp:
     build:
@@ -92,7 +94,7 @@ services:
     ports:
       - "3002:3002"
     volumes:
-      - ~/.letta+/chroma:/data
+      - ${HOME}/.letta+/chroma:/data
     environment:
       - CHROMA_CLIENT_TYPE=persistent
       - CHROMA_DATA_DIR=/data
@@ -106,7 +108,7 @@ services:
       context: ./dcf_mcp
       dockerfile: Dockerfile
     ports:
-      - "7337:7337"
+      - "8337:8337"
     environment:
       # Point the tool at the mounted manifests dir
       DCF_MANIFESTS_DIR: /app/generated/manifests
