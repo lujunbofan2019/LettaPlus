@@ -24,7 +24,7 @@ ENV DCF_MANIFESTS_DIR=/app/generated/manifests \
     SKILL_PREVIEW_CHARS=400 \
     PYTHONUNBUFFERED=1
 
-EXPOSE 7337
+EXPOSE 8337
 
 # Streamable HTTP via ASGI (uvicorn)
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7337"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8337"]

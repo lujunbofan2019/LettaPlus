@@ -46,4 +46,4 @@ USER app
 EXPOSE 8000
 
 # Command to run the application
-CMD [ "uv", "run", "graphiti_mcp_server_v2.py", "--transport", "sse", "--host", "0.0.0.0", "--use-custom-entities" ]
+CMD [ "uv", "run", "graphiti_mcp_server_v2.py", "--host", "0.0.0.0", "--use-custom-entities" ]

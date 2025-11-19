@@ -36,3 +36,4 @@ pnpm-debug.log*
 .env
 
 dcf_core_lib.egg-info/
+/graphiti/.venv/

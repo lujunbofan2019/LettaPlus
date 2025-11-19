@@ -36,6 +36,9 @@ from graphiti_core.search.search_config_recipes import (
 from graphiti_core.search.search_filters import SearchFilters
 from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 
+from urllib.parse import urlparse
+from graphiti_core.driver.falkordb_driver import FalkorDriver
+
 load_dotenv()
 
 
@@ -1279,6 +1282,26 @@ class Neo4jConfig(BaseModel):
         )
 
 
+
+uri = os.environ.get("FALKORDB_URI", "redis://falkordb:6379")
+parsed = urlparse(uri)
+password = os.environ.get("FALKORDB_PASSWORD")
+if password in (None, "", "null"):
+    password = None
+
+username = os.environ.get("FALKORDB_USERNAME", "default")  # Redis default user is "default"
+
+print("Connecting to FalkorDB with", parsed.hostname, parsed.port, repr(username), repr(password), os.environ.get("FALKORDB_DATABASE"))
+
+falkor_driver = FalkorDriver(
+    host=parsed.hostname or "falkordb",
+    port=parsed.port or 6379,
+    username=username,
+    password=password,
+    database=os.environ.get("FALKORDB_DATABASE", "lettaplus"),
+)
+
+
 class GraphitiConfig(BaseModel):
     """Configuration for Graphiti client.
 
@@ -1325,7 +1348,7 @@ class GraphitiConfig(BaseModel):
 class MCPConfig(BaseModel):
     """Configuration for MCP server."""
 
-    transport: str = 'sse'  # Default to SSE transport
+    transport: str = 'sse'
 
     @classmethod
     def from_cli(cls, args: argparse.Namespace) -> 'MCPConfig':
@@ -1401,9 +1424,12 @@ async def initialize_graphiti():
 
         # Initialize Graphiti client
         graphiti_client = Graphiti(
-            uri=config.neo4j.uri,
-            user=config.neo4j.user,
-            password=config.neo4j.password,
+            # replace neo4j with fldb
+            # uri=config.neo4j.uri,
+            # user=config.neo4j.user,
+            # password=config.neo4j.password,
+            graph_driver = falkor_driver,
+
             llm_client=llm_client,
             embedder=embedder_client,
             max_coroutines=SEMAPHORE_LIMIT,
@@ -2052,7 +2078,7 @@ async def run_mcp_server():
     mcp_config = await initialize_server()
     logger.info(f'Starting MCP server with transport: {mcp_config.transport}')
     await mcp.run_async(
-        transport=mcp_config.transport,
+        transport='http', # use streamable http rather than sse
         host=mcp.settings.host or '0.0.0.0',
         port=mcp.settings.port or 8000
     )

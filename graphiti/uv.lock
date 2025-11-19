@@ -31,6 +31,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233 },
+]
+
+[[package]]
 name = "attrs"
 version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -372,6 +381,19 @@ wheels = [
 ]
 
 [[package]]
+name = "falkordb"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "redis" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/3b/2d846e877aec104841c523e99e1c584d4aa2423a0e31afee5b8369e3c8c5/falkordb-1.2.0.tar.gz", hash = "sha256:ce57365b86722d538e75aa5d438de67ecd8eb9478da612506d9812cd7f182d0b", size = 28976 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/81/1265e623c989bb8c12fe566645bad390d04e66fa62b84ca656e5bafce1f0/falkordb-1.2.0-py3-none-any.whl", hash = "sha256:7572d9cc377735d22efc52fe6fe73c7a435422c827b6ea3ca223a850a77be12e", size = 34737 },
+]
+
+[[package]]
 name = "fastmcp"
 version = "2.10.5"
 source = { registry = "https://pypi.org/simple" }
@@ -410,6 +432,32 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/68/46/252e3e1451fedcae07199e38feee668e5aabacbc38a53c2603c137612089/graphiti_core-0.17.4.tar.gz", hash = "sha256:eb731fa4ca811b7e2e87ff7ccd4023e89483b4e8cb198b6ee6d033f202a032ce", size = 6463249 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/d0/e109292f4a7873be064c93a5293112cca598e80d0c892f15252ba7e0b2ae/graphiti_core-0.17.4-py3-none-any.whl", hash = "sha256:e9834e6bcf67890f372de72679f2736929371dd00cdf33aaa18d82bdd2dc25a2", size = 136762 },
+]
+
+[package.optional-dependencies]
+falkordb = [
+    { name = "falkordb" },
+]
+
+[[package]]
+name = "graphiti-mcp"
+version = "0.4.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "fastmcp" },
+    { name = "graphiti-core", extra = ["falkordb"] },
+    { name = "mcp", extra = ["cli"] },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.21.0" },
+    { name = "fastmcp", specifier = ">=2.10.0" },
+    { name = "graphiti-core", extras = ["falkordb"], specifier = ">=0.17.3" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.11.0" },
+    { name = "openai", specifier = ">=1.68.2" },
 ]
 
 [[package]]
@@ -604,27 +652,6 @@ wheels = [
 cli = [
     { name = "python-dotenv" },
     { name = "typer" },
-]
-
-[[package]]
-name = "mcp-server"
-version = "0.4.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "azure-identity" },
-    { name = "fastmcp" },
-    { name = "graphiti-core" },
-    { name = "mcp", extra = ["cli"] },
-    { name = "openai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "azure-identity", specifier = ">=1.21.0" },
-    { name = "fastmcp", specifier = ">=2.10.0" },
-    { name = "graphiti-core", specifier = ">=0.17.3" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.11.0" },
-    { name = "openai", specifier = ">=1.68.2" },
 ]
 
 [[package]]
@@ -1066,6 +1093,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c9/31/097f2e132c4f16d99a22bfb777e0fd88bd8e1c634304e102f313af69ace5/pywin32-311-cp314-cp314-win32.whl", hash = "sha256:b7a2c10b93f8986666d0c803ee19b5990885872a7de910fc460f9b0c2fbf92ee", size = 8840714 },
     { url = "https://files.pythonhosted.org/packages/90/4b/07c77d8ba0e01349358082713400435347df8426208171ce297da32c313d/pywin32-311-cp314-cp314-win_amd64.whl", hash = "sha256:3aca44c046bd2ed8c90de9cb8427f581c479e594e99b5c0bb19b29c10fd6cb87", size = 9656800 },
     { url = "https://files.pythonhosted.org/packages/c0/d2/21af5c535501a7233e734b8af901574572da66fcc254cb35d0609c9080dd/pywin32-311-cp314-cp314-win_arm64.whl", hash = "sha256:a508e2d9025764a8270f93111a970e1d0fbfc33f4153b388bb649b7eec4f9b42", size = 8932540 },
+]
+
+[[package]]
+name = "redis"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
+    { name = "pyjwt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/cf/128b1b6d7086200c9f387bd4be9b2572a30b90745ef078bd8b235042dc9f/redis-5.3.1.tar.gz", hash = "sha256:ca49577a531ea64039b5a36db3d6cd1a0c7a60c34124d46924a45b956e8cf14c", size = 4626200 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/26/5c5fa0e83c3621db835cfc1f1d789b37e7fa99ed54423b5f519beb931aa7/redis-5.3.1-py3-none-any.whl", hash = "sha256:dc1909bd24669cc31b5f67a039700b16ec30571096c5f1f0d9d2324bff31af97", size = 272833 },
 ]
 
 [[package]]
