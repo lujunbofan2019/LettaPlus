@@ -9,7 +9,7 @@ dependencies = [
     "fastmcp>=2.10.0", # streamable http is supported since 2.x
     "openai>=1.68.2",
     # "graphiti-core>=0.17.3", # only works for neo4j
-    "graphiti-core[falkordb]>=0.17.3", # add fldb specific dependencies
+    "graphiti-core[falkordb]>=0.23.1", # add fldb specific dependencies
     "azure-identity>=1.21.0",
     "mcp[cli]>=1.11.0",
 ]
