@@ -22,23 +22,23 @@ services:
       retries: 20
       start_period: 10s
 
-  shim:
-    build:
-      context: ./shim
-      dockerfile: Dockerfile.proxy
-    environment:
-      PYTHONUNBUFFERED: "1"
-      UPSTREAM_BASE: http://letta:8283
-      ADE_ORIGINS: https://app.letta.com,http://localhost
-      ENABLE_RUNTIME_IDENTITY_INJECTION: "true"
-      LOG_LEVEL: INFO
-      WIRE_DEBUG: "false"
-    command: >
-      uvicorn proxy:app --host 0.0.0.0 --port 9283 --log-level info --no-access-log
-    ports: ["9283:9283"]
-    depends_on:
-      letta:
-        condition: service_healthy
+#  shim:
+#    build:
+#      context: ./shim
+#      dockerfile: Dockerfile.proxy
+#    environment:
+#      PYTHONUNBUFFERED: "1"
+#      UPSTREAM_BASE: http://letta:8283
+#      ADE_ORIGINS: https://app.letta.com,http://localhost
+#      ENABLE_RUNTIME_IDENTITY_INJECTION: "true"
+#      LOG_LEVEL: INFO
+#      WIRE_DEBUG: "false"
+#    command: >
+#      uvicorn proxy:app --host 0.0.0.0 --port 9283 --log-level info --no-access-log
+#    ports: ["9283:9283"]
+#    depends_on:
+#      letta:
+#        condition: service_healthy
 
   redis:
     image: redis/redis-stack:latest
@@ -48,27 +48,25 @@ services:
       - ${HOME}/.letta+/redis-data:/data
     restart: unless-stopped
 
-  neo4j:
-    image: neo4j:5.26.9
-    ports:
-    # only updated external ports to avoid windows preserved port range
-    # internal ports remain the same, and services in the same stack consume internal ports
-      - "8484:7474" # HTTP
-      - "8687:7687" # Bolt
-    environment:
-      - NEO4J_AUTH=neo4j/demodemo
-      - NEO4J_server_memory_heap_initial__size=512m
-      - NEO4J_server_memory_heap_max__size=1G
-      - NEO4J_server_memory_pagecache_size=512m
-    volumes:
-      - ${HOME}/.letta+/neo4j_data:/data
-      - ${HOME}/.letta+/neo4j_logs:/logs
-    healthcheck:
-      test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:7474" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+#  neo4j:
+#    image: neo4j:5.26.9
+#    ports:
+#      - "8484:7474" # HTTP
+#      - "8687:7687" # Bolt
+#    environment:
+#      - NEO4J_AUTH=neo4j/demodemo
+#      - NEO4J_server_memory_heap_initial__size=512m
+#      - NEO4J_server_memory_heap_max__size=1G
+#      - NEO4J_server_memory_pagecache_size=512m
+#    volumes:
+#      - ${HOME}/.letta+/neo4j_data:/data
+#      - ${HOME}/.letta+/neo4j_logs:/logs
+#    healthcheck:
+#      test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:7474" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 30s
 
   falkordb:
     image: falkordb/falkordb:latest
