@@ -318,7 +318,7 @@ class Person(BaseModel):
     5. Note any preferences, expertise, or responsibilities associated with them
     """
 
-    person_name: str = Field(
+    full_name: str = Field(
         ...,
         description="Full name of the person."
     )
@@ -493,7 +493,7 @@ class Skill(BaseModel):
         ...,
         description="Semantic version (e.g., '1.0.0', '2.1.3-beta')."
     )
-    uuid: str | None = Field(
+    skill_id: str | None = Field(
         None,
         description="UUID for this specific skill version."
     )
