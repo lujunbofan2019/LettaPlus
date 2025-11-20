@@ -110,7 +110,7 @@ services:
       - FALKORDB_DATABASE=lettaplus
     ports:
       - "8000:8000"
-    command: [ "uv", "run", "graphiti_mcp_server_v2.py", "--host", "0.0.0.0", "--use-custom-entities" ]
+    command: [ "uv", "run", "main.py", "--config", "config/config-docker-falkordb.yaml" ]
 
   chroma-mcp:
     build:
