@@ -243,7 +243,7 @@ class Document(BaseModel):
         None,
         description="Where the document can be found (URL, file path, repository)."
     )
-    summary: str | None = Field(
+    content_summary: str | None = Field(
         None,
         description="Brief summary of the document's content or purpose."
     )
