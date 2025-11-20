@@ -136,7 +136,7 @@ class Location(BaseModel):
     5. Capture the purpose or context of the location
     """
 
-    name: str = Field(
+    location_name: str = Field(
         ...,
         description="Name of the location (e.g., 'Seattle Office', 'AWS us-east-1')."
     )
@@ -165,7 +165,7 @@ class Event(BaseModel):
     5. Capture outcomes or significance of the event
     """
 
-    name: str = Field(
+    event_name: str = Field(
         ...,
         description="Name or title of the event (e.g., 'Sprint Planning', 'Product Launch')."
     )
@@ -198,7 +198,7 @@ class Organization(BaseModel):
     5. Capture the organization's role or significance in the context
     """
 
-    name: str = Field(
+    org_name: str = Field(
         ...,
         description="Name of the organization (e.g., 'Acme Corp', 'Engineering Team')."
     )
@@ -262,7 +262,7 @@ class Topic(BaseModel):
     5. Note why this topic is relevant in the context
     """
 
-    name: str = Field(
+    topic_name: str = Field(
         ...,
         description="Name of the topic (e.g., 'Machine Learning', 'API Design')."
     )
@@ -289,7 +289,7 @@ class Object(BaseModel):
     5. Note the object's purpose or significance
     """
 
-    name: str = Field(
+    object_name: str = Field(
         ...,
         description="Name or identifier of the object."
     )
@@ -318,7 +318,7 @@ class Person(BaseModel):
     5. Note any preferences, expertise, or responsibilities associated with them
     """
 
-    name: str = Field(
+    person_name: str = Field(
         ...,
         description="Full name of the person."
     )
@@ -351,7 +351,7 @@ class Project(BaseModel):
     5. Capture the project's purpose, goals, or business value when mentioned
     """
 
-    name: str = Field(
+    project_name: str = Field(
         ...,
         description="The name of the project."
     )
@@ -384,7 +384,7 @@ class Technology(BaseModel):
     5. Capture relationships with projects or preferences about the technology
     """
 
-    name: str = Field(
+    technology_name: str = Field(
         ...,
         description="Name of the technology (e.g., 'Python', 'Neo4j', 'AWS Lambda')."
     )
@@ -485,7 +485,7 @@ class Skill(BaseModel):
         ...,
         description="Unique manifest identifier (e.g., 'web.search@1.0.0')."
     )
-    name: str = Field(
+    skill_name: str = Field(
         ...,
         description="Human-readable skill name (e.g., 'web.search')."
     )
@@ -528,7 +528,7 @@ class Workflow(BaseModel):
     7. Capture adaptations (workflow forked, states added/removed, skills swapped)
     """
 
-    name: str = Field(
+    workflow_name: str = Field(
         ...,
         description="Workflow name (e.g., 'research-and-summarize', 'invoice-reconciliation')."
     )
@@ -659,6 +659,10 @@ class Agent(BaseModel):
     agent_id: str = Field(
         ...,
         description="Unique identifier for this agent instance."
+    )
+    agent_name: str = Field(
+        ...,
+        description="Name of this agent instance (e.g., 'Planner', 'Worker', 'Reflector')."
     )
     agent_template: str | None = Field(
         None,
