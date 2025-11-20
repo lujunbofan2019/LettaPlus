@@ -1,0 +1,116 @@
+# Graphiti MCP Server Configuration for Docker with FalkorDB
+# Customized to include local entity types.
+
+server:
+  transport: "http"  # HTTP transport (SSE is deprecated)
+  host: "0.0.0.0"
+  port: 8000
+
+llm:
+  provider: "openai"  # Options: openai, azure_openai, anthropic, gemini, groq
+  model: "${MODEL_NAME:gpt-5-mini}"
+  max_tokens: 4096
+
+  providers:
+    openai:
+      api_key: ${OPENAI_API_KEY}
+      api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
+      organization_id: ${OPENAI_ORGANIZATION_ID:}
+
+    azure_openai:
+      api_key: ${AZURE_OPENAI_API_KEY}
+      api_url: ${AZURE_OPENAI_ENDPOINT}
+      api_version: ${AZURE_OPENAI_API_VERSION:2024-10-21}
+      deployment_name: ${AZURE_OPENAI_DEPLOYMENT}
+      use_azure_ad: ${USE_AZURE_AD:false}
+
+    anthropic:
+      api_key: ${ANTHROPIC_API_KEY}
+      api_url: ${ANTHROPIC_API_URL:https://api.anthropic.com}
+      max_retries: 3
+
+    gemini:
+      api_key: ${GOOGLE_API_KEY}
+      project_id: ${GOOGLE_PROJECT_ID:}
+      location: ${GOOGLE_LOCATION:us-central1}
+
+    groq:
+      api_key: ${GROQ_API_KEY}
+      api_url: ${GROQ_API_URL:https://api.groq.com/openai/v1}
+
+embedder:
+  provider: "openai"  # Options: openai, azure_openai, gemini, voyage
+  model: "${EMBEDDER_MODEL:text-embedding-3-small}"
+  dimensions: ${EMBEDDING_DIMENSIONS:1536}
+
+  providers:
+    openai:
+      api_key: ${OPENAI_API_KEY}
+      api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
+      organization_id: ${OPENAI_ORGANIZATION_ID:}
+
+    azure_openai:
+      api_key: ${AZURE_OPENAI_API_KEY}
+      api_url: ${AZURE_OPENAI_EMBEDDINGS_ENDPOINT}
+      api_version: ${AZURE_OPENAI_API_VERSION:2024-10-21}
+      deployment_name: ${AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT}
+      use_azure_ad: ${USE_AZURE_AD:false}
+
+    gemini:
+      api_key: ${GOOGLE_API_KEY}
+      project_id: ${GOOGLE_PROJECT_ID:}
+      location: ${GOOGLE_LOCATION:us-central1}
+
+    voyage:
+      api_key: ${VOYAGE_API_KEY}
+      api_url: ${VOYAGE_API_URL:https://api.voyageai.com/v1}
+      model: "voyage-3"
+
+database:
+  provider: "falkordb"  # Using FalkorDB for this configuration
+
+  providers:
+    falkordb:
+      uri: ${FALKORDB_URI:redis://falkordb:6379}
+      password: ${FALKORDB_PASSWORD:}
+      database: ${FALKORDB_DATABASE:default_db}
+
+graphiti:
+  group_id: ${GRAPHITI_GROUP_ID:main}
+  episode_id_prefix: ${EPISODE_ID_PREFIX:}
+  user_id: ${USER_ID:mcp_user}
+  # Built-in entity types from the official Graphiti MCP server are always loaded.
+  # Only list bespoke entity types here to extend the ontology. These entries become
+  # lightweight Pydantic models at runtime whose name and description come from the
+  # YAML; they do not add custom fields unless you define a class in src/models/entity_types.py.
+  entity_types:
+    - name: "Person"
+      description: "Individuals with roles, contact info, expertise, and relationships to work."
+    - name: "Project"
+      description: "Projects, products, or initiatives with goals, status, tech stack, or timelines."
+    - name: "Technology"
+      description: "Tools, frameworks, platforms, languages, or infrastructure components."
+    - name: "Bug"
+      description: "Defects or issues with severity, status, affected components, and owners."
+    - name: "APIEndpoint"
+      description: "API routes with methods, auth, rate limits, and behaviors."
+    - name: "Skill"
+      description: "Reusable, versioned agent skills with metadata and requirements."
+    - name: "Workflow"
+      description: "State-machine style task orchestrations using skills."
+    - name: "WorkflowExecution"
+      description: "Specific runs of workflows with outcomes, triggers, or errors."
+    - name: "WorkflowState"
+      description: "States or steps within a workflow and transitions."
+    - name: "Agent"
+      description: "Agents with identities, capabilities, loaded skills, and context."
+    - name: "ProblemDecomposition"
+      description: "Breakdowns of complex problems into subproblems or tasks."
+    - name: "SkillPerformanceMetric"
+      description: "Metrics describing skill performance such as latency, success, and errors."
+    - name: "CapabilityGap"
+      description: "Missing capabilities, tools, or knowledge blocking progress."
+    - name: "WorkflowAdaptation"
+      description: "Changes made to workflows in response to conditions or results."
+    - name: "LearningInsight"
+      description: "Lessons, takeaways, or improvements learned from execution."
