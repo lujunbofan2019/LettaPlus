@@ -224,6 +224,7 @@ class GraphitiService:
                     falkor_driver = FalkorDriver(
                         host=db_config['host'],
                         port=db_config['port'],
+                        username="default",
                         password=db_config['password'],
                         database=db_config['database'],
                     )

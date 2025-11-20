@@ -15,7 +15,7 @@ llm:
     openai:
       api_key: ${OPENAI_API_KEY}
       api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
-      organization_id: ${OPENAI_ORGANIZATION_ID:}
+      organization_id: ${OPENAI_ORGANIZATION_ID}
 
     azure_openai:
       api_key: ${AZURE_OPENAI_API_KEY}
@@ -47,7 +47,7 @@ embedder:
     openai:
       api_key: ${OPENAI_API_KEY}
       api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
-      organization_id: ${OPENAI_ORGANIZATION_ID:}
+      organization_id: ${OPENAI_ORGANIZATION_ID}
 
     azure_openai:
       api_key: ${AZURE_OPENAI_API_KEY}
@@ -72,12 +72,12 @@ database:
   providers:
     falkordb:
       uri: ${FALKORDB_URI:redis://falkordb:6379}
-      password: ${FALKORDB_PASSWORD:}
-      database: ${FALKORDB_DATABASE:default_db}
+      password: ${FALKORDB_PASSWORD:demodemo}
+      database: ${FALKORDB_DATABASE:lettaplus}
 
 graphiti:
   group_id: ${GRAPHITI_GROUP_ID:main}
-  episode_id_prefix: ${EPISODE_ID_PREFIX:}
+  episode_id_prefix: ${EPISODE_ID_PREFIX:dcf}
   user_id: ${USER_ID:mcp_user}
   # Built-in entity types from the official Graphiti MCP server are always loaded.
   # Only list bespoke entity types here to extend the ontology. These entries become

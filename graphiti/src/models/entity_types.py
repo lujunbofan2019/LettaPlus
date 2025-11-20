@@ -80,7 +80,7 @@ class Location(BaseModel):
     7. Note any significant activities or events associated with the location
     """
 
-    name: str = Field(
+    location_name: str = Field(
         ...,
         description='The name or identifier of the location',
     )
@@ -104,7 +104,7 @@ class Event(BaseModel):
     8. Extract both recurring events and one-time occurrences
     """
 
-    name: str = Field(
+    event_name: str = Field(
         ...,
         description='The name or title of the event',
     )
@@ -130,7 +130,7 @@ class Object(BaseModel):
     7. Avoid extracting objects that are better classified as Documents or other types
     """
 
-    name: str = Field(
+    object_name: str = Field(
         ...,
         description='The name or identifier of the object',
     )
@@ -156,7 +156,7 @@ class Topic(BaseModel):
     7. Avoid extracting topics that are better classified as Events, Documents, or Organizations
     """
 
-    name: str = Field(
+    topic_name: str = Field(
         ...,
         description='The name or identifier of the topic',
     )
@@ -179,7 +179,7 @@ class Organization(BaseModel):
     7. Extract both large entities and small groups if formally organized
     """
 
-    name: str = Field(
+    org_name: str = Field(
         ...,
         description='The name of the organization',
     )
