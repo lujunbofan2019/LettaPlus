@@ -21,11 +21,18 @@
       "description": "Retrieve structured profile",
       "json_schema": {
         "name": "company_profile",
-        "description": "Retrieve structured profile",
+        "description": "Mock company intelligence lookup",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "company": {
+              "type": "string",
+              "description": "Company name"
+            }
+          },
+          "required": [
+            "company"
+          ]
         }
       },
       "definition": {

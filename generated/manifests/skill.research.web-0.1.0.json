@@ -22,11 +22,18 @@
       "description": "Core search tool",
       "json_schema": {
         "name": "search_query",
-        "description": "Core search tool",
+        "description": "Mock web search query tool",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "q": {
+              "type": "string",
+              "description": "Search query"
+            }
+          },
+          "required": [
+            "q"
+          ]
         }
       },
       "definition": {
@@ -41,11 +48,18 @@
       "description": "Get page content",
       "json_schema": {
         "name": "web_fetch",
-        "description": "Get page content",
+        "description": "Mock HTTP fetcher",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "URL to fetch"
+            }
+          },
+          "required": [
+            "url"
+          ]
         }
       },
       "definition": {

@@ -20,11 +20,20 @@
       "description": "Cluster insights into themes",
       "json_schema": {
         "name": "insight_compare",
-        "description": "Cluster insights into themes",
+        "description": "Mock synthesis tool combining research",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "insights": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "insights"
+          ]
         }
       },
       "definition": {

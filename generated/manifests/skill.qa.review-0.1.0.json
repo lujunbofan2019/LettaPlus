@@ -20,11 +20,23 @@
       "description": "Review deliverable quality",
       "json_schema": {
         "name": "llm_quality_review",
-        "description": "Review deliverable quality",
+        "description": "Mock quality assurance reviewer",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "draft": {
+              "type": "string"
+            },
+            "criteria": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "draft"
+          ]
         }
       },
       "definition": {
