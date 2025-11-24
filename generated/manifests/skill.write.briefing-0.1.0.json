@@ -20,20 +20,11 @@
       "description": "Draft executive briefing",
       "json_schema": {
         "name": "llm_briefing",
-        "description": "Mock briefing writer",
+        "description": "Draft executive briefing",
         "parameters": {
           "type": "object",
-          "properties": {
-            "themes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "audience": {
-              "type": "string"
-            }
-          }
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
