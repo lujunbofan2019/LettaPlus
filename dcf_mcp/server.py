@@ -36,12 +36,12 @@ from tools.redis_json.json_merge import json_merge as _json_merge
 from tools.redis_json.json_move import json_move as _json_move
 from tools.redis_json.json_read import json_read as _json_read
 from tools.redis_json.json_set import json_set as _json_set
-from file_system.create_directory import create_directory as _create_directory
-from file_system.delete_path import delete_path as _delete_path
-from file_system.list_directory import list_directory as _list_directory
-from file_system.move_path import move_path as _move_path
-from file_system.read_file import read_file as _read_file
-from file_system.write_file import write_file as _write_file
+from tools.file_system.create_directory import create_directory as _create_directory
+from tools.file_system.delete_path import delete_path as _delete_path
+from tools.file_system.list_directory import list_directory as _list_directory
+from tools.file_system.move_path import move_path as _move_path
+from tools.file_system.read_file import read_file as _read_file
+from tools.file_system.write_file import write_file as _write_file
 
 
 mcp = FastMCP(name="dcf-mcp-server")
