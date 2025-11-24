@@ -27,6 +27,7 @@ def _sanitize_tool_name(name: str) -> str:
 
 def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                      refs_csv_path: str = "/app/skills_src/skill_tool_refs.csv",
+                     mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv",
                      out_dir: str = "/app/generated/manifests",
                      catalog_path: str = "/app/generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
     """
@@ -52,6 +53,10 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
            - toolName   (required)
            - required   ("true"/"false"; default true)
            - notes      (free text; ignored by generator, kept only for authoring)
+
+      3) mcp_tools_csv_path
+         Optional; when present, the params schema and descriptions from this CSV
+         (same format as stub_mcp) are used to enrich requiredTools entries.
 
     Outputs:
       - One manifest JSON per skill at: {out_dir}/{manifestId}.json
@@ -125,6 +130,7 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
     try:
         skills_csv = Path(skills_csv_path)
         refs_csv = Path(refs_csv_path)
+        mcp_tools_csv = Path(mcp_tools_csv_path)
         out_dir_p = Path(out_dir)  # keep as given; verify with _ensure_under_dir on actual files
         catalog_p = Path(catalog_path) if catalog_path else Path(DEFAULT_CATALOG_FILENAME)
 
@@ -171,7 +177,43 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
             raw = (row.get("skillPackageId") or row.get("packageId") or "").strip()
             return raw or None
 
+        def load_mcp_tool_schemas(csv_path: Path) -> Dict[tuple, Dict[str, Any]]:
+            """Index params schemas by (serverId, toolName), preserving sanitized/unsanitized keys."""
+
+            schema_index: Dict[tuple, Dict[str, Any]] = {}
+            if not csv_path.exists():
+                return schema_index
+
+            with csv_path.open("r", encoding="utf-8", newline="") as f:
+                for row in csv.DictReader(f):
+                    sid = (row.get("serverId") or "").strip()
+                    tool_raw = (row.get("toolName") or "").strip()
+                    if not sid or not tool_raw:
+                        continue
+
+                    tool_name = _sanitize_tool_name(tool_raw)
+                    params_schema = parse_json_cell(row.get("paramsSchema.json"), {"type": "object", "properties": {}})
+                    if not isinstance(params_schema, dict):
+                        params_schema = {"type": "object", "properties": {}}
+
+                    desc = (row.get("description") or "").strip()
+                    if not desc:
+                        desc = f"Tool '{tool_raw}' from server '{sid}'"
+
+                    schema_obj = {
+                        "name": tool_name,
+                        "description": desc,
+                        "parameters": params_schema
+                    }
+
+                    for key in {tool_name, tool_raw}:
+                        schema_index[(sid, key)] = schema_obj
+
+            return schema_index
+
         # Load refs index
+        tool_schema_index = load_mcp_tool_schemas(mcp_tools_csv)
+
         refs_index: Dict[str, List[Dict[str, Any]]] = {}
         sanitized_tracker: Dict[str, Dict[str, Dict[str, str]]] = {}
         if refs_csv.exists():
@@ -247,6 +289,9 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                     desc_text = ref.get("description") or f"Tool '{original_tname}' from server '{sid}'"
                     schema_obj = ref.get("schema")
                     if not isinstance(schema_obj, dict):
+                        schema_obj = tool_schema_index.get((sid, tname)) or tool_schema_index.get((sid, original_tname))
+
+                    if not isinstance(schema_obj, dict):
                         schema_obj = {
                             "name": tname,
                             "description": desc_text,
@@ -256,6 +301,9 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                                 "required": []
                             }
                         }
+
+                    if not schema_obj.get("description"):
+                        schema_obj["description"] = desc_text
                     schema_obj["name"] = tname
                     if original_tname and original_tname != tname:
                         schema_obj.setdefault("meta", {})["originalToolName"] = original_tname
@@ -303,18 +351,23 @@ def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
                 with out_path.open("w", encoding="utf-8") as mf:
                     json.dump(manifest, mf, indent=2, ensure_ascii=False)
 
+                try:
+                    manifest_path_for_catalog = out_path.relative_to(Path.cwd()).as_posix()
+                except ValueError:
+                    manifest_path_for_catalog = out_path.as_posix()
+
                 out["written_files"].append(str(out_path))
                 out["manifests"].append({
                     "manifestId": manifest_id,
                     "skillName": name,
                     "skillVersion": ver,
-                    "path": str(out_path)
+                    "path": manifest_path_for_catalog
                 })
                 catalog["skills"].append({
                     "manifestId": manifest_id,
                     "skillName": name,
                     "skillVersion": ver,
-                    "path": str(out_path)
+                    "path": manifest_path_for_catalog
                 })
 
         with catalog_p.open("w", encoding="utf-8") as cf:

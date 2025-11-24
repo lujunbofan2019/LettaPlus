@@ -21,11 +21,17 @@
       "description": "LLM-generated research outline",
       "json_schema": {
         "name": "llm_outline",
-        "description": "LLM-generated research outline",
+        "description": "Mock planning LLM",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "topic": {
+              "type": "string"
+            },
+            "constraints": {
+              "type": "string"
+            }
+          }
         }
       },
       "definition": {
