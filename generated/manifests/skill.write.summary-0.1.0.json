@@ -20,11 +20,18 @@
       "description": "Summarize input text",
       "json_schema": {
         "name": "llm_summarize",
-        "description": "Summarize input text",
+        "description": "Mock summarisation endpoint",
         "parameters": {
           "type": "object",
-          "properties": {},
-          "required": []
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Text to summarise"
+            }
+          },
+          "required": [
+            "text"
+          ]
         }
       },
       "definition": {

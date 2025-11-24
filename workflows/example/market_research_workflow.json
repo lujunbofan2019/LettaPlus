@@ -33,37 +33,37 @@
   },
   "af_imports": [
     {
-      "uri": "/app/agents/worker.af",
+      "uri": "file:///app/agents/worker.af",
       "version": "2"
     }
   ],
   "skill_imports": [
     {
-      "uri": "/app/generated/manifests/skill.plan.research_scope-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.plan.research_scope-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.research.news-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.research.news-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.research.web-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.research.web-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.research.company-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.research.company-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.analyze.synthesis-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.analyze.synthesis-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.write.briefing-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.write.briefing-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.plan.actions-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.plan.actions-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.qa.review-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.qa.review-0.1.0.json"
     },
     {
-      "uri": "/app/generated/manifests/skill.write.summary-0.1.0.json"
+      "uri": "file:///app/generated/manifests/skill.write.summary-0.1.0.json"
     }
   ],
   "asl": {

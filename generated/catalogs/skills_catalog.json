@@ -4,55 +4,55 @@
       "manifestId": "skill.research.web@0.1.0",
       "skillName": "research.web",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.research.web-0.1.0.json"
+      "path": "generated/manifests/skill.research.web-0.1.0.json"
     },
     {
       "manifestId": "skill.write.summary@0.1.0",
       "skillName": "write.summary",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.write.summary-0.1.0.json"
+      "path": "generated/manifests/skill.write.summary-0.1.0.json"
     },
     {
       "manifestId": "skill.plan.research_scope@0.1.0",
       "skillName": "plan.research_scope",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.plan.research_scope-0.1.0.json"
+      "path": "generated/manifests/skill.plan.research_scope-0.1.0.json"
     },
     {
       "manifestId": "skill.research.news@0.1.0",
       "skillName": "research.news",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.research.news-0.1.0.json"
+      "path": "generated/manifests/skill.research.news-0.1.0.json"
     },
     {
       "manifestId": "skill.research.company@0.1.0",
       "skillName": "research.company",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.research.company-0.1.0.json"
+      "path": "generated/manifests/skill.research.company-0.1.0.json"
     },
     {
       "manifestId": "skill.analyze.synthesis@0.1.0",
       "skillName": "analyze.synthesis",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.analyze.synthesis-0.1.0.json"
+      "path": "generated/manifests/skill.analyze.synthesis-0.1.0.json"
     },
     {
       "manifestId": "skill.write.briefing@0.1.0",
       "skillName": "write.briefing",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.write.briefing-0.1.0.json"
+      "path": "generated/manifests/skill.write.briefing-0.1.0.json"
     },
     {
       "manifestId": "skill.plan.actions@0.1.0",
       "skillName": "plan.actions",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.plan.actions-0.1.0.json"
+      "path": "generated/manifests/skill.plan.actions-0.1.0.json"
     },
     {
       "manifestId": "skill.qa.review@0.1.0",
       "skillName": "qa.review",
       "skillVersion": "0.1.0",
-      "path": "/app/generated/manifests/skill.qa.review-0.1.0.json"
+      "path": "generated/manifests/skill.qa.review-0.1.0.json"
     }
   ]
 }
