@@ -137,6 +137,9 @@ services:
     environment:
       # Point the tool at the mounted manifests dir
       DCF_MANIFESTS_DIR: /app/generated/manifests
+      DCF_SCHEMAS_DIR: /app/schemas
+      DCF_IMPORTS_BASE_DIR: /app/workflows
+      DCF_SKILLS_CATALOG: /app/generated/catalogs/skills_catalog.json
       SKILL_PREVIEW_CHARS: "400"
     volumes:
       # Mount skill authoring inputs and generated outputs
@@ -144,6 +147,10 @@ services:
       - ./generated/manifests:/app/generated/manifests
       - ./generated/catalogs:/app/generated/catalogs
       - ./generated/stub:/app/generated/stub
+      # Mount agent templates, schemas, and workflow bundles for default resolution
+      - ./dcf_mcp/agents:/app/agents:ro
+      - ./dcf_mcp/schemas:/app/schemas:ro
+      - ./workflows:/app/workflows:ro
     restart: unless-stopped
 
   stub-mcp:

@@ -96,9 +96,9 @@ def validate_workflow(
         return out
 
     if imports_base_dir is None:
-        imports_base_dir = os.path.dirname(schema_abs)
+        imports_base_dir = os.getenv("DCF_IMPORTS_BASE_DIR", os.path.dirname(schema_abs))
     if skills_base_dir is None:
-        skills_base_dir = imports_base_dir
+        skills_base_dir = os.getenv("DCF_MANIFESTS_DIR", imports_base_dir)
 
     # ---------- 1) JSON Schema validation ----------
     try:
