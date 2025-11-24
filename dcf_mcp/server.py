@@ -36,6 +36,12 @@ from tools.redis_json.json_merge import json_merge as _json_merge
 from tools.redis_json.json_move import json_move as _json_move
 from tools.redis_json.json_read import json_read as _json_read
 from tools.redis_json.json_set import json_set as _json_set
+from file_system.create_directory import create_directory as _create_directory
+from file_system.delete_path import delete_path as _delete_path
+from file_system.list_directory import list_directory as _list_directory
+from file_system.move_path import move_path as _move_path
+from file_system.read_file import read_file as _read_file
+from file_system.write_file import write_file as _write_file
 
 
 mcp = FastMCP(name="dcf-mcp-server")
@@ -412,6 +418,86 @@ def notify_next_worker_agent(workflow_id: str,
 
 
 notify_next_worker_agent.__doc__ = _notify_next_worker_agent.__doc__
+
+
+@mcp.tool()
+def list_directory(path: str = ".",
+                   recursive: bool = False,
+                   include_hidden: bool = False,
+                   max_entries: int | None = None) -> Dict[str, Any]:
+    return _list_directory(
+        path=path,
+        recursive=recursive,
+        include_hidden=include_hidden,
+        max_entries=max_entries,
+    )
+
+
+list_directory.__doc__ = _list_directory.__doc__
+
+
+@mcp.tool()
+def read_file(path: str,
+              offset: int = 0,
+              length: int | None = None,
+              encoding: str = "utf-8") -> Dict[str, Any]:
+    return _read_file(path=path, offset=offset, length=length, encoding=encoding)
+
+
+read_file.__doc__ = _read_file.__doc__
+
+
+@mcp.tool()
+def write_file(path: str,
+               content: str,
+               append: bool = False,
+               encoding: str = "utf-8",
+               create_parents: bool = True) -> Dict[str, Any]:
+    return _write_file(
+        path=path,
+        content=content,
+        append=append,
+        encoding=encoding,
+        create_parents=create_parents,
+    )
+
+
+write_file.__doc__ = _write_file.__doc__
+
+
+@mcp.tool()
+def create_directory(path: str,
+                     parents: bool = True,
+                     exist_ok: bool = True) -> Dict[str, Any]:
+    return _create_directory(path=path, parents=parents, exist_ok=exist_ok)
+
+
+create_directory.__doc__ = _create_directory.__doc__
+
+
+@mcp.tool()
+def delete_path(path: str,
+                recursive: bool = False) -> Dict[str, Any]:
+    return _delete_path(path=path, recursive=recursive)
+
+
+delete_path.__doc__ = _delete_path.__doc__
+
+
+@mcp.tool()
+def move_path(source: str,
+              destination: str,
+              overwrite: bool = False,
+              create_parents: bool = True) -> Dict[str, Any]:
+    return _move_path(
+        source=source,
+        destination=destination,
+        overwrite=overwrite,
+        create_parents=create_parents,
+    )
+
+
+move_path.__doc__ = _move_path.__doc__
 
 
 @mcp.tool()
