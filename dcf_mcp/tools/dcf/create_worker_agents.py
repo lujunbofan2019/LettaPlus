@@ -143,7 +143,8 @@ def create_worker_agents(workflow_json: str,
     imported_index_by_id = {}
     imported_index_by_name = {}
     af_imports = wf.get("af_imports") or []
-    base_dir = Path(imports_base_dir).expanduser() if imports_base_dir else None
+    resolved_base_dir = imports_base_dir or os.getenv("DCF_IMPORTS_BASE_DIR")
+    base_dir = Path(resolved_base_dir).expanduser() if resolved_base_dir else None
 
     for entry in af_imports:
         if not isinstance(entry, str):
