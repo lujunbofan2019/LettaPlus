@@ -421,3 +421,14 @@ Switch this file (or point it to prod URLs) to move from mocks to real backends.
 - `mcp_tools.csv` = “What are the tools’ interfaces?”
 - `mcp_cases.csv` = “What should those tools return in test scenarios?”
 - `registry.json` = “Where do those tools live right now (stub or real)?”
+
+---
+
+How to: fix Windows Hyper-V ports reservation
+
+1. Stop and exit Docker Desktop
+2. Stop WinNAT service `net stop winnat`
+3. Set the new dynamic port range `netsh int ipv4 set dynamicport tcp start=49152 num=16384`
+4. Restart WinNAT `net start winnat`
+5. Confirm the change was effective `netsh int ipv4 show dynamicport tcp`
+6. Reboot machine if needed.
