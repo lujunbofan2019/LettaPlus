@@ -422,6 +422,43 @@ Switch this file (or point it to prod URLs) to move from mocks to real backends.
 - `mcp_cases.csv` = “What should those tools return in test scenarios?”
 - `registry.json` = “Where do those tools live right now (stub or real)?”
 
+### Example workflow: Market Intelligence and Action Plan
+
+The example workflow at `workflows/example/market_research_workflow.json` (schema v2.2.0) shows how the CSV artifacts wire together in practice:
+
+- **Inputs**: `topic`, `company`, and `audience` are validated up front and threaded through each state.
+- **Skills per state**: Each Task state binds to a generated manifest under `generated/manifests/` (e.g., `skill.plan.research_scope`, `skill.research.news`, `skill.research.company`, `skill.analyze.synthesis`, `skill.write.briefing`, `skill.plan.actions`, `skill.qa.review`, `skill.write.summary`). These manifests are produced by `csv_to_manifests.py` using `skills.csv`, `skill_tool_refs.csv`, and `mcp_tools.csv`.
+- **Tool coverage**: The states exercise both search-style tools (`search_query`, `news_headlines`) and structured data lookups (`company_profile`) plus LLM-format tools (`llm_outline`, `llm_briefing`, `llm_action_plan`, `llm_quality_review`, `llm_summarize`). The stub server responds deterministically using the rows in `skills_src/mcp_cases.csv` so each call path has canned outputs for regression tests.
+- **End-to-end reuse**: The same workflow can run against real MCP servers by swapping endpoints in `skills_src/registry.json`; no workflow or manifest edits are required.
+
+### Testing data & scenarios in `skills_src/mcp_cases.csv`
+
+The stub MCP server is driven by the cases in `skills_src/mcp_cases.csv`, which mirror the states in the example workflow. Highlights:
+
+- **Market discovery**: `search_query` cases like `case_market_scan` and `case_competitor_signal` return multi-hit SERP payloads to validate pagination and recency handling.
+- **News intake**: `news_headlines` cases (`case_market_news`, `case_robotics_news`, `case_ai_agents`, `case_ev_market`) provide timestamped headlines so the Summarize and QA steps can reference sources.
+- **Company dossiers**: `company_profile` cases for “Acme Robotics”, “SwiftLift”, “EcoCharge Networks”, and “Northwind Analytics” inject metrics, segments, product lines, and milestones for the `research.company` skill.
+- **Synthesis and writing**: Analysis and LLM cases (`insight_compare`, `llm_outline`, `llm_briefing`, `llm_action_plan`, `llm_quality_review`, `llm_summarize`) include thematic coverage (sustainability, agentic tooling, EV charging, privacy) so the workflow can generate briefings, action plans, QA feedback, and executive digests without live models.
+
+### Do you need to edit the workflow JSON to consume the stub cases?
+
+Short answer: **no edits are required** for the provided scenarios—the workflow already sends the exact `inputs_json` payloads that the stub server matches on. Each Task’s `Parameters` block maps workflow inputs (`topic`, `company`, `audience`) into the tool calls, and those values line up with the sample `inputs_json` rows in `skills_src/mcp_cases.csv` (e.g., `topic` strings for search/news tools and `company` strings for company dossiers).
+
+If you want to target **additional scenarios**, the schema (v2.2.0) does support richer controls without leaving the declarative JSON:
+
+- You can change or augment the `Parameters` for any `Task` state to emit different tool arguments (these must still match the stub case’s `inputs_json` for deterministic responses).
+- You can add new `Task` states (or `Choice`/`Pass` states) to branch into new tools or alternate case IDs; the schema allows composing additional states as long as they follow ASL-compatible constructs.
+- You can include `States.Format` in `Parameters` to derive inputs from prior results (as shown in `QualityReview` and `SummarizePackage`), enabling scenario-specific prompts without code changes.
+
+In other words, the current workflow schema already provides the knobs you need to steer which stub cases are exercised; only adjust the workflow JSON if you add brand-new scenarios that require different tool inputs than those already covered.
+
+**How to run the example with the stub server**
+
+1) Generate artifacts: run `python skills_src/csv_to_manifests.py` and `python skills_src/csv_to_stub_config.py` to refresh manifests and `generated/stub/stub_config.json`.
+2) Start the stub server: launch `stub_mcp/stub_mcp_server.py` (e.g., `python stub_mcp/stub_mcp_server.py --config generated/stub/stub_config.json`).
+3) Point the resolver: ensure `skills_src/registry.json` routes the relevant `serverId`s (e.g., `search`, `datasets`, `llm`) to the stub endpoint.
+4) Execute the workflow: run the `market_research_workflow.json` with your workflow runner; each Task will resolve skills/manifests from `generated/manifests/` and receive deterministic tool responses from the stub server.
+
 ---
 
 How to: fix Windows Hyper-V ports reservation
