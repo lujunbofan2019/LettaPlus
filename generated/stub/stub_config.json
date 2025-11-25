@@ -144,6 +144,88 @@
               "latencyMsOverride": null,
               "errorMode": null,
               "weight": null
+            },
+            {
+              "caseId": "case_agentic_sales",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.q",
+                "value": ".*agentic sales enablement.*"
+              },
+              "response": {
+                "hits": [
+                  {
+                    "title": "Forrester: Agentic Sales Assistants 2025",
+                    "url": "https://forrester.example/agentic-sales-2025"
+                  },
+                  {
+                    "title": "IDC: AI Agents for B2B Pipelines",
+                    "url": "https://idc.example/ai-agents-b2b"
+                  },
+                  {
+                    "title": "Case Study: DealVelocity virtual reps",
+                    "url": "https://casehub.example/dealvelocity-virtual-rep"
+                  }
+                ],
+                "total": 3,
+                "generated_at": "2025-03-05T10:00:00Z"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_ev_infrastructure",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.q",
+                "value": ".*EV charging network.*"
+              },
+              "response": {
+                "hits": [
+                  {
+                    "title": "IEA: Rapid buildout of urban charging",
+                    "url": "https://iea.example/urban-charging"
+                  },
+                  {
+                    "title": "BloombergNEF: Grid impacts of fast charging",
+                    "url": "https://bnef.example/grid-fast-charging"
+                  },
+                  {
+                    "title": "UtilityDive: Policy incentives in 2025",
+                    "url": "https://utilitydive.example/ev-policy-2025"
+                  }
+                ],
+                "total": 3
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_data_privacy",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.q",
+                "value": ".*data privacy compliance.*"
+              },
+              "response": {
+                "hits": [
+                  {
+                    "title": "Gartner: Top privacy automation platforms",
+                    "url": "https://gartner.example/privacy-automation"
+                  },
+                  {
+                    "title": "IAPP: CPRA enforcement trends",
+                    "url": "https://iapp.example/cpra-trends"
+                  }
+                ],
+                "total": 2,
+                "notes": "Weighted toward enterprise readiness"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
             }
           ],
           "meta": {
@@ -266,6 +348,72 @@
                     "url": "https://industryinsight.example/interoperability",
                     "source": "IndustryInsight",
                     "publishedAt": "2025-03-02T05:15:00Z"
+                  }
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_ai_agents",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.topic",
+                "value": ".*agent.*"
+              },
+              "response": {
+                "headlines": [
+                  {
+                    "title": "Enterprise pilots AI agents for revenue ops",
+                    "url": "https://techpulse.example/agent-rev-ops",
+                    "source": "TechPulse",
+                    "publishedAt": "2025-03-05T08:15:00Z"
+                  },
+                  {
+                    "title": "Procurement teams test AI co-pilots",
+                    "url": "https://procurement.example/ai-copilot",
+                    "source": "ProcurementDaily",
+                    "publishedAt": "2025-03-04T13:40:00Z"
+                  },
+                  {
+                    "title": "Analysts flag governance as adoption hurdle",
+                    "url": "https://analystdesk.example/agent-governance",
+                    "source": "AnalystDesk",
+                    "publishedAt": "2025-03-03T06:05:00Z"
+                  }
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_ev_market",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.topic",
+                "value": ".*EV charging.*"
+              },
+              "response": {
+                "headlines": [
+                  {
+                    "title": "Municipalities accelerate fast-charger RFPs",
+                    "url": "https://cities.example/fast-charger-rfp",
+                    "source": "CityWatch",
+                    "publishedAt": "2025-03-04T10:00:00Z"
+                  },
+                  {
+                    "title": "Utilities test vehicle-to-grid pilots",
+                    "url": "https://utilities.example/v2g-pilot",
+                    "source": "GridToday",
+                    "publishedAt": "2025-03-03T14:20:00Z"
+                  },
+                  {
+                    "title": "Charging networks consolidate via M&A",
+                    "url": "https://finance.example/charging-mna",
+                    "source": "FinanceWire",
+                    "publishedAt": "2025-03-02T07:50:00Z"
                   }
                 ]
               },
@@ -536,6 +684,111 @@
               "latencyMsOverride": null,
               "errorMode": null,
               "weight": null
+            },
+            {
+              "caseId": "case_ecocharge",
+              "match": {
+                "strategy": "exact",
+                "expr": "$.company",
+                "value": "EcoCharge Networks"
+              },
+              "response": {
+                "profile": {
+                  "overview": "EcoCharge Networks designs modular EV charging hubs with integrated grid services.",
+                  "metrics": [
+                    {
+                      "label": "Employees",
+                      "value": "180"
+                    },
+                    {
+                      "label": "HQ",
+                      "value": "Denver, CO"
+                    },
+                    {
+                      "label": "Funding",
+                      "value": "$95M Series C (2025)"
+                    }
+                  ],
+                  "customerSegments": [
+                    "Municipal fleets",
+                    "Retail parking operators"
+                  ],
+                  "productLines": [
+                    {
+                      "name": "PulseHub",
+                      "description": "Level 3 fast-charging with battery buffering"
+                    },
+                    {
+                      "name": "GridSync",
+                      "description": "Demand-response and V2G orchestration"
+                    }
+                  ],
+                  "recentMilestones": [
+                    {
+                      "date": "2025-02-12",
+                      "detail": "Won Austin downtown charging tender"
+                    },
+                    {
+                      "date": "2024-11-03",
+                      "detail": "Launched GridSync 2.0 analytics"
+                    }
+                  ]
+                }
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_northwind",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.company",
+                "value": ".*Northwind Analytics.*"
+              },
+              "response": {
+                "profile": {
+                  "overview": "Northwind Analytics provides privacy-aware customer intelligence for regulated industries.",
+                  "metrics": [
+                    {
+                      "label": "Employees",
+                      "value": "320"
+                    },
+                    {
+                      "label": "HQ",
+                      "value": "Toronto, CA"
+                    },
+                    {
+                      "label": "ARR",
+                      "value": "$88M"
+                    }
+                  ],
+                  "customerSegments": [
+                    "Banks",
+                    "Insurers",
+                    "Health systems"
+                  ],
+                  "productLines": [
+                    {
+                      "name": "ComplyIQ",
+                      "description": "Privacy automation for data teams"
+                    },
+                    {
+                      "name": "SignalRoom",
+                      "description": "Consent-aware customer analytics"
+                    }
+                  ],
+                  "recentMilestones": [
+                    {
+                      "date": "2025-01-18",
+                      "detail": "Expanded to EU with Schrems II compliance"
+                    }
+                  ]
+                }
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
             }
           ],
           "meta": {
@@ -621,6 +874,50 @@
               "latencyMsOverride": null,
               "errorMode": null,
               "weight": null
+            },
+            {
+              "caseId": "case_supply_chain",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.insights",
+                "value": ".*supply chain.*"
+              },
+              "response": {
+                "themes": [
+                  "Supply chain resilience",
+                  "Vendor consolidation"
+                ],
+                "risks": [
+                  "Regional capacity shortages",
+                  "Integration friction across legacy WMS"
+                ],
+                "confidence": "high"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_ai_agent",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.insights",
+                "value": ".*agentic.*"
+              },
+              "response": {
+                "themes": [
+                  "Operational co-pilots reduce manual load",
+                  "Governance and access control requirements"
+                ],
+                "risks": [
+                  "Shadow IT deployments",
+                  "Model drift without audit"
+                ],
+                "confidence": "medium"
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
             }
           ],
           "meta": {
@@ -685,6 +982,26 @@
               "latencyMsOverride": null,
               "errorMode": null,
               "weight": null
+            },
+            {
+              "caseId": "case_outline_ev",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.topic",
+                "value": ".*EV charging.*"
+              },
+              "response": {
+                "outline": [
+                  "Clarify grid interconnect constraints",
+                  "Map policy incentives by region",
+                  "Benchmark charger utilisation and uptime",
+                  "Identify target partners (utilities, parking operators)",
+                  "Define ROI model for municipalities"
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
             }
           ],
           "meta": {
@@ -735,6 +1052,20 @@
               },
               "response": {
                 "briefing": "Executive Briefing\n===================\nOpportunities:\n- Sustainability positioning resonates with enterprise RFP criteria.\n- AI-enabled optimisation reduces fulfilment cost by 18% in pilots.\nRisks:\n- Capital expenditure remains a barrier for mid-market prospects.\n- Integration complexity demands stronger SI partnerships.\nRecommended watch-outs: monitor interoperability roadmap and quantify carbon savings."
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_briefing_agents",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.themes",
+                "value": ".*agentic.*"
+              },
+              "response": {
+                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Agentic co-pilots automate 25-40% of revenue ops tasks.\n- Early movers show pipeline hygiene uplift and faster renewal cycles.\nRisks:\n- Access control and audit trails must satisfy compliance.\n- Change management is needed to avoid user backlash."
               },
               "latencyMsOverride": null,
               "errorMode": null,
@@ -809,6 +1140,29 @@
                 "ownerRecommendations": {
                   "product": "Own interoperability roadmap update",
                   "marketing": "Publish sustainability proof-points"
+                }
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_actions_ev",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.objectives",
+                "value": ".*charging.*"
+              },
+              "response": {
+                "actions": [
+                  "Prioritise fast-charger deployments near logistics hubs",
+                  "Co-develop grid services bundle with utility partners",
+                  "Launch pilot measuring dwell-time uplift for retail hosts",
+                  "Publish reliability SLA benchmarks"
+                ],
+                "ownerRecommendations": {
+                  "operations": "Own site-readiness checklist",
+                  "product": "Finalize V2G pricing"
                 }
               },
               "latencyMsOverride": null,
@@ -896,6 +1250,28 @@
               "latencyMsOverride": null,
               "errorMode": null,
               "weight": null
+            },
+            {
+              "caseId": "case_review_privacy",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.draft",
+                "value": ".*privacy.*"
+              },
+              "response": {
+                "issues": [
+                  "Add regulatory citations for CPRA/GDPR",
+                  "Clarify data retention policy and DPIA owner"
+                ],
+                "status": "revise",
+                "suggestedFixes": [
+                  "Reference latest enforcement actions",
+                  "Name responsible data protection officer"
+                ]
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
             }
           ],
           "meta": {
@@ -944,6 +1320,20 @@
               },
               "response": {
                 "summary": "Executive digest: Market momentum is accelerating for sustainable modular automation; top opportunities lie in enterprise retail pilots while capital intensity and integration remain key risks. Next steps focus on quantifying ROI and formalising partner enablement."
+              },
+              "latencyMsOverride": null,
+              "errorMode": null,
+              "weight": null
+            },
+            {
+              "caseId": "case_summary_finance",
+              "match": {
+                "strategy": "regex",
+                "expr": "$.text",
+                "value": ".*finance.*"
+              },
+              "response": {
+                "summary": "Finance-focused digest: strong capital efficiency but dependence on regulatory clarity; continue tracking incentive timelines."
               },
               "latencyMsOverride": null,
               "errorMode": null,
