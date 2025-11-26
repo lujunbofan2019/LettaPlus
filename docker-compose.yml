@@ -138,7 +138,7 @@ services:
       # Point the tool at the mounted manifests dir
       DCF_MANIFESTS_DIR: /app/generated/manifests
       DCF_SCHEMAS_DIR: /app/schemas
-      DCF_IMPORTS_BASE_DIR: /app/workflows
+      DCF_WORKFLOWS_DIR: /app/workflows
       DCF_SKILLS_CATALOG: /app/generated/catalogs/skills_catalog.json
       SKILL_PREVIEW_CHARS: "400"
     volumes:

@@ -3,9 +3,16 @@ import json
 import os
 from urllib.parse import urlparse
 
+
+DEFAULT_WORKFLOW_SCHEMA = os.getenv(
+    "DCF_WORKFLOW_SCHEMA", "/app/schemas/letta_asl_workflow_schema_v2.2.0.json"
+)
+DEFAULT_WORKFLOWS_DIR = os.getenv("DCF_WORKFLOWS_DIR", "/app/workflows")
+DEFAULT_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/generated/manifests")
+
 def validate_workflow(
     workflow_json: str,
-    schema_path: str = "/app/schemas/letta_asl_workflow_schema_v2.2.0.json",
+    schema_path: str = DEFAULT_WORKFLOW_SCHEMA,
     imports_base_dir: str = None,
     skills_base_dir: str = None
 ) -> Dict[str, Any]:
@@ -96,9 +103,9 @@ def validate_workflow(
         return out
 
     if imports_base_dir is None:
-        imports_base_dir = os.getenv("DCF_IMPORTS_BASE_DIR", os.path.dirname(schema_abs))
+        imports_base_dir = DEFAULT_WORKFLOWS_DIR or os.path.dirname(schema_abs)
     if skills_base_dir is None:
-        skills_base_dir = os.getenv("DCF_MANIFESTS_DIR", imports_base_dir)
+        skills_base_dir = DEFAULT_MANIFESTS_DIR or imports_base_dir
 
     # ---------- 1) JSON Schema validation ----------
     try:

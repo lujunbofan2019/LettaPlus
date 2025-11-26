@@ -48,10 +48,17 @@ mcp = FastMCP(name="dcf-mcp-server")
 
 DEFAULT_SCHEMAS_DIR = os.getenv("DCF_SCHEMAS_DIR", "/app/schemas")
 DEFAULT_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/generated/manifests")
-DEFAULT_IMPORTS_BASE_DIR = os.getenv("DCF_IMPORTS_BASE_DIR", "/app/workflows")
+DEFAULT_WORKFLOWS_DIR = os.getenv("DCF_WORKFLOWS_DIR", "/app/workflows")
+DEFAULT_AGENTS_DIR = os.getenv("DCF_AGENTS_DIR", "/app/agents")
 
-_DEFAULT_SKILL_SCHEMA = os.path.join(DEFAULT_SCHEMAS_DIR, "skill_manifest_schema_v2.0.0.json")
-_DEFAULT_WORKFLOW_SCHEMA = os.path.join(DEFAULT_SCHEMAS_DIR, "letta_asl_workflow_schema_v2.2.0.json")
+DEFAULT_SKILL_SCHEMA = os.getenv(
+    "DCF_SKILL_SCHEMA",
+    os.path.join(DEFAULT_SCHEMAS_DIR, "skill_manifest_schema_v2.0.0.json"),
+)
+DEFAULT_WORKFLOW_SCHEMA = os.getenv(
+    "DCF_WORKFLOW_SCHEMA",
+    os.path.join(DEFAULT_SCHEMAS_DIR, "letta_asl_workflow_schema_v2.2.0.json"),
+)
 
 
 @mcp.tool()
@@ -126,7 +133,7 @@ unload_skill.__doc__ = _unload_skill.__doc__
 
 @mcp.tool()
 def validate_skill_manifest(skill_json: str, schema_path: str | None = None) -> Dict[str, Any]:
-    effective_schema = schema_path or _DEFAULT_SKILL_SCHEMA
+    effective_schema = schema_path or DEFAULT_SKILL_SCHEMA
     return _validate_skill_manifest(skill_json=skill_json, schema_path=effective_schema)
 
 
@@ -281,12 +288,15 @@ release_state_lease.__doc__ = _release_state_lease.__doc__
 def create_worker_agents(workflow_json: str,
                          imports_base_dir: str | None = None,
                          agent_name_prefix: str | None = None,
+                         agent_name_suffix: str | None = None,
                          default_tags_json: str | None = None) -> Dict[str, Any]:
-    effective_imports = imports_base_dir or DEFAULT_IMPORTS_BASE_DIR
+    effective_imports = imports_base_dir or DEFAULT_AGENTS_DIR
+    effective_suffix = agent_name_suffix or ".af"
     return _create_worker_agents(
         workflow_json=workflow_json,
         imports_base_dir=effective_imports,
         agent_name_prefix=agent_name_prefix,
+        agent_name_suffix=effective_suffix,
         default_tags_json=default_tags_json,
     )
 
@@ -351,9 +361,9 @@ def validate_workflow(workflow_json: str,
                       schema_path: str | None = None,
                       imports_base_dir: str | None = None,
                       skills_base_dir: str | None = None) -> Dict[str, Any]:
-    effective_schema = schema_path or _DEFAULT_WORKFLOW_SCHEMA
-    effective_imports = imports_base_dir or DEFAULT_IMPORTS_BASE_DIR
-    effective_skills = skills_base_dir or os.getenv("DCF_MANIFESTS_DIR", effective_imports)
+    effective_schema = schema_path or DEFAULT_WORKFLOW_SCHEMA
+    effective_imports = imports_base_dir or DEFAULT_WORKFLOWS_DIR
+    effective_skills = skills_base_dir or DEFAULT_MANIFESTS_DIR or effective_imports
 
     return _validate_workflow(
         workflow_json=workflow_json,

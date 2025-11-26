@@ -4,9 +4,12 @@ import json
 import uuid
 from pathlib import Path
 
+DEFAULT_AGENTS_DIR = os.getenv("DCF_AGENTS_DIR", "/app/agents")
+
 def create_worker_agents(workflow_json: str,
                          imports_base_dir: str = None,
                          agent_name_prefix: str = None,
+                         agent_name_suffix: str = ".af",
                          default_tags_json: str = None) -> Dict[str, Any]:
     """Create one worker agent per ASL Task state using Letta .af v2 templates.
 
@@ -31,6 +34,7 @@ def create_worker_agents(workflow_json: str,
       imports_base_dir: Base directory for resolving relative paths in `workflow.af_imports[*]`.
       agent_name_prefix: Prefix for created agent names, e.g. "wf-{workflow_id}-".
                          If omitted, defaults to "wf-{workflow_id}-".
+      agent_name_suffix: Suffix to append when resolving agent templates from disk (e.g., ".af").
       default_tags_json: JSON string array of extra tags (e.g., ["worker", "choreo"]).
                          Each agent also receives "wf:{workflow_id}" and "state:{StateName}".
 
@@ -60,6 +64,7 @@ def create_worker_agents(workflow_json: str,
     warnings = []
     created = []
     agents_map = {}
+    agent_name_suffix = agent_name_suffix if agent_name_suffix is not None else ".af"
 
     # --- Load workflow JSON ---
     try:
@@ -143,8 +148,38 @@ def create_worker_agents(workflow_json: str,
     imported_index_by_id = {}
     imported_index_by_name = {}
     af_imports = wf.get("af_imports") or []
-    resolved_base_dir = imports_base_dir or os.getenv("DCF_IMPORTS_BASE_DIR")
+    resolved_base_dir = imports_base_dir if imports_base_dir is not None else DEFAULT_AGENTS_DIR
     base_dir = Path(resolved_base_dir).expanduser() if resolved_base_dir else None
+
+    def _load_template_from_file(name: str):
+        if not base_dir:
+            return None
+        candidate = (base_dir / f"{name}{agent_name_suffix}").resolve()
+        if not candidate.exists():
+            warnings.append("Skipping disk template for agent '%s' (not found: %s)." % (name, candidate))
+            return None
+        try:
+            with open(str(candidate), "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            warnings.append("Failed to load disk template for agent '%s': %s: %s" % (name, e.__class__.__name__, e))
+            return None
+
+        if isinstance(data, dict) and isinstance(data.get("agents"), list):
+            for agent_ent in data.get("agents") or []:
+                if not isinstance(agent_ent, dict):
+                    continue
+                if agent_ent.get("name") == name or agent_ent.get("id") == name:
+                    return agent_ent
+            # Fallback to first agent entry if no direct match
+            for agent_ent in data.get("agents") or []:
+                if isinstance(agent_ent, dict):
+                    return agent_ent
+        if isinstance(data, dict) and (data.get("name") or data.get("id")):
+            return data
+
+        warnings.append("Disk template for agent '%s' at %s had unexpected format." % (name, candidate))
+        return None
 
     for entry in af_imports:
         if not isinstance(entry, str):
@@ -234,6 +269,10 @@ def create_worker_agents(workflow_json: str,
                 template_kind, template_payload = "v2", embedded_index_by_id[ref_id]
             elif ref_id in imported_index_by_id:
                 template_kind, template_payload = "v2", imported_index_by_id[ref_id]
+            elif base_dir:
+                disk_tpl = _load_template_from_file(ref_id)
+                if disk_tpl:
+                    template_kind, template_payload = "v2", disk_tpl
             else:
                 return {
                     "status": None,
@@ -248,6 +287,10 @@ def create_worker_agents(workflow_json: str,
                 template_kind, template_payload = "v2", embedded_index_by_name[ref_name]
             elif ref_name in imported_index_by_name:
                 template_kind, template_payload = "v2", imported_index_by_name[ref_name]
+            elif base_dir:
+                disk_tpl = _load_template_from_file(ref_name)
+                if disk_tpl:
+                    template_kind, template_payload = "v2", disk_tpl
             else:
                 return {
                     "status": None,
