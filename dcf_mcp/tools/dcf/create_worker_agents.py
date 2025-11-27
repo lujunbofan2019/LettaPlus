@@ -182,11 +182,16 @@ def create_worker_agents(workflow_json: str,
         return None
 
     for entry in af_imports:
-        if not isinstance(entry, str):
+        if isinstance(entry, dict) and isinstance(entry.get("uri"), str):
+            entry_path = entry.get("uri")
+        elif isinstance(entry, str):
+            entry_path = entry
+        else:
             continue
+
         # Resolve path (supports file://)
         try:
-            p_str = entry
+            p_str = entry_path
             if p_str.startswith("file://"):
                 p = Path(p_str[7:])
             else:
@@ -198,7 +203,7 @@ def create_worker_agents(workflow_json: str,
             with open(str(p), "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as e:
-            warnings.append("Skipping af_import '%s' (load error: %s: %s)." % (entry, e.__class__.__name__, e))
+            warnings.append("Skipping af_import '%s' (load error: %s: %s)." % (entry_path, e.__class__.__name__, e))
             continue
 
         # Data may be a multi-entity .af v2 bundle or a single agent
@@ -256,7 +261,7 @@ def create_worker_agents(workflow_json: str,
 
         # Resolve AgentBinding (v2) or fallback to inline v1
         agent_binding = s_def.get("AgentBinding") or {}
-        ref = agent_binding.get("agent_ref") or {}
+        ref = agent_binding.get("agent_ref") or agent_binding.get("agent_template_ref") or {}
         ref_id = ref.get("id") if isinstance(ref, dict) else None
         ref_name = ref.get("name") if isinstance(ref, dict) else None
 
@@ -273,10 +278,11 @@ def create_worker_agents(workflow_json: str,
                 disk_tpl = _load_template_from_file(ref_id)
                 if disk_tpl:
                     template_kind, template_payload = "v2", disk_tpl
-            else:
+            if template_kind is None:
                 return {
                     "status": None,
-                    "error": "AgentBinding.agent_ref.id '%s' not found in embedded or imported .af v2 entities." % ref_id,
+                    "error": "AgentBinding.agent_ref.id '%s' not found in embedded, imported, or disk templates (base_dir=%s)." %
+                              (ref_id, base_dir),
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
@@ -291,10 +297,11 @@ def create_worker_agents(workflow_json: str,
                 disk_tpl = _load_template_from_file(ref_name)
                 if disk_tpl:
                     template_kind, template_payload = "v2", disk_tpl
-            else:
+            if template_kind is None:
                 return {
                     "status": None,
-                    "error": "AgentBinding.agent_ref.name '%s' not found in embedded or imported .af v2 entities." % ref_name,
+                    "error": "AgentBinding.agent_ref.name '%s' not found in embedded, imported, or disk templates (base_dir=%s)." %
+                              (ref_name, base_dir),
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
@@ -312,7 +319,7 @@ def create_worker_agents(workflow_json: str,
             if template_kind is None:
                 return {
                     "status": None,
-                    "error": "No agent template found for state '%s'. Provide AgentBinding.agent_ref (v2) or inline .af v1 agent." % s_name,
+                    "error": "No agent template found for state '%s'. Provide AgentBinding.agent_ref/agent_template_ref (v2) or inline .af v1 agent." % s_name,
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
