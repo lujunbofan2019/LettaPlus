@@ -1,6 +1,6 @@
 services:
   letta:
-    image: letta/letta:0.14.0
+    image: letta/letta:0.15.1
     entrypoint: ["/entrypoint.sh"]
     command: ["./letta/server/startup.sh"]
     ports:
@@ -112,21 +112,21 @@ services:
       - "8000:8000"
     command: [ "uv", "run", "main.py", "--config", "config/config-docker-falkordb.yaml" ]
 
-  chroma-mcp:
-    build:
-      context: ./chroma
-      dockerfile: Dockerfile
-    ports:
-      - "3002:3002"
-    volumes:
-      - ~/.letta+/chroma:/data
-    environment:
-      - CHROMA_CLIENT_TYPE=persistent
-      - CHROMA_DATA_DIR=/data
-      - CHROMA_OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: >
-      --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
-    restart: unless-stopped
+#  chroma-mcp:
+#    build:
+#      context: ./chroma
+#      dockerfile: Dockerfile
+#    ports:
+#      - "3002:3002"
+#    volumes:
+#      - ~/.letta+/chroma:/data
+#    environment:
+#      - CHROMA_CLIENT_TYPE=persistent
+#      - CHROMA_DATA_DIR=/data
+#      - CHROMA_OPENAI_API_KEY=${OPENAI_API_KEY}
+#    command: >
+#      --host 0.0.0.0 --port 3002 --pass-environment -- chroma-mcp --client-type persistent --data-dir /data
+#    restart: unless-stopped
 
   dcf-mcp:
     build:
