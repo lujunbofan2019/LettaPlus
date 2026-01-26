@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/lufan/Downloads/LettaPlus log --oneline)",
+      "Bash(find:*)"
+    ]
+  }
+}
