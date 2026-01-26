@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from tools.common.delete_agent import delete_agent as _delete_agent
 from tools.common.remove_tool_return_limits import remove_tool_return_limits as _remove_tool_return_limits
 from tools.common.resolve_agent_name_to_id import resolve_agent_name_to_id as _resolve_agent_name_to_id
@@ -44,7 +45,55 @@ from tools.file_system.read_file import read_file as _read_file
 from tools.file_system.write_file import write_file as _write_file
 
 
-mcp = FastMCP(name="dcf-mcp-server")
+def _parse_csv_env(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _truthy_env(value: str | None, *, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _default_transport_security() -> TransportSecuritySettings:
+    """
+    Protect against DNS rebinding while allowing common local/dev hostnames.
+
+    Some MCP clients (e.g., other Docker services) will connect using the Compose service name
+    (Host: dcf-mcp:8337). If DNS rebinding protection is enabled without allowing that host,
+    requests fail with HTTP 421 "Invalid Host header".
+    """
+
+    enable = _truthy_env(
+        os.getenv("DCF_MCP_ENABLE_DNS_REBINDING_PROTECTION"),
+        default=True,
+    )
+
+    allowed_hosts = _parse_csv_env(os.getenv("DCF_MCP_ALLOWED_HOSTS")) or [
+        "localhost",
+        "localhost:*",
+        "127.0.0.1",
+        "127.0.0.1:*",
+        "dcf-mcp",
+        "dcf-mcp:*",
+    ]
+
+    allowed_origins = _parse_csv_env(os.getenv("DCF_MCP_ALLOWED_ORIGINS")) or [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "http://dcf-mcp:*",
+    ]
+
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=enable,
+        allowed_hosts=allowed_hosts,
+        allowed_origins=allowed_origins,
+    )
+
+
+mcp = FastMCP(name="dcf-mcp-server", transport_security=_default_transport_security())
 
 DEFAULT_SCHEMAS_DIR = os.getenv("DCF_SCHEMAS_DIR", "/app/schemas")
 DEFAULT_MANIFESTS_DIR = os.getenv("DCF_MANIFESTS_DIR", "/app/generated/manifests")
