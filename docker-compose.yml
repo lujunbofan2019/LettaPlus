@@ -150,7 +150,8 @@ services:
       # Mount agent templates, schemas, and workflow bundles for default resolution
       - ./dcf_mcp/agents:/app/agents:ro
       - ./dcf_mcp/schemas:/app/schemas:ro
-      - ./workflows:/app/workflows:ro
+      # Writable so the Planner can persist newly created workflows via file_system tools.
+      - ./workflows:/app/workflows
     restart: unless-stopped
 
   stub-mcp:

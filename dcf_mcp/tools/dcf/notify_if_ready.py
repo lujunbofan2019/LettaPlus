@@ -17,7 +17,7 @@ def notify_if_ready(
 ) -> Dict[str, Any]:
     """Notify a single target state's worker agent IFF the state is ready (or unconditionally if require_ready=False).
 
-    Ready := every upstream dependency (from meta.deps[state].upstream) has status == "done".
+    Ready := every upstream dependency (from meta.deps[state].upstream) has a success-like status in {"succeeded","done","skipped"}.
              Source states (no upstream) are considered ready by default.
 
     This function is choreography-friendly: it does not acquire leases or mutate state.
@@ -108,7 +108,7 @@ def notify_if_ready(
                 "ready": None, "skipped": True, "skip_reason": "state_read_error", "agent_id": agent_id, "message_id": None, "run_id": None}
 
     # Skip list
-    default_skip = ["running", "done", "failed"]
+    default_skip = ["running", "succeeded", "done", "failed", "skipped"]
     try:
         skip_list = json.loads(skip_if_status_in_json) if skip_if_status_in_json else default_skip
         if not isinstance(skip_list, list):
@@ -124,6 +124,7 @@ def notify_if_ready(
     # Readiness
     ready = None
     if require_ready:
+        success_like = {"succeeded", "done", "skipped"}
         ready = True
         ups = ((deps.get(state) or {}).get("upstream") or [])
         for u in ups:
@@ -134,7 +135,7 @@ def notify_if_ready(
                     udoc = udoc[0]
             except Exception:
                 udoc = None
-            if not isinstance(udoc, dict) or udoc.get("status") != "done":
+            if not isinstance(udoc, dict) or udoc.get("status") not in success_like:
                 ready = False
                 break
         if not ready:

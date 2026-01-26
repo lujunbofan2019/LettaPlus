@@ -35,6 +35,7 @@ def read_workflow_control_plane(workflow_id: str,
         "workflow_id": str or None,
         "meta": dict or None,            # present if include_meta=True and found
         "states": dict,                  # { state_name: state_doc or None }
+        "outputs": dict,                 # { state_name: output_doc or None } (from dp:wf:{id}:output:{state})
         "readiness": dict or None        # { state_name: bool }, when compute_readiness=True
       }
     """
@@ -77,6 +78,7 @@ def read_workflow_control_plane(workflow_id: str,
     meta = None
     states_out = {}
     readiness = None
+    outputs_out: Dict[str, Any] = {}
 
     # 1) Load meta when needed (to resolve state list or compute readiness)
     meta_needed = include_meta or compute_readiness or not states_json
@@ -116,7 +118,7 @@ def read_workflow_control_plane(workflow_id: str,
                 "readiness": None
             }
 
-    # 3) Read each state document
+    # 3) Read each state document (and any data-plane outputs for those states)
     for s in states_list:
         key = "cp:wf:%s:state:%s" % (workflow_id, s)
         try:
@@ -126,6 +128,16 @@ def read_workflow_control_plane(workflow_id: str,
             states_out[s] = doc if isinstance(doc, dict) else None
         except Exception:
             states_out[s] = None
+
+        # Output is optional; missing keys resolve to None.
+        out_key = "dp:wf:%s:output:%s" % (workflow_id, s)
+        try:
+            out_doc = r.json().get(out_key, '$')
+            if isinstance(out_doc, list) and len(out_doc) == 1:
+                out_doc = out_doc[0]
+            outputs_out[s] = out_doc
+        except Exception:
+            outputs_out[s] = None
 
     # 4) Compute readiness if requested
     if compute_readiness:
@@ -164,5 +176,6 @@ def read_workflow_control_plane(workflow_id: str,
         "workflow_id": workflow_id,
         "meta": meta if include_meta else None,
         "states": states_out,
+        "outputs": outputs_out,
         "readiness": readiness
     }

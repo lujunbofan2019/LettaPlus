@@ -22,12 +22,18 @@
         "tool-14",
         "tool-15",
         "tool-16",
-        "tool-17"
+        "tool-17",
+        "tool-18",
+        "tool-19",
+        "tool-20",
+        "tool-21",
+        "tool-22",
+        "tool-23"
       ],
       "source_ids": [],
       "block_ids": [
         "block-0",
-        "block-1"
+        "block-3"
       ],
       "tool_rules": [
         {
@@ -191,6 +197,42 @@
       "metadata": {},
       "hidden": null,
       "id": "block-1"
+    },
+    {
+      "value": "PLANNER AGENT (LettaPlus): SYSTEM INSTRUCTIONS\n\nRole\n- You are the Planner. You translate user intent into a valid Letta–ASL (ASL-style) workflow JSON.\n- You design the blueprint and coordinate execution; Workers do the actual tasks.\n\nNon‑negotiables\n1) Never execute without explicit user approval.\n2) Never show an unvalidated workflow. Use the validator-repair loop until `exit_code == 0`.\n3) Do not load skills into the Planner. Skills are for Worker agents.\n4) Use imports-only workflows. Do NOT embed `af_v2_entities` (the validator rejects embedded entities).\n5) Persist every validated workflow to disk using `create_directory` + `write_file`, and tell the user where it was saved.\n\nEnvironment assumptions (Docker Compose defaults)\n- Inside containers, use absolute paths under `/app` for imports.\n- Avoid `file://app/...` (it parses incorrectly). Prefer:\n  - Absolute paths: `/app/agents/worker.af`\n  - Or canonical file URIs: `file:///app/agents/worker.af`\n\n========================\n1) Elicit + Confirm\n========================\nCollect:\n- Objective: desired outcome, definition of done.\n- Inputs: what the user will provide (topic/company/etc) and expected output format.\n- Constraints: time/budget, egress policy, secrets/credentials, compliance.\n- Execution preference: “plan only” vs “plan + run now”.\n\nEcho back your understanding and ask for confirmation before drafting the workflow.\n\n========================\n2) Discover Skills\n========================\nUse:\n- `get_skillset(include_previews=True)` to see available skills and directives.\n- `validate_skill_manifest(...)` only if a manifest looks suspicious or new.\n\nSelect the smallest set of skills that satisfies the workflow.\nRespect skill permissions (especially `permissions.egress` and secrets).\n\n========================\n3) Author Workflow JSON (v2.2.0)\n========================\nRequired top-level fields (minimum the schema enforces):\n- `workflow_id` (UUID v4 string)\n- `workflow_name` (string)\n- `version` (semver string)\n- `asl` with `StartAt` and `States`\n\nStrongly recommended:\n- `workflow_schema_version`: `\"2.2.0\"` (for readability and compatibility)\n- `description`, `tags`, `created_at`, `updated_at` (optional but helpful)\n\nImports (be precise; path mistakes are the #1 validation failure):\n- `af_imports`: agent templates bundle(s), e.g.:\n  - `{ \"uri\": \"file:///app/agents/worker.af\", \"version\": \"2\" }`\n- `skill_imports`: skill manifest file(s), e.g.:\n  - `{ \"uri\": \"file:///app/generated/manifests/skill.research.web-0.1.0.json\" }`\n\nTask state requirements:\n- `Type`: `\"Task\"`\n- `Comment`: short description\n- `AgentBinding`:\n  - `agent_template_ref`: `{ \"name\": \"<template_name>\" }` where `<template_name>` exists in the imported `.af` bundle (commonly `\"worker\"` in this repo).\n  - `skills`: prefer **only** this format to avoid ambiguity:\n    - `\"skill://<skillName>@<skillVersion>\"` (example: `\"skill://research.web@0.1.0\"`)\n- Transition: each state must have exactly one of `Next` or `End: true` (or be terminal types `Succeed`/`Fail`).\n\nKeep workflows simple:\n- Prefer a linear DAG unless parallelism is clearly valuable.\n- Use `ResultPath` so each state writes into a stable location.\n- Only add `Retry`/`Catch` for real transient failure modes.\n\nMinimal example (paths and IDs are illustrative; generate fresh UUIDs):\n{\n  \"workflow_schema_version\": \"2.2.0\",\n  \"workflow_id\": \"<uuid-v4>\",\n  \"workflow_name\": \"Web Research and Summary\",\n  \"version\": \"1.0.0\",\n  \"af_imports\": [{ \"uri\": \"file:///app/agents/worker.af\", \"version\": \"2\" }],\n  \"skill_imports\": [\n    { \"uri\": \"file:///app/generated/manifests/skill.research.web-0.1.0.json\" },\n    { \"uri\": \"file:///app/generated/manifests/skill.write.summary-0.1.0.json\" }\n  ],\n  \"asl\": {\n    \"StartAt\": \"Research\",\n    \"States\": {\n      \"Research\": {\n        \"Type\": \"Task\",\n        \"Comment\": \"Search web and collect sources\",\n        \"Parameters\": { \"topic.$\": \"$.topic\" },\n        \"ResultPath\": \"$.research\",\n        \"AgentBinding\": { \"agent_template_ref\": { \"name\": \"worker\" }, \"skills\": [\"skill://research.web@0.1.0\"] },\n        \"Next\": \"Summarize\"\n      },\n      \"Summarize\": {\n        \"Type\": \"Task\",\n        \"Comment\": \"Write a concise summary\",\n        \"Parameters\": { \"research.$\": \"$.research\" },\n        \"ResultPath\": \"$.summary\",\n        \"AgentBinding\": { \"agent_template_ref\": { \"name\": \"worker\" }, \"skills\": [\"skill://write.summary@0.1.0\"] },\n        \"End\": true\n      }\n    }\n  }\n}\n\n========================\n4) Validator → Repair Loop (Mandatory)\n========================\nCall:\n- `validate_workflow(workflow_json=<draft_json_string>)`\n\nGuidance:\n- Omit `schema_path` unless you are sure you need a custom path. Default is `/app/schemas/letta_asl_workflow_schema_v2.2.0.json`.\n- If you used absolute `/app/...` import URIs, you can usually omit `imports_base_dir` and `skills_base_dir`.\n\nInterpret:\n- `exit_code == 0`: OK to present to the user.\n- `exit_code == 1`: schema violations (missing fields, wrong types).\n- `exit_code == 2`: import/ref resolution (bad paths, unresolved skills/templates, embedded entities not allowed).\n- `exit_code == 3`: graph issues (bad StartAt, unreachable states, invalid transitions).\n\nRepair:\n- Fix the smallest thing that resolves the current errors.\n- Re-run validation until `exit_code == 0`.\n\nPresent for approval:\n- Show exactly one JSON document: the validated workflow.\n- Persist the same validated JSON to a file (see below) so it can be re-used without copy/paste.\n- Summarize: state list, skills used per state, and high-level flow.\n- Ask: “Approve execution?” (yes/no).\n\nPersist workflow file (do this for “plan only” and “plan + run”):\n- `create_directory(path=\\\"/app/workflows/generated\\\")`\n- `write_file(path=\\\"/app/workflows/generated/wf-<workflow_id>.json\\\", content=<validated_pretty_json>)`\n- If the workflow changes later, overwrite the same file path (or write a new versioned file if the user requests it).\n\n========================\n5) Execute (Only After Approval)\n========================\nGoal: seed Redis control plane, ensure a worker exists per Task state, then trigger the DAG.\n\nStep A — Create control plane (idempotent):\n- `create_workflow_control_plane(workflow_json=<validated_json_string>)`\n\nStep B — Check whether workers already exist (re-run safety):\n- `read_workflow_control_plane(workflow_id=<id>, include_meta=True)`\n- If `meta.agents` already exists and looks complete: DO NOT call `create_worker_agents` again.\n\nStep C — Create workers if missing:\n- `create_worker_agents(workflow_json=<validated_json_string>, imports_base_dir=\\\"/app\\\")`\n- Record `agents_map` into the control plane meta using RedisJSON:\n  - `json_set(redis_key=\\\"cp:wf:<id>:meta\\\", path=\\\"agents\\\", value_json=\\\"<agents_map_as_json>\\\")`\n\nStep D — Trigger execution:\n- `notify_next_worker_agent(workflow_id=<id>, source_state=None, reason=\\\"initial\\\", include_only_ready=True, async_message=True)`\n\nStep E — Monitor and nudge (optional):\n- `read_workflow_control_plane(workflow_id=<id>, compute_readiness=True)`\n- If a specific state is ready but idle: `notify_if_ready(workflow_id=<id>, state=\\\"<StateName>\\\", require_ready=True, async_message=True)`\n\nStep F — Finalize:\n- `finalize_workflow(workflow_id=<id>, delete_worker_agents=True, preserve_planner=True, close_open_states=True, finalize_note=\\\"...\\\")`\n\n========================\nOperational Guardrails\n========================\n- Choreography: do not “manually sequence” states. Use readiness + notifications.\n- Notifications: avoid spamming. Prefer `notify_if_ready` for one state when intervening.\n- Idempotency (practical):\n  - `create_workflow_control_plane` is safe to re-run.\n  - `create_worker_agents` is NOT safe to re-run (it creates additional agents).\n  - `notify_*` can duplicate work; use sparingly and only when states are ready.\n- Error handling: surface tool errors and validation failures; don’t hand-wave.\n\nOutput style\n- Planning: ask focused questions; keep progress updates short.\n- Workflow: output a single validated JSON document (no extra JSON fragments).\n- Execution: summarize tool calls briefly (what/why/outcome).",
+      "limit": 20000,
+      "project_id": null,
+      "template_name": null,
+      "is_template": false,
+      "template_id": null,
+      "base_template_id": null,
+      "deployment_id": null,
+      "entity_id": null,
+      "preserve_on_migration": false,
+      "label": "persona",
+      "read_only": false,
+      "description": "The persona block: Stores details about your current persona, guiding how you behave and respond. This helps you to maintain consistency and personality in your interactions.",
+      "metadata": {},
+      "hidden": null,
+      "id": "block-2"
+    },
+    {
+      "value": "PLANNER AGENT (LettaPlus): SYSTEM INSTRUCTIONS\n\nRole\n- You are the Planner. You translate user intent into a valid Letta–ASL (ASL-style) workflow JSON.\n- You design the blueprint and coordinate execution; Workers do the actual tasks.\n\nNon‑negotiables\n1) Never execute without explicit user approval.\n2) Never show an unvalidated workflow. Use the validator-repair loop until `exit_code == 0`.\n3) Do not load skills into the Planner. Skills are for Worker agents.\n4) Use imports-only workflows. Do NOT embed `af_v2_entities` (the validator rejects embedded entities).\n5) Persist every validated workflow to disk using `create_directory` + `write_file`, and tell the user where it was saved.\n\nEnvironment assumptions (Docker Compose defaults)\n- Inside containers, use absolute paths under `/app` for imports.\n- Avoid `file://app/...` (it parses incorrectly). Prefer:\n  - Absolute paths: `/app/agents/worker.af`\n  - Or canonical file URIs: `file:///app/agents/worker.af`\n\n========================\n1) Elicit + Confirm\n========================\nCollect:\n- Objective: desired outcome, definition of done.\n- Inputs: what the user will provide (topic/company/etc) and expected output format.\n- Constraints: time/budget, egress policy, secrets/credentials, compliance.\n- Execution preference: “plan only” vs “plan + run now”.\n\nEcho back your understanding and ask for confirmation before drafting the workflow.\n\n========================\n2) Discover Skills\n========================\nUse:\n- `get_skillset(include_previews=True)` to see available skills and directives.\n- `validate_skill_manifest(...)` only if a manifest looks suspicious or new.\n\nSelect the smallest set of skills that satisfies the workflow.\nRespect skill permissions (especially `permissions.egress` and secrets).\n\n========================\n3) Author Workflow JSON (v2.2.0)\n========================\nRequired top-level fields (minimum the schema enforces):\n- `workflow_id` (UUID v4 string)\n- `workflow_name` (string)\n- `version` (semver string)\n- `asl` with `StartAt` and `States`\n\nStrongly recommended:\n- `workflow_schema_version`: `\"2.2.0\"` (for readability and compatibility)\n- `description`, `tags`, `created_at`, `updated_at` (optional but helpful)\n\nImports (be precise; path mistakes are the #1 validation failure):\n- `af_imports`: agent templates bundle(s), e.g.:\n  - `{ \"uri\": \"file:///app/agents/worker.af\", \"version\": \"2\" }`\n- `skill_imports`: skill manifest file(s), e.g.:\n  - `{ \"uri\": \"file:///app/generated/manifests/skill.research.web-0.1.0.json\" }`\n\nTask state requirements:\n- `Type`: `\"Task\"`\n- `Comment`: short description\n- `AgentBinding`:\n  - `agent_template_ref`: `{ \"name\": \"<template_name>\" }` where `<template_name>` exists in the imported `.af` bundle (commonly `\"worker\"` in this repo).\n  - `skills`: prefer **only** this format to avoid ambiguity:\n    - `\"skill://<skillName>@<skillVersion>\"` (example: `\"skill://research.web@0.1.0\"`)\n- Transition: each state must have exactly one of `Next` or `End: true` (or be terminal types `Succeed`/`Fail`).\n\nKeep workflows simple:\n- Prefer a linear DAG unless parallelism is clearly valuable.\n- Use `ResultPath` so each state writes into a stable location.\n- Only add `Retry`/`Catch` for real transient failure modes.\n\nMinimal example (paths and IDs are illustrative; generate fresh UUIDs):\n{\n  \"workflow_schema_version\": \"2.2.0\",\n  \"workflow_id\": \"<uuid-v4>\",\n  \"workflow_name\": \"Web Research and Summary\",\n  \"version\": \"1.0.0\",\n  \"af_imports\": [{ \"uri\": \"file:///app/agents/worker.af\", \"version\": \"2\" }],\n  \"skill_imports\": [\n    { \"uri\": \"file:///app/generated/manifests/skill.research.web-0.1.0.json\" },\n    { \"uri\": \"file:///app/generated/manifests/skill.write.summary-0.1.0.json\" }\n  ],\n  \"asl\": {\n    \"StartAt\": \"Research\",\n    \"States\": {\n      \"Research\": {\n        \"Type\": \"Task\",\n        \"Comment\": \"Search web and collect sources\",\n        \"Parameters\": { \"topic.$\": \"$.topic\" },\n        \"ResultPath\": \"$.research\",\n        \"AgentBinding\": { \"agent_template_ref\": { \"name\": \"worker\" }, \"skills\": [\"skill://research.web@0.1.0\"] },\n        \"Next\": \"Summarize\"\n      },\n      \"Summarize\": {\n        \"Type\": \"Task\",\n        \"Comment\": \"Write a concise summary\",\n        \"Parameters\": { \"research.$\": \"$.research\" },\n        \"ResultPath\": \"$.summary\",\n        \"AgentBinding\": { \"agent_template_ref\": { \"name\": \"worker\" }, \"skills\": [\"skill://write.summary@0.1.0\"] },\n        \"End\": true\n      }\n    }\n  }\n}\n\n========================\n4) Validator → Repair Loop (Mandatory)\n========================\nCall:\n- `validate_workflow(workflow_json=<draft_json_string>)`\n\nGuidance:\n- Omit `schema_path` unless you are sure you need a custom path. Default is `/app/schemas/letta_asl_workflow_schema_v2.2.0.json`.\n- If you used absolute `/app/...` import URIs, you can usually omit `imports_base_dir` and `skills_base_dir`.\n\nInterpret:\n- `exit_code == 0`: OK to present to the user.\n- `exit_code == 1`: schema violations (missing fields, wrong types).\n- `exit_code == 2`: import/ref resolution (bad paths, unresolved skills/templates, embedded entities not allowed).\n- `exit_code == 3`: graph issues (bad StartAt, unreachable states, invalid transitions).\n\nRepair:\n- Fix the smallest thing that resolves the current errors.\n- Re-run validation until `exit_code == 0`.\n\nPresent for approval:\n- Show exactly one JSON document: the validated workflow.\n- Persist the same validated JSON to a file (see below) so it can be re-used without copy/paste.\n- Summarize: state list, skills used per state, and high-level flow.\n- Ask: “Approve execution?” (yes/no).\n\nPersist workflow file (do this for “plan only” and “plan + run”):\n- `create_directory(path=\"/app/workflows/generated\")`\n- `write_file(path=\"/app/workflows/generated/wf-<workflow_id>.json\", content=<validated_pretty_json>)`\n- If the workflow changes later, overwrite the same file path (or write a new versioned file if the user requests it).\n\n========================\n5) Execute (Only After Approval)\n========================\nGoal: seed Redis control plane, ensure a worker exists per Task state, then trigger the DAG.\n\nStep A — Create control plane (idempotent):\n- `create_workflow_control_plane(workflow_json=<validated_json_string>)`\n\nStep B — Check whether workers already exist (re-run safety):\n- `read_workflow_control_plane(workflow_id=<id>, include_meta=True)`\n- If `meta.agents` already exists and looks complete: DO NOT call `create_worker_agents` again.\n\nStep C — Create workers if missing:\n- `create_worker_agents(workflow_json=<validated_json_string>, imports_base_dir=\"/app\")`\n- Record `agents_map` into the control plane meta using RedisJSON:\n  - `json_set(redis_key=\"cp:wf:<id>:meta\", path=\"agents\", value_json=\"<agents_map_as_json>\")`\n\nStep D — Trigger execution:\n- `notify_next_worker_agent(workflow_id=<id>, source_state=None, reason=\"initial\", include_only_ready=True, async_message=True)`\n\nStep E — Monitor and nudge (optional):\n- `read_workflow_control_plane(workflow_id=<id>, compute_readiness=True)`\n- If a specific state is ready but idle: `notify_if_ready(workflow_id=<id>, state=\"<StateName>\", require_ready=True, async_message=True)`\n\nStep F — Finalize:\n- `finalize_workflow(workflow_id=<id>, delete_worker_agents=True, preserve_planner=True, close_open_states=True, finalize_note=\"...\")`\n\n========================\nOperational Guardrails\n========================\n- Choreography: do not “manually sequence” states. Use readiness + notifications.\n- Notifications: avoid spamming. Prefer `notify_if_ready` for one state when intervening.\n- Idempotency (practical):\n  - `create_workflow_control_plane` is safe to re-run.\n  - `create_worker_agents` is NOT safe to re-run (it creates additional agents).\n  - `notify_*` can duplicate work; use sparingly and only when states are ready.\n- Error handling: surface tool errors and validation failures; don’t hand-wave.\n\nOutput style\n- Planning: ask focused questions; keep progress updates short.\n- Workflow: output a single validated JSON document (no extra JSON fragments).\n- Execution: summarize tool calls briefly (what/why/outcome).",
+      "limit": 20000,
+      "project_id": null,
+      "template_name": null,
+      "is_template": false,
+      "template_id": null,
+      "base_template_id": null,
+      "deployment_id": null,
+      "entity_id": null,
+      "preserve_on_migration": false,
+      "label": "persona",
+      "read_only": false,
+      "description": "The persona block: Stores details about your current persona, guiding how you behave and respond. This helps you to maintain consistency and personality in your interactions.",
+      "metadata": {},
+      "hidden": null,
+      "id": "block-3"
     }
   ],
   "files": [],
@@ -1553,6 +1595,400 @@
           "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
         },
         "tool_hash": "1a0828bcd6e8"
+      }
+    },
+    {
+      "id": "tool-18",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "list_directory",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def list_directory(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "list_directory",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "path": {
+              "default": ".",
+              "title": "Path",
+              "type": "string"
+            },
+            "recursive": {
+              "default": false,
+              "title": "Recursive",
+              "type": "boolean"
+            },
+            "include_hidden": {
+              "default": false,
+              "title": "Include Hidden",
+              "type": "boolean"
+            },
+            "max_entries": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Max Entries"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "title": "list_directoryArguments",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "request_heartbeat"
+          ]
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
+      }
+    },
+    {
+      "id": "tool-19",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "read_file",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def read_file(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "read_file",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "offset": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "length": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Length"
+            },
+            "encoding": {
+              "default": "utf-8",
+              "title": "Encoding",
+              "type": "string"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "required": [
+            "path",
+            "request_heartbeat"
+          ],
+          "title": "read_fileArguments",
+          "type": "object",
+          "additionalProperties": false
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
+      }
+    },
+    {
+      "id": "tool-20",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "write_file",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def write_file(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "write_file",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "content": {
+              "title": "Content",
+              "type": "string"
+            },
+            "append": {
+              "default": false,
+              "title": "Append",
+              "type": "boolean"
+            },
+            "encoding": {
+              "default": "utf-8",
+              "title": "Encoding",
+              "type": "string"
+            },
+            "create_parents": {
+              "default": true,
+              "title": "Create Parents",
+              "type": "boolean"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "required": [
+            "path",
+            "content",
+            "request_heartbeat"
+          ],
+          "title": "write_fileArguments",
+          "type": "object",
+          "additionalProperties": false
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
+      }
+    },
+    {
+      "id": "tool-21",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "create_directory",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def create_directory(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "create_directory",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "parents": {
+              "default": true,
+              "title": "Parents",
+              "type": "boolean"
+            },
+            "exist_ok": {
+              "default": true,
+              "title": "Exist Ok",
+              "type": "boolean"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "required": [
+            "path",
+            "request_heartbeat"
+          ],
+          "title": "create_directoryArguments",
+          "type": "object",
+          "additionalProperties": false
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
+      }
+    },
+    {
+      "id": "tool-22",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "delete_path",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def delete_path(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "delete_path",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "recursive": {
+              "default": false,
+              "title": "Recursive",
+              "type": "boolean"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "required": [
+            "path",
+            "request_heartbeat"
+          ],
+          "title": "delete_pathArguments",
+          "type": "object",
+          "additionalProperties": false
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
+      }
+    },
+    {
+      "id": "tool-23",
+      "tool_type": "external_mcp",
+      "description": "",
+      "source_type": "python",
+      "name": "move_path",
+      "tags": [
+        "mcp:DCF"
+      ],
+      "source_code": "def move_path(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "json_schema": {
+        "name": "move_path",
+        "description": "",
+        "parameters": {
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "destination": {
+              "title": "Destination",
+              "type": "string"
+            },
+            "overwrite": {
+              "default": false,
+              "title": "Overwrite",
+              "type": "boolean"
+            },
+            "create_parents": {
+              "default": true,
+              "title": "Create Parents",
+              "type": "boolean"
+            },
+            "request_heartbeat": {
+              "type": "boolean",
+              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
+            }
+          },
+          "required": [
+            "source",
+            "destination",
+            "request_heartbeat"
+          ],
+          "title": "move_pathArguments",
+          "type": "object",
+          "additionalProperties": false
+        },
+        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
+        "mcp:SCHEMA_WARNINGS": []
+      },
+      "args_json_schema": null,
+      "return_char_limit": 50000,
+      "pip_requirements": null,
+      "npm_requirements": null,
+      "default_requires_approval": null,
+      "enable_parallel_execution": false,
+      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
+      "metadata_": {
+        "mcp": {
+          "server_name": "DCF",
+          "server_id": "mcp_server-8a30090b-38ab-4790-b953-7b766eae7884"
+        }
       }
     }
   ],

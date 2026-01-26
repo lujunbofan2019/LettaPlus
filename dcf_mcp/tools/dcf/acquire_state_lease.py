@@ -27,7 +27,7 @@ def acquire_state_lease(
           * Else, if caller already holds the lease (same owner & token) -> "lease_already_held".
           * Else -> "lease_held" error.
       - If no lease -> create one.
-      - Optionally enforces readiness (all upstream states "done") and owner match.
+      - Optionally enforces readiness (all upstream states are success-like) and owner match.
 
     Args:
       workflow_id (str): The workflow UUID.
@@ -35,7 +35,7 @@ def acquire_state_lease(
       owner_agent_id (str): The agent ID that will own the lease if acquired.
       redis_url (str): Redis URL (e.g., "redis://redis:6379/0"). Defaults to REDIS_URL env or "redis://redis:6379/0".
       lease_ttl_s (int): Lease TTL seconds to store in the state (informational). Default 300 if omitted.
-      require_ready (bool): If True, require all upstream dependencies to be status == "done". Default True.
+      require_ready (bool): If True, require all upstream dependencies to be in {"succeeded","done","skipped"}. Default True.
       require_owner_match (bool): If True, require meta.agents[state] == owner_agent_id (when present). Default True.
       allow_steal_if_expired (bool): If True, allow takeover when an existing lease is expired. Default True.
       set_running_on_acquire (bool): If True and current status == "pending", set status="running" and started_at=now. Default True.
@@ -133,6 +133,7 @@ def acquire_state_lease(
         ups = []
         if isinstance(deps.get(state), dict) and isinstance(deps[state].get("upstream"), list):
             ups = [u for u in deps[state]["upstream"] if isinstance(u, str)]
+        success_like = {"succeeded", "done", "skipped"}
         all_ok = True
         for u in ups:
             u_key = f"cp:wf:{workflow_id}:state:{u}"
@@ -142,7 +143,7 @@ def acquire_state_lease(
                     udoc = udoc[0]
             except Exception:
                 udoc = None
-            if not isinstance(udoc, dict) or udoc.get("status") != "done":
+            if not isinstance(udoc, dict) or udoc.get("status") not in success_like:
                 all_ok = False
                 break
         if not ups:

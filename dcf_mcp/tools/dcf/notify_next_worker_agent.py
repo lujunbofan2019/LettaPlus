@@ -125,6 +125,7 @@ def notify_next_worker_agent(
         # Optional readiness filter: evaluate inline (no helper defs)
         skipped_not_ready = False
         if include_only_ready:
+            success_like = {"succeeded", "done", "skipped"}
             ups = ((deps.get(t_state) or {}).get("upstream") or [])
             if ups:
                 # Must have all upstream 'done'
@@ -137,7 +138,7 @@ def notify_next_worker_agent(
                             udoc = udoc[0]
                     except Exception:
                         udoc = None
-                    if not isinstance(udoc, dict) or udoc.get("status") != "done":
+                    if not isinstance(udoc, dict) or udoc.get("status") not in success_like:
                         all_done = False
                         break
                 if not all_done:
