@@ -42,7 +42,7 @@ def remove_tool_return_limits(agent_id: str) -> Dict[str, Any]:
                            tool_id = getattr(tool, 'id', None) or getattr(tool, 'tool_id', None)
                            if not tool_id or not isinstance(tool_id, str):
                                 raise ValueError(f"Missing or invalid tool ID for tool entry: {str(tool)[:100]}...")
-                           client.tools.modify(
+                           client.tools.update(
                                tool_id=tool_id,
                                return_char_limit=60000
                            )

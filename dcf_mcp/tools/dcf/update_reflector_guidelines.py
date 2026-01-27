@@ -192,7 +192,7 @@ def update_reflector_guidelines(
 
         # Write back
         result_json = json.dumps(result, indent=2)
-        client.blocks.modify(block_id=guidelines_block_id, value=result_json)
+        client.blocks.update(block_id=guidelines_block_id, value=result_json)
 
         return {
             "status": f"Updated guidelines for Planner '{planner_agent_id}' (revision {result['revision']})",

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from contextlib import closing
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin
 
@@ -115,38 +114,19 @@ def _metadata_for_physical(definition: Dict[str, Any]) -> Tuple[Optional[Dict[st
     return metadata, None
 
 
-def _connect_mcp_server(client: Any, config: Any, server_name: str) -> Set[str]:
-    """Establish an MCP connection and return discovered tool names."""
-
+def _get_mcp_server_tools(client: Any, server_id: str, server_name: str) -> Set[str]:
+    """Get tool names from an MCP server by its ID."""
     discovered: Set[str] = set()
-    success = False
-
-    with closing(client.tools.connect_mcp_server(request=config)) as stream:
-        for event in stream:
-            event_type = getattr(event, "event", None)
-            tool_obj = getattr(event, "tools", None)
-            if tool_obj is not None:
-                name = getattr(tool_obj, "name", None)
-                if isinstance(name, str) and name:
-                    discovered.add(name)
-
-            if event_type == "success":
-                success = True
-            elif event_type == "error":
-                message = getattr(event, "message", None) or ""
-                raise RuntimeError(
-                    f"connect_mcp_server reported error for '{server_name}'{': ' + message if message else ''}"
-                )
-            elif event_type == "oauth_required":
-                raise RuntimeError(
-                    f"connect_mcp_server requested OAuth for '{server_name}', which is unsupported in this environment"
-                )
-
-    if not success:
+    try:
+        tools_response = client.mcp_servers.tools.list(server_id)
+        for item in tools_response:
+            name = getattr(item, "name", None)
+            if isinstance(name, str) and name:
+                discovered.add(name)
+    except Exception as exc:
         raise RuntimeError(
-            f"connect_mcp_server for '{server_name}' completed without a success event"
+            f"Failed to list tools for MCP server '{server_name}' (id={server_id}): {exc}"
         )
-
     return discovered
 
 
@@ -280,11 +260,17 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
     baseline_tool_ids = set(attached_ids)
 
     registry_cache: Optional[Dict[str, Any]] = None
+    # Track known MCP servers: name -> server_id mapping
+    known_mcp_servers: Dict[str, str] = {}
     try:
-        existing_servers = client.tools.list_mcp_servers() or {}
-        known_mcp_servers: Set[str] = set(existing_servers.keys())
+        existing_servers = client.mcp_servers.list()
+        for srv in existing_servers:
+            srv_name = getattr(srv, "server_name", None) or getattr(srv, "name", None)
+            srv_id = getattr(srv, "id", None)
+            if srv_name and srv_id:
+                known_mcp_servers[srv_name] = srv_id
     except Exception:
-        known_mcp_servers = set()
+        pass
 
     available_mcp_tools: Dict[str, Set[str]] = {}
 
@@ -412,9 +398,10 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
 
                 transport = metadata.get("transport")
                 try:
-                    if transport == "streamable_http":
-                        from letta_client import StreamableHttpServerConfig
+                    # Build config dict for the new mcp_servers API
+                    config: Dict[str, Any] = {}
 
+                    if transport == "streamable_http":
                         endpoint = metadata.get("endpoint") or ""
                         path = metadata.get("path")
                         if path:
@@ -423,38 +410,33 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                             )
                         else:
                             server_url = endpoint
-                        config = StreamableHttpServerConfig(
-                            server_name=server_name,
-                            type="streamable_http",
-                            server_url=server_url,
-                            custom_headers=(metadata.get("headers") or None),
-                        )
+                        config = {
+                            "mcp_server_type": "streamable_http",
+                            "server_url": server_url,
+                        }
+                        if metadata.get("headers"):
+                            config["custom_headers"] = metadata.get("headers")
                     elif transport == "stdio":
-                        from letta_client import StdioServerConfig
-
                         command = metadata.get("command")
                         if not command:
                             raise ValueError(
                                 f"mcp_server '{server_name}' missing command"
                             )
-                        config = StdioServerConfig(
-                            server_name=server_name,
-                            command=command,
-                            args=metadata.get("args") or [],
-                        )
+                        config = {
+                            "mcp_server_type": "stdio",
+                            "command": command,
+                            "args": metadata.get("args") or [],
+                        }
                     elif transport in {"ws", "sse"}:
-                        from letta_client import SseServerConfig
-
                         endpoint = metadata.get("endpoint")
                         if not endpoint:
                             raise ValueError(
                                 f"mcp_server '{server_name}' missing SSE endpoint"
                             )
-                        config = SseServerConfig(
-                            server_name=server_name,
-                            type="sse",
-                            server_url=endpoint,
-                        )
+                        config = {
+                            "mcp_server_type": "sse",
+                            "server_url": endpoint,
+                        }
                     else:
                         raise ValueError(
                             f"Unsupported MCP transport '{transport}' for '{tool_name}'"
@@ -463,31 +445,29 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                     if not server_name:
                         server_name = f"skill_{skill_name}_{tool_name or 'tool'}"
 
-                    if server_name not in known_mcp_servers:
-                        client.tools.add_mcp_server(request=config)
-                        known_mcp_servers.add(server_name)
-                        discovered = _connect_mcp_server(
-                            client=client,
-                            config=config,
+                    # Create server if not already known
+                    server_id = known_mcp_servers.get(server_name)
+                    if not server_id:
+                        created_server = client.mcp_servers.create(
                             server_name=server_name,
+                            config=config,
                         )
+                        server_id = getattr(created_server, "id", None)
+                        if not server_id:
+                            raise RuntimeError(
+                                f"MCP server '{server_name}' creation did not return an id"
+                            )
+                        known_mcp_servers[server_name] = server_id
+                        # Discover tools from newly created server
+                        discovered = _get_mcp_server_tools(client, server_id, server_name)
                         if discovered:
                             available_mcp_tools[server_name] = discovered
 
-                    if server_name not in available_mcp_tools:
-                        try:
-                            tools_response = client.tools.list_mcp_tools_by_server(
-                                mcp_server_name=server_name
-                            )
-                            available_mcp_tools[server_name] = {
-                                getattr(item, "name", "")
-                                for item in tools_response
-                                if getattr(item, "name", None)
-                            }
-                        except Exception as exc:
-                            raise RuntimeError(
-                                f"Failed to list MCP tools for server '{server_name}': {exc}"
-                            )
+                    # Get tools list if not already available
+                    if server_name not in available_mcp_tools and server_id:
+                        available_mcp_tools[server_name] = _get_mcp_server_tools(
+                            client, server_id, server_name
+                        )
 
                     target_tool_name = metadata.get("toolName") or tool_name
                     if not target_tool_name:
@@ -501,16 +481,21 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                             f"MCP server '{server_name}' does not expose tool '{target_tool_name}'"
                         )
 
-                    tool = client.tools.add_mcp_tool(
-                        mcp_server_name=server_name,
-                        mcp_tool_name=target_tool_name,
-                    )
-                    tool_id = getattr(tool, "id", None) or getattr(tool, "tool_id", None)
+                    # Find the tool by name in the server's tool list
+                    tool_id = None
+                    if server_id:
+                        tools_list = client.mcp_servers.tools.list(server_id)
+                        for t in tools_list:
+                            if getattr(t, "name", None) == target_tool_name:
+                                tool_id = getattr(t, "id", None)
+                                break
+
                     if not tool_id:
                         raise RuntimeError(
-                            f"MCP tool '{target_tool_name}' did not return an id"
+                            f"MCP tool '{target_tool_name}' not found on server '{server_name}'"
                         )
-                    if tool_id and tool_id not in attached_ids:
+
+                    if tool_id not in attached_ids:
                         client.agents.tools.attach(agent_id=agent_id, tool_id=tool_id)
                         out["added"]["tool_ids"].append(tool_id)
                         attached_ids.add(tool_id)
@@ -649,7 +634,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
         state[manifest_id] = state_entry
         new_value = json.dumps(state, indent=2)
         if state_block_id:
-            client.blocks.modify(block_id=state_block_id, value=new_value)
+            client.blocks.update(block_id=state_block_id, value=new_value)
         else:
             state_block = client.blocks.create(label=STATE_BLOCK_LABEL, value=new_value)
             state_block_id = getattr(state_block, "id", None) or getattr(state_block, "block_id", None)
@@ -661,7 +646,7 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
                 state_entry["memoryBlockIds"].append(state_block_id)
             final_value = json.dumps(state, indent=2)
             if final_value != new_value:
-                client.blocks.modify(block_id=state_block_id, value=final_value)
+                client.blocks.update(block_id=state_block_id, value=final_value)
     except Exception as exc:
         out["error"] = f"State tracking error: {exc}"
         return out

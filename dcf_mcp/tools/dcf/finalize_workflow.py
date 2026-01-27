@@ -199,7 +199,7 @@ def finalize_workflow(
             try:
                 client = Letta(
                     base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"),
-                    token=os.getenv("LETTA_TOKEN")
+                    api_key=os.getenv("LETTA_API_KEY")
                 )
             except Exception as e:
                 delete_errors = to_delete

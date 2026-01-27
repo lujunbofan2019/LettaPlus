@@ -3,7 +3,12 @@
     "allow": [
       "Bash(git -C /Users/lufan/Downloads/LettaPlus log --oneline)",
       "Bash(find:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(pip show:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.letta.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:pypi.org)"
     ]
   }
 }

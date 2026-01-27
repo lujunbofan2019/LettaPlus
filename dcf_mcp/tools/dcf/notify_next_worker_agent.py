@@ -113,7 +113,7 @@ def notify_next_worker_agent(
 
     # Letta client
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), token=os.getenv("LETTA_TOKEN"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), api_key=os.getenv("LETTA_API_KEY"))
     except Exception as e:
         return {"status": None, "error": f"Failed to init Letta client: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "source_state": source_state, "targets": []}
 

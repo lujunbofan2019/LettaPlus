@@ -136,7 +136,7 @@ def register_reflector(
 
         if existing_reg_block_id:
             # Update existing registration
-            client.blocks.modify(block_id=existing_reg_block_id, value=registration_json)
+            client.blocks.update(block_id=existing_reg_block_id, value=registration_json)
             registration_block_id = existing_reg_block_id
             warnings.append("Updated existing reflector registration (previous registration overwritten)")
         else:
@@ -182,7 +182,7 @@ def register_reflector(
         if existing_guidelines_block_id:
             # Update existing guidelines (preserve if not provided initial)
             if initial_guidelines_json:
-                client.blocks.modify(block_id=existing_guidelines_block_id, value=guidelines_json)
+                client.blocks.update(block_id=existing_guidelines_block_id, value=guidelines_json)
             guidelines_block_id = existing_guidelines_block_id
         else:
             # Create new guidelines block
@@ -214,7 +214,7 @@ def register_reflector(
         planner_ref_json = json.dumps(planner_ref_data, indent=2)
 
         if reflector_planner_ref_id:
-            client.blocks.modify(block_id=reflector_planner_ref_id, value=planner_ref_json)
+            client.blocks.update(block_id=reflector_planner_ref_id, value=planner_ref_json)
         else:
             ref_block = client.blocks.create(label="planner_reference", value=planner_ref_json)
             ref_block_id = getattr(ref_block, "id", None) or getattr(ref_block, "block_id", None)

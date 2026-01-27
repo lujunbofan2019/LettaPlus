@@ -126,7 +126,7 @@ def unload_skill(manifest_id: str, agent_id: str) -> Dict[str, Any]:
                 del state[manifest_id]
 
             if state:
-                client.blocks.modify(block_id=state_block_id, value=json.dumps(state, indent=2))
+                client.blocks.update(block_id=state_block_id, value=json.dumps(state, indent=2))
             else:
                 # No skills left → remove state block entirely
                 try:

@@ -151,7 +151,7 @@ def notify_if_ready(
 
     # Send
     try:
-        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), token=os.getenv("LETTA_TOKEN"))
+        client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"), api_key=os.getenv("LETTA_API_KEY"))
     except Exception as e:
         return {"status": None, "error": f"Letta init failed: {e.__class__.__name__}: {e}", "workflow_id": workflow_id, "state": state,
                 "ready": ready, "skipped": True, "skip_reason": "letta_client_init_failed", "agent_id": agent_id, "message_id": None, "run_id": None}
