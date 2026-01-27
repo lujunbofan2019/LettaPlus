@@ -27,6 +27,10 @@ from tools.dcf.unload_skill import unload_skill as _unload_skill
 from tools.dcf.update_workflow_control_plane import update_workflow_control_plane as _update_workflow_control_plane
 from tools.dcf.validate_skill_manifest import validate_skill_manifest as _validate_skill_manifest
 from tools.dcf.validate_workflow import validate_workflow as _validate_workflow
+from tools.dcf.register_reflector import register_reflector as _register_reflector
+from tools.dcf.read_shared_memory_blocks import read_shared_memory_blocks as _read_shared_memory_blocks
+from tools.dcf.update_reflector_guidelines import update_reflector_guidelines as _update_reflector_guidelines
+from tools.dcf.trigger_reflection import trigger_reflection as _trigger_reflection
 from tools.redis_json.json_append import json_append as _json_append
 from tools.redis_json.json_copy import json_copy as _json_copy
 from tools.redis_json.json_create import json_create as _json_create
@@ -479,6 +483,98 @@ def notify_next_worker_agent(workflow_id: str,
 
 
 notify_next_worker_agent.__doc__ = _notify_next_worker_agent.__doc__
+
+
+# --- Reflector Tools ---
+
+@mcp.tool()
+def register_reflector(planner_agent_id: str,
+                       reflector_agent_id: str,
+                       initial_guidelines_json: str | None = None) -> Dict[str, Any]:
+    return _register_reflector(
+        planner_agent_id=planner_agent_id,
+        reflector_agent_id=reflector_agent_id,
+        initial_guidelines_json=initial_guidelines_json,
+    )
+
+
+register_reflector.__doc__ = _register_reflector.__doc__
+
+
+@mcp.tool()
+def read_shared_memory_blocks(planner_agent_id: str,
+                              reflector_agent_id: str | None = None,
+                              include_labels_json: str | None = None,
+                              exclude_labels_json: str | None = None,
+                              include_all: bool = False) -> Dict[str, Any]:
+    include_labels = None
+    exclude_labels = None
+    if include_labels_json:
+        try:
+            include_labels = __import__("json").loads(include_labels_json)
+        except Exception:
+            pass
+    if exclude_labels_json:
+        try:
+            exclude_labels = __import__("json").loads(exclude_labels_json)
+        except Exception:
+            pass
+    return _read_shared_memory_blocks(
+        planner_agent_id=planner_agent_id,
+        reflector_agent_id=reflector_agent_id,
+        include_labels=include_labels,
+        exclude_labels=exclude_labels,
+        include_all=include_all,
+    )
+
+
+read_shared_memory_blocks.__doc__ = _read_shared_memory_blocks.__doc__
+
+
+@mcp.tool()
+def update_reflector_guidelines(planner_agent_id: str,
+                                guidelines_json: str | None = None,
+                                add_skill_recommendation: str | None = None,
+                                add_workflow_pattern: str | None = None,
+                                add_user_intent_tip: str | None = None,
+                                add_warning: str | None = None,
+                                add_insight: str | None = None,
+                                merge_mode: bool = True) -> Dict[str, Any]:
+    return _update_reflector_guidelines(
+        planner_agent_id=planner_agent_id,
+        guidelines_json=guidelines_json,
+        add_skill_recommendation=add_skill_recommendation,
+        add_workflow_pattern=add_workflow_pattern,
+        add_user_intent_tip=add_user_intent_tip,
+        add_warning=add_warning,
+        add_insight=add_insight,
+        merge_mode=merge_mode,
+    )
+
+
+update_reflector_guidelines.__doc__ = _update_reflector_guidelines.__doc__
+
+
+@mcp.tool()
+def trigger_reflection(workflow_id: str,
+                       planner_agent_id: str,
+                       final_status: str | None = None,
+                       execution_summary_json: str | None = None,
+                       redis_url: str | None = None,
+                       async_message: bool = True,
+                       max_steps: int | None = None) -> Dict[str, Any]:
+    return _trigger_reflection(
+        workflow_id=workflow_id,
+        planner_agent_id=planner_agent_id,
+        final_status=final_status,
+        execution_summary_json=execution_summary_json,
+        redis_url=redis_url,
+        async_message=async_message,
+        max_steps=max_steps,
+    )
+
+
+trigger_reflection.__doc__ = _trigger_reflection.__doc__
 
 
 @mcp.tool()

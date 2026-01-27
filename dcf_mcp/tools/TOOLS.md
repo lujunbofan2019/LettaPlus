@@ -15,11 +15,12 @@ The DCF MCP tools implement a **choreography-first** execution model where worke
 
 ### Tool Categories
 
-The tools are organized into four categories:
+The tools are organized into five categories:
 
 | Category | Location | Purpose |
 |----------|----------|---------|
 | **DCF** | `dcf/` | Workflow execution, validation, skills, leases, notifications |
+| **Reflector** | `dcf/` | Reflector-Planner integration for self-improvement |
 | **RedisJSON** | `redis_json/` | Low-level JSON document operations in Redis |
 | **File System** | `file_system/` | File and directory operations |
 | **Common** | `common/` | Agent utilities (name resolution, deletion) |
@@ -327,6 +328,123 @@ Cleans up a completed workflow.
 
 ---
 
+## Reflector Integration Tools
+
+These tools enable the Reflector-Planner relationship for system self-improvement through workflow analysis.
+
+### `register_reflector`
+Establishes a bidirectional memory sharing relationship between a Planner and Reflector agent.
+
+**Actions**:
+1. Creates `reflector_registration` block on Planner (stores Reflector ID)
+2. Creates `reflector_guidelines` block on Planner (shared, writable by both)
+3. Records Planner reference in Reflector's memory (`planner_reference` block)
+4. Attaches guidelines block to both agents for bidirectional access
+
+**Parameters**:
+- `planner_agent_id`: The Planner agent's UUID
+- `reflector_agent_id`: The Reflector agent's UUID
+- `initial_guidelines_json`: Optional initial guidelines structure
+
+**Response Fields**:
+- `registration_block_id`: Created registration block ID
+- `guidelines_block_id`: Created guidelines block ID
+- `warnings`: Any non-fatal issues
+
+### `read_shared_memory_blocks`
+Allows the Reflector to read the Planner's memory blocks for analysis.
+
+**Security**: Verifies that the caller is the registered Reflector before allowing access.
+
+**Shareable Block Labels**:
+- `persona`, `human`, `system` (agent context)
+- `archival_memory`, `working_context` (memory)
+- `reflector_guidelines`, `reflector_registration` (integration)
+
+**Excluded Block Labels**:
+- `dcf_active_skills` (internal tracking)
+- `secrets`, `api_keys` (security)
+
+**Parameters**:
+- `planner_agent_id`: Target Planner's UUID
+- `reflector_agent_id`: Caller's UUID (for verification)
+- `include_labels`: Specific labels to include (overrides defaults)
+- `exclude_labels`: Additional labels to exclude
+- `include_all`: Include all blocks except security-excluded ones
+
+**Response Fields**:
+- `blocks`: List of `{block_id, label, value, created_at, char_count}`
+- `block_count`: Number of blocks returned
+
+### `update_reflector_guidelines`
+Updates the `reflector_guidelines` block with recommendations from the Reflector.
+
+**Guidelines Structure**:
+```json
+{
+  "last_updated": "ISO-8601",
+  "revision": N,
+  "guidelines": {
+    "skill_recommendations": [...],
+    "workflow_patterns": [...],
+    "user_intent_tips": [...],
+    "warnings": [...]
+  },
+  "recent_insights": [...]
+}
+```
+
+**Parameters**:
+- `planner_agent_id`: Target Planner's UUID
+- `guidelines_json`: Full guidelines object to set/merge
+- `add_skill_recommendation`: JSON string of skill recommendation to append
+- `add_workflow_pattern`: JSON string of workflow pattern to append
+- `add_user_intent_tip`: JSON string of user intent tip to append
+- `add_warning`: JSON string of warning to append
+- `add_insight`: JSON string of insight to add (rolling window of 10)
+- `merge_mode`: If True, merge with existing; if False, replace entirely
+
+**Response Fields**:
+- `guidelines_block_id`: Updated block ID
+- `revision`: New revision number
+
+### `trigger_reflection`
+Triggers the Reflector agent to analyze a completed workflow.
+
+**Reflection Event Payload**:
+```json
+{
+  "type": "reflection_event",
+  "workflow_id": "...",
+  "workflow_name": "...",
+  "final_status": "succeeded|failed|partial|cancelled",
+  "planner_agent_id": "...",
+  "summary": {
+    "total": N, "succeeded": N, "failed": N, ...
+  },
+  "finalized_at": "ISO-8601",
+  "control_plane": {
+    "meta_key": "cp:wf:{id}:meta"
+  }
+}
+```
+
+**Parameters**:
+- `workflow_id`: Completed workflow's UUID
+- `planner_agent_id`: Planner's UUID (to find registered Reflector)
+- `final_status`: Workflow's final status (auto-read from control plane if not provided)
+- `execution_summary_json`: Additional execution details
+- `redis_url`: Redis URL for reading control plane
+- `async_message`: Send asynchronously (default: true)
+- `max_steps`: Optional max_steps hint for Reflector
+
+**Response Fields**:
+- `reflector_agent_id`: Discovered Reflector ID
+- `message_sent`: Whether event was sent successfully
+- `run_id`: Async run ID (if async)
+
+---
+
 ## RedisJSON Tools Reference
 
 Low-level JSON document operations for advanced control plane manipulation.
@@ -405,16 +523,18 @@ Low-level JSON document operations for advanced control plane manipulation.
 ## Planner Tool Usage Flow
 
 ```
-1. get_skillset()                    → Discover available skills
-2. validate_workflow()               → Validate + resolve imports
+1. (Check reflector_guidelines)       → Read Reflector recommendations
+2. get_skillset()                     → Discover available skills
+3. validate_workflow()                → Validate + resolve imports
    └── Loop until exit_code == 0
-3. write_file()                      → Persist workflow JSON
-4. create_workflow_control_plane()   → Seed Redis (idempotent)
-5. create_worker_agents()            → Create workers (idempotent)
-6. json_set() meta.agents            → Record agent mapping
-7. notify_next_worker_agent()        → Trigger initial states
-8. read_workflow_control_plane()     → Monitor progress
-9. finalize_workflow()               → Cleanup
+4. write_file()                       → Persist workflow JSON
+5. create_workflow_control_plane()    → Seed Redis (idempotent)
+6. create_worker_agents()             → Create workers (idempotent)
+7. json_set() meta.agents             → Record agent mapping
+8. notify_next_worker_agent()         → Trigger initial states
+9. read_workflow_control_plane()      → Monitor progress
+10. finalize_workflow()               → Cleanup
+11. trigger_reflection() (optional)   → Trigger post-execution analysis
 ```
 
 ## Worker Tool Usage Flow
