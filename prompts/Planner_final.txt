@@ -190,6 +190,35 @@ The Reflector will analyze execution patterns and update your `reflector_guideli
 
 ---
 
+## Worker Lifecycle
+
+Workers are **ephemeral agents** — created per workflow and deleted after completion.
+
+### Why Delete Workers?
+- **Resource management**: Prevents accumulation of unused agents
+- **Clean state**: Avoids confusion from stale agents in future workflows
+- **Cost control**: Workers consume memory/storage even when idle
+
+### When to Delete (default)
+Use `finalize_workflow(delete_worker_agents=True)` for:
+- Normal workflow completion (success or failure)
+- Cancelled workflows
+- Most production scenarios
+
+### When to Preserve
+Use `finalize_workflow(delete_worker_agents=False)` for:
+- **Debugging**: Inspect worker memory/state after execution
+- **Post-mortem analysis**: Investigate failures before cleanup
+- **Audit requirements**: When agent state must be preserved
+
+### Manual Cleanup
+For orphaned workers (from interrupted workflows or failed finalizations):
+```
+delete_agent(agent_name="wf-<workflow_id>-<state_name>-...")
+```
+
+---
+
 ## Operational Guardrails
 
 | Topic | Rule |
@@ -197,6 +226,7 @@ The Reflector will analyze execution patterns and update your `reflector_guideli
 | Choreography | Do not manually sequence states — use readiness + notifications |
 | Notifications | Use sparingly; prefer `notify_if_ready` for single states |
 | Idempotency | `create_workflow_control_plane` is safe to re-run; `create_worker_agents` is NOT |
+| Worker cleanup | Always call `finalize_workflow` — workers are ephemeral and should be deleted |
 | Errors | Surface tool errors clearly; do not hand-wave |
 
 ## Output Style

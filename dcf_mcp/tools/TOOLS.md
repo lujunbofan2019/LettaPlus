@@ -62,6 +62,134 @@ Used by tools that perform actions with simple success/failure outcomes.
 
 ---
 
+## Agent Tool Assignment
+
+Each agent type requires a specific set of tools. Use this table when configuring agents in Letta.
+
+### Planner Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Planning & Validation** | | |
+| `validate_workflow` | ✅ | Validate workflow JSON before execution |
+| `validate_skill_manifest` | ⚪ | Validate unfamiliar skill manifests |
+| `get_skillset` | ✅ | Discover available skills for workflow design |
+| `get_skillset_from_catalog` | ⚪ | Alternative skill discovery from catalog file |
+| **Workflow Creation** | | |
+| `create_workflow_control_plane` | ✅ | Seed Redis control plane for execution |
+| `create_worker_agents` | ✅ | Create worker agents from templates |
+| **Execution Management** | | |
+| `read_workflow_control_plane` | ✅ | Monitor execution progress |
+| `notify_next_worker_agent` | ✅ | Trigger initial/downstream states |
+| `notify_if_ready` | ⚪ | Notify specific state when ready |
+| `finalize_workflow` | ✅ | Cleanup after execution |
+| **Reflector Integration** | | |
+| `register_reflector` | ⚪ | Register Reflector as companion agent |
+| `trigger_reflection` | ⚪ | Trigger post-execution analysis |
+| **Agent Management** | | |
+| `delete_agent` | ⚪ | Manual cleanup of orphaned workers |
+| **Data Operations** | | |
+| `json_set` | ✅ | Update control plane (e.g., meta.agents) |
+| `json_read` | ⚪ | Read control plane data |
+| **File Operations** | | |
+| `write_file` | ✅ | Persist workflow JSON to disk |
+| `create_directory` | ✅ | Create workflow output directories |
+| `read_file` | ⚪ | Read existing files |
+| `list_directory` | ⚪ | List directory contents |
+
+### Worker Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Lease Management** | | |
+| `acquire_state_lease` | ✅ | Get exclusive execution access |
+| `renew_state_lease` | ⚪ | Extend lease for long-running tasks |
+| `release_state_lease` | ✅ | Release lock after completion |
+| **State Management** | | |
+| `read_workflow_control_plane` | ✅ | Get task inputs and check readiness |
+| `update_workflow_control_plane` | ✅ | Write output and update status |
+| **Skill Management** | | |
+| `load_skill` | ✅ | Dynamically load required skills |
+| `unload_skill` | ✅ | Cleanup skills after execution |
+| **Notifications** | | |
+| `notify_next_worker_agent` | ✅ | Trigger downstream workers on success |
+| **Data Operations** | | |
+| `json_read` | ⚪ | Read upstream outputs from data plane |
+| **File Operations** | | |
+| `read_file` | ⚪ | Read input files |
+| `write_file` | ⚪ | Write output files |
+| **Dynamic Tools** | | |
+| *(Skill-specific tools)* | ✅ | Loaded dynamically via `load_skill` |
+
+### Reflector Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Memory Access** | | |
+| `read_shared_memory_blocks` | ✅ | Access Planner's memory for analysis |
+| **Guidelines Publishing** | | |
+| `update_reflector_guidelines` | ✅ | Publish recommendations to Planner |
+| **Execution Analysis** | | |
+| `read_workflow_control_plane` | ✅ | Get execution details (states, durations, errors) |
+| `json_read` | ⚪ | Read detailed state/output data from data plane |
+| **File Operations** | | |
+| `read_file` | ⚪ | Read workflow definitions |
+| **Knowledge Graph (Graphiti MCP)** | | |
+| `add_episode_to_graph_memory` | ✅ | Persist workflow executions and insights |
+| `search_graph_memory_nodes` | ✅ | Find similar workflows, skills, insights |
+| `search_graph_memory_facts` | ✅ | Query skill performance and relationships |
+
+**Legend**: ✅ = Required, ⚪ = Optional/Situational
+
+### Tool Assignment Summary
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           DCF MCP Tool Distribution                          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  PLANNER (19 tools)       │  WORKER (12 tools)        │  REFLECTOR (9 tools) │
+├───────────────────────────┼───────────────────────────┼──────────────────────┤
+│  Planning:                │  Leases:                  │  Memory:             │
+│    validate_workflow      │    acquire_state_lease    │    read_shared_      │
+│    validate_skill_manifest│    renew_state_lease      │      memory_blocks   │
+│    get_skillset           │    release_state_lease    │                      │
+│    get_skillset_from_     │                           │  Guidelines:         │
+│      catalog              │  State:                   │    update_reflector_ │
+│                           │    read_workflow_         │      guidelines      │
+│  Workflow:                │      control_plane        │                      │
+│    create_workflow_       │    update_workflow_       │  Analysis:           │
+│      control_plane        │      control_plane        │    read_workflow_    │
+│    create_worker_agents   │                           │      control_plane   │
+│                           │  Skills:                  │    json_read         │
+│  Execution:               │    load_skill             │    read_file         │
+│    read_workflow_         │    unload_skill           │                      │
+│      control_plane        │                           │  Graphiti MCP:       │
+│    notify_next_worker_    │  Notify:                  │    add_episode_to_   │
+│      agent                │    notify_next_worker_    │      graph_memory    │
+│    notify_if_ready        │      agent                │    search_graph_     │
+│    finalize_workflow      │                           │      memory_nodes    │
+│                           │  Data:                    │    search_graph_     │
+│  Reflector:               │    json_read              │      memory_facts    │
+│    register_reflector     │    read_file              │                      │
+│    trigger_reflection     │    write_file             │                      │
+│                           │                           │                      │
+│  Agent:                   │  + Skill-specific tools   │                      │
+│    delete_agent           │    (loaded dynamically)   │                      │
+│                           │                           │                      │
+│  Data:                    │                           │                      │
+│    json_set               │                           │                      │
+│    json_read              │                           │                      │
+│                           │                           │                      │
+│  Files:                   │                           │                      │
+│    write_file             │                           │                      │
+│    create_directory       │                           │                      │
+│    read_file              │                           │                      │
+│    list_directory         │                           │                      │
+└───────────────────────────┴───────────────────────────┴──────────────────────┘
+```
+
+---
+
 ## DCF Tools Reference
 
 ### Planning & Validation
@@ -529,12 +657,18 @@ Low-level JSON document operations for advanced control plane manipulation.
    └── Loop until exit_code == 0
 4. write_file()                       → Persist workflow JSON
 5. create_workflow_control_plane()    → Seed Redis (idempotent)
-6. create_worker_agents()             → Create workers (idempotent)
+6. create_worker_agents()             → Create ephemeral workers
 7. json_set() meta.agents             → Record agent mapping
 8. notify_next_worker_agent()         → Trigger initial states
 9. read_workflow_control_plane()      → Monitor progress
-10. finalize_workflow()               → Cleanup
+10. finalize_workflow()               → Close states + delete workers
+    ├── delete_worker_agents=True     (default: deletes ephemeral workers)
+    └── preserve_planner=True         (default: keeps Planner agent)
 11. trigger_reflection() (optional)   → Trigger post-execution analysis
+
+Edge cases:
+• delete_agent()                      → Manual cleanup of orphaned workers
+                                        (failed finalization, interrupted workflows)
 ```
 
 ## Worker Tool Usage Flow
@@ -549,6 +683,43 @@ Low-level JSON document operations for advanced control plane manipulation.
 7. notify_next_worker_agent()        → Trigger downstream (success only)
 8. unload_skill()                    → Cleanup skills
 9. release_state_lease()             → Release lock
+```
+
+## Reflector Tool Usage Flow
+
+```
+1. (Receive reflection_event message from trigger_reflection)
+   ├── workflow_id, planner_agent_id, final_status, summary
+
+2. read_shared_memory_blocks()       → Access Planner's memory
+   ├── persona, archival_memory, working_context
+   └── reflector_guidelines (current state)
+
+3. read_workflow_control_plane()     → Get execution details
+   ├── Per-state status, durations, errors
+   └── Output data from data plane
+
+4. (Query Graphiti for historical context)
+   ├── search_graph_memory_nodes()   → Find similar workflows
+   ├── search_graph_memory_facts()   → Get skill performance history
+   └── search_graph_memory_nodes()   → Retrieve past insights
+
+5. (Analyze patterns and derive insights)
+   ├── Compare with historical data
+   ├── Identify success/failure patterns
+   └── Generate recommendations
+
+6. (Persist to Graphiti)
+   ├── add_episode_to_graph_memory() → WorkflowExecution record
+   ├── add_episode_to_graph_memory() → LearningInsight records
+   └── add_episode_to_graph_memory() → SkillMetric records
+
+7. update_reflector_guidelines()     → Publish to Planner
+   ├── add_skill_recommendation      → Skill preferences
+   ├── add_workflow_pattern          → Proven structures
+   ├── add_user_intent_tip           → User preference insights
+   ├── add_warning                   → Pitfalls to avoid
+   └── add_insight                   → Recent observations
 ```
 
 ---
