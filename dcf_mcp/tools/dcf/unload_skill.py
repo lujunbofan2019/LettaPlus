@@ -2,8 +2,6 @@ from typing import Any, Dict
 import os
 import json
 
-from letta_client import Letta
-
 # --- Constants ---
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 # Use the same env var name as the loader tool for consistency
@@ -38,6 +36,12 @@ def unload_skill(manifest_id: str, agent_id: str) -> Dict[str, Any]:
         return {"status": None, "error": "TypeError: manifest_id must be a non-empty string"}
     if not isinstance(agent_id, str) or not agent_id.strip():
         return {"status": None, "error": "TypeError: agent_id must be a non-empty string"}
+
+    # Lazy import for letta_client
+    try:
+        from letta_client import Letta
+    except Exception as e:
+        return {"status": None, "error": f"Missing dependency: letta_client not importable: {e}"}
 
     try:
         # 0) Client + agent existence

@@ -10,7 +10,8 @@ def create_worker_agents(workflow_json: str,
                          imports_base_dir: str = None,
                          agent_name_prefix: str = None,
                          agent_name_suffix: str = ".af",
-                         default_tags_json: str = None) -> Dict[str, Any]:
+                         default_tags_json: str = None,
+                         skip_if_exists: bool = True) -> Dict[str, Any]:
     """Create one worker agent per ASL Task state using Letta .af v2 templates.
 
     Resolution order for agent templates:
@@ -28,6 +29,8 @@ def create_worker_agents(workflow_json: str,
           - Replace template `tools` with `tool_ids` when matches are found.
           - Skip source-defined tools we cannot safely de-duplicate (add a warning).
         This means templates should prefer referencing pre-registered tools (by name / id).
+      * When skip_if_exists=True (default), if workers already exist for this workflow
+        (detected via "wf:{workflow_id}" tag), they are returned without creating duplicates.
 
     Args:
       workflow_json: The workflow document as a JSON string. Should contain `asl.StartAt` and `asl.States`.
@@ -37,6 +40,8 @@ def create_worker_agents(workflow_json: str,
       agent_name_suffix: Suffix to append when resolving agent templates from disk (e.g., ".af").
       default_tags_json: JSON string array of extra tags (e.g., ["worker", "choreo"]).
                          Each agent also receives "wf:{workflow_id}" and "state:{StateName}".
+      skip_if_exists: If True (default), check for existing workers with matching workflow tag
+                      and return them instead of creating duplicates.
 
     Returns:
       dict: {
@@ -45,6 +50,7 @@ def create_worker_agents(workflow_json: str,
         "workflow_id": str or None,
         "agents_map": dict,                 # { state_name: agent_id }
         "created": list,                    # [{ "state": ..., "agent_id": ..., "agent_name": ... }, ...]
+        "existing": list,                   # [{ "state": ..., "agent_id": ..., "agent_name": ... }, ...] (when skip_if_exists)
         "warnings": list                    # non-fatal issues
       }
     """
@@ -58,6 +64,7 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": None,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": ["Install/upgrade Letta Python client in the server image."]
         }
 
@@ -76,6 +83,7 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": None,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": []
         }
 
@@ -87,6 +95,7 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": None,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": []
         }
 
@@ -100,6 +109,7 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": workflow_id,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": []
         }
 
@@ -114,8 +124,51 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": workflow_id,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": []
         }
+
+    # --- Idempotency check: look for existing workers ---
+    if skip_if_exists:
+        try:
+            client_check = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://letta:8283"))
+            all_agents = client_check.agents.list()
+            wf_tag = "wf:%s" % workflow_id
+            existing_workers = []
+            existing_map = {}
+            for agent in all_agents:
+                agent_tags = getattr(agent, "tags", []) or []
+                if wf_tag in agent_tags and "role:worker" in agent_tags:
+                    agent_id = getattr(agent, "id", None) or getattr(agent, "agent_id", None)
+                    agent_name = getattr(agent, "name", None)
+                    # Extract state from tags (format: "state:{StateName}")
+                    state_name = None
+                    for tag in agent_tags:
+                        if tag.startswith("state:"):
+                            state_name = tag[6:]
+                            break
+                    if agent_id and state_name:
+                        existing_workers.append({
+                            "state": state_name,
+                            "agent_id": agent_id,
+                            "agent_name": agent_name
+                        })
+                        existing_map[state_name] = agent_id
+
+            # If we found workers for all task states, return them
+            if existing_workers and all(s in existing_map for s in task_states):
+                return {
+                    "status": "Workers already exist for workflow '%s'. Returning existing agents." % workflow_id,
+                    "error": None,
+                    "workflow_id": workflow_id,
+                    "agents_map": existing_map,
+                    "created": [],
+                    "existing": existing_workers,
+                    "warnings": ["skip_if_exists=True: found %d existing worker(s)" % len(existing_workers)]
+                }
+        except Exception as e:
+            # Non-fatal: if we can't check, proceed with creation
+            warnings.append("Could not check for existing workers: %s" % e)
 
     # --- Optional default tags ---
     extra_tags = []
@@ -236,6 +289,7 @@ def create_worker_agents(workflow_json: str,
             "workflow_id": workflow_id,
             "agents_map": {},
             "created": [],
+            "existing": [],
             "warnings": warnings
         }
 
@@ -286,6 +340,7 @@ def create_worker_agents(workflow_json: str,
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
+                    "existing": [],
                     "warnings": warnings
                 }
         elif isinstance(ref_name, str):
@@ -305,6 +360,7 @@ def create_worker_agents(workflow_json: str,
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
+                    "existing": [],
                     "warnings": warnings
                 }
         else:
@@ -323,6 +379,7 @@ def create_worker_agents(workflow_json: str,
                     "workflow_id": workflow_id,
                     "agents_map": agents_map,
                     "created": created,
+                    "existing": [],
                     "warnings": warnings
                 }
 
@@ -396,6 +453,7 @@ def create_worker_agents(workflow_json: str,
                 "workflow_id": workflow_id,
                 "agents_map": agents_map,
                 "created": created,
+                "existing": [],
                 "warnings": warnings
             }
 
@@ -408,6 +466,7 @@ def create_worker_agents(workflow_json: str,
                 "workflow_id": workflow_id,
                 "agents_map": agents_map,
                 "created": created,
+                "existing": [],
                 "warnings": warnings
             }
 
@@ -421,5 +480,6 @@ def create_worker_agents(workflow_json: str,
         "workflow_id": workflow_id,
         "agents_map": agents_map,
         "created": created,
+        "existing": [],
         "warnings": warnings
     }

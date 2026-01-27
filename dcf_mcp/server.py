@@ -338,7 +338,8 @@ def create_worker_agents(workflow_json: str,
                          imports_base_dir: str | None = None,
                          agent_name_prefix: str | None = None,
                          agent_name_suffix: str | None = None,
-                         default_tags_json: str | None = None) -> Dict[str, Any]:
+                         default_tags_json: str | None = None,
+                         skip_if_exists: bool = True) -> Dict[str, Any]:
     effective_imports = imports_base_dir or DEFAULT_AGENTS_DIR
     effective_suffix = agent_name_suffix or ".af"
     return _create_worker_agents(
@@ -347,6 +348,7 @@ def create_worker_agents(workflow_json: str,
         agent_name_prefix=agent_name_prefix,
         agent_name_suffix=effective_suffix,
         default_tags_json=default_tags_json,
+        skip_if_exists=skip_if_exists,
     )
 
 
