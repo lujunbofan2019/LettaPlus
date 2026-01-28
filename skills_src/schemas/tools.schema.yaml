@@ -1,0 +1,295 @@
+# =============================================================================
+# YAML Authoring Schema for Tools Registry
+# =============================================================================
+# Version: 1.0.0
+# Purpose: Define MCP tool specifications and simulation test cases
+#
+# IMPORTANT: This file serves TWO purposes:
+#
+# 1. TOOL SCHEMA ENRICHMENT
+#    When yaml_to_manifests.py generates skill manifests, it pulls tool
+#    schemas (params, result, description) from this file to enrich the
+#    requiredTools entries in the generated JSON manifests.
+#
+# 2. STUB SERVER CONFIGURATION
+#    When yaml_to_stub_config.py runs, it generates stub_config.json from
+#    this file, including all test cases for deterministic simulation.
+#
+# Relationship to other schemas:
+#
+#   tools.yaml ──────┬──▶ skill manifests (json_schema enrichment)
+#                    │
+#                    └──▶ stub_config.json (simulation configuration)
+#
+# See skills_src/SKILLS.md for detailed documentation.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Example tools.yaml Structure
+# -----------------------------------------------------------------------------
+# apiVersion: tools/v1
+# kind: ToolsRegistry
+#
+# servers:
+#   search:
+#     description: Search and discovery tools
+#     tools:
+#       search_query:
+#         version: 0.1.0
+#         description: Web search query tool
+#         params:
+#           type: object
+#           properties:
+#             q: { type: string, description: Search query }
+#           required: [q]
+#         result:
+#           type: object
+#           properties:
+#             hits: { type: array }
+#         defaults:
+#           response: { hits: [] }
+#           latencyMs: 150
+#           rateLimit: { rps: 2 }
+#         cases:
+#           - id: case_python
+#             match: { strategy: exact, path: q, value: python }
+#             response: { hits: [...] }
+# -----------------------------------------------------------------------------
+
+schema:
+  # ===========================================================================
+  # Document Header
+  # ===========================================================================
+
+  apiVersion:
+    type: string
+    required: true
+    enum: ["tools/v1"]
+    description: Schema version identifier.
+
+  kind:
+    type: string
+    required: true
+    enum: ["ToolsRegistry"]
+    description: Resource type identifier.
+
+  # ===========================================================================
+  # Servers Section
+  # ===========================================================================
+
+  servers:
+    type: object
+    required: true
+    description: |
+      Map of logical server IDs to their tool definitions.
+      Server IDs are referenced in skill files as: ref: <serverId>:<toolName>
+    additionalProperties:
+      type: object
+      description: Server definition containing tools.
+      properties:
+        description:
+          type: string
+          required: false
+          description: Human-readable description of this server's purpose.
+
+        tools:
+          type: object
+          required: true
+          description: Map of tool names to their specifications.
+          additionalProperties:
+            type: object
+            description: Tool specification.
+            properties:
+              # -----------------------------------------------------------------
+              # Tool Metadata
+              # -----------------------------------------------------------------
+              version:
+                type: string
+                required: false
+                default: "0.1.0"
+                description: Tool version string.
+
+              description:
+                type: string
+                required: true
+                description: |
+                  Human-readable tool description.
+                  Used in both skill manifests and stub server tool listings.
+
+              # -----------------------------------------------------------------
+              # Schema Definitions (used for manifest enrichment)
+              # -----------------------------------------------------------------
+              params:
+                type: object
+                required: true
+                description: |
+                  JSON Schema for input parameters.
+                  This is embedded in generated skill manifests as json_schema.parameters.
+
+                  TRANSFORMATION TO MANIFEST:
+                    tools.yaml:
+                      params:
+                        type: object
+                        properties:
+                          q: { type: string }
+                        required: [q]
+
+                    manifest.json:
+                      "json_schema": {
+                        "name": "search_query",
+                        "description": "...",
+                        "parameters": {
+                          "type": "object",
+                          "properties": { "q": { "type": "string" } },
+                          "required": ["q"]
+                        }
+                      }
+                properties:
+                  type:
+                    type: string
+                    const: "object"
+                  properties:
+                    type: object
+                    description: Parameter definitions.
+                  required:
+                    type: array
+                    items: string
+                    description: Required parameter names.
+
+              result:
+                type: object
+                required: false
+                description: |
+                  JSON Schema for the tool's output (optional).
+                  Used for documentation and validation.
+
+              # -----------------------------------------------------------------
+              # Simulation Defaults (used for stub config)
+              # -----------------------------------------------------------------
+              defaults:
+                type: object
+                required: false
+                description: Default behaviors for stub server simulation.
+                properties:
+                  response:
+                    type: any
+                    description: |
+                      Default response when no test case matches.
+                      Supports template variables: {{ now_iso }}, {{ uuid }}, {{ args.* }}
+
+                  latencyMs:
+                    type: integer
+                    default: 100
+                    description: Simulated network latency in milliseconds.
+
+                  rateLimit:
+                    type: object
+                    properties:
+                      rps:
+                        type: integer
+                        default: 0
+                        description: Requests per second limit (0 = unlimited).
+
+              # -----------------------------------------------------------------
+              # Test Cases (used for stub config)
+              # -----------------------------------------------------------------
+              cases:
+                type: array
+                required: false
+                default: []
+                description: |
+                  Deterministic test cases for stub server simulation.
+                  Cases are matched in order of weight (descending), then definition order.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      required: true
+                      description: |
+                        Unique case identifier.
+                        Used in metrics: server:tool:caseId
+
+                    match:
+                      type: object
+                      required: true
+                      description: Criteria for matching this case.
+                      properties:
+                        strategy:
+                          type: string
+                          enum: ["exact", "regex", "jsonpath", "contains", "always"]
+                          required: true
+                          description: |
+                            Matching strategy:
+                            - exact: Exact string match on path value
+                            - regex: Regex pattern on JSON-serialized arguments
+                            - contains: Substring match
+                            - jsonpath: Limited JSONPath expression
+                            - always: Always matches (use for fallbacks)
+
+                        path:
+                          type: string
+                          required: false
+                          description: |
+                            Dot-notation path to the value to match.
+                            Examples: q, args.topic, data.items[0]
+                            Not required for 'always' strategy.
+
+                        value:
+                          type: any
+                          required: false
+                          description: |
+                            Value to match against.
+                            For regex: the pattern string.
+                            For exact/contains: the expected value.
+
+                    response:
+                      type: any
+                      required: false
+                      description: |
+                        Response to return when this case matches.
+                        Supports template variables:
+                        - {{ now_iso }} - Current ISO timestamp
+                        - {{ uuid }} - Random UUID
+                        - {{ random_int(min, max) }} - Random integer
+                        - {{ args.param }} or {{ param }} - Input argument
+
+                    responseTemplate:
+                      type: string
+                      required: false
+                      description: |
+                        Alternative to 'response' for complex templating.
+                        Parsed as JSON after template processing.
+
+                    latencyMsOverride:
+                      type: integer
+                      required: false
+                      description: Override default latency for this case.
+
+                    errorMode:
+                      type: string
+                      enum: ["throw", "timeout", "http_500", "flaky"]
+                      required: false
+                      description: |
+                        Error injection mode:
+                        - throw: Return error response immediately
+                        - timeout: Sleep 10s then timeout
+                        - http_500: Return HTTP 500 error
+                        - flaky: Random failures based on flakyRate
+
+                    flakyRate:
+                      type: number
+                      minimum: 0
+                      maximum: 1
+                      required: false
+                      description: |
+                        Probability of failure when errorMode=flaky.
+                        Example: 0.3 = 30% failure rate.
+
+                    weight:
+                      type: integer
+                      required: false
+                      description: |
+                        Priority weight for case matching.
+                        Higher weight = checked first.
+                        Use to ensure specific cases match before generic ones.

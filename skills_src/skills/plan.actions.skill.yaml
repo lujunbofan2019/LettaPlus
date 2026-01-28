@@ -1,0 +1,28 @@
+# Skill: Action Planning
+# Generates prioritized action plans
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.plan.actions@0.1.0
+  name: plan.actions
+  version: 0.1.0
+  description: Generates prioritized action plans
+  tags: [plan, actions]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Output 3-5 actionable next steps.
+    Rank actions by impact and feasibility.
+    Assign clear ownership recommendations where appropriate.
+    Include timeline considerations.
+
+  tools:
+    - ref: llm:llm_action_plan
+      required: true
+      description: Generate prioritized actions from objectives

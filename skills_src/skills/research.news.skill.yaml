@@ -1,0 +1,32 @@
+# Skill: News Research
+# Collects topical headlines and supporting web snippets
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.research.news@0.1.0
+  name: research.news
+  version: 0.1.0
+  description: Collects topical headlines and supporting web snippets
+  tags: [research, news]
+
+spec:
+  permissions:
+    egress: internet
+    secrets: []
+
+  directives: |
+    Return at least three diverse sources when available.
+    Include source attribution for all headlines.
+    Prioritize recent and authoritative sources.
+    Note publication dates to establish recency.
+
+  tools:
+    - ref: search:news_headlines
+      required: true
+      description: Pull relevant headlines for a topic
+
+    - ref: web:web_fetch
+      required: false
+      description: Optional deep-dive on selected headlines

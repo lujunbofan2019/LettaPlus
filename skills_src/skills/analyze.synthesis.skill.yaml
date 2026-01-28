@@ -1,0 +1,28 @@
+# Skill: Research Synthesis
+# Synthesizes multi-source research into themes and risks
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.analyze.synthesis@0.1.0
+  name: analyze.synthesis
+  version: 0.1.0
+  description: Synthesizes multi-source research into themes and risks
+  tags: [analysis, synthesis]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Cluster insights into 2-4 dominant themes.
+    Enumerate explicit risks with supporting evidence.
+    Assign confidence levels to conclusions.
+    Cross-reference multiple sources to validate findings.
+
+  tools:
+    - ref: analysis:insight_compare
+      required: true
+      description: Cluster insights into themes and identify risks

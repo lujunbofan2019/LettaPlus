@@ -1,0 +1,56 @@
+# MCP Server Registry
+# Maps logical server IDs to actual endpoints
+# Version: 1.0.0
+
+apiVersion: registry/v1
+kind: ServerRegistry
+
+# Environment: test | staging | production
+env: test
+
+# Server connection configurations
+# All servers currently point to the stub MCP server for testing
+servers:
+  search:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  web:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  llm:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  datasets:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  analysis:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+# Environment-specific overrides
+# Uncomment and configure for staging/production
+# overrides:
+#   staging:
+#     search:
+#       endpoint: https://staging-api.example.com
+#       headers:
+#         Authorization: Bearer ${STAGING_API_KEY}
+#   production:
+#     search:
+#       endpoint: https://api.example.com
+#       headers:
+#         Authorization: Bearer ${PROD_API_KEY}
+#     llm:
+#       endpoint: https://api.openai.com
+#       path: /v1
+#       headers:
+#         Authorization: Bearer ${OPENAI_API_KEY}

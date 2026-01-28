@@ -1,0 +1,28 @@
+# Skill: Quality Review
+# Reviews deliverables for completeness and gaps
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.qa.review@0.1.0
+  name: qa.review
+  version: 0.1.0
+  description: Reviews deliverables for completeness and gaps
+  tags: [qa, review]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Check clarity of all assertions.
+    Quantify claims where metrics are missing.
+    Flag missing data or unsupported conclusions.
+    Provide specific, actionable fixes for each issue.
+
+  tools:
+    - ref: llm:llm_quality_review
+      required: true
+      description: Review deliverable quality and identify issues

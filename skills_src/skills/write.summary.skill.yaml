@@ -1,0 +1,28 @@
+# Skill: Summary Writing
+# Short factual summary writer
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.write.summary@0.1.0
+  name: write.summary
+  version: 0.1.0
+  description: Short factual summary writer
+  tags: [write, summary]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Write concise, factual summaries under 150 words.
+    No speculation or unsupported claims.
+    Use clear, professional language.
+    Highlight the most important points first.
+
+  tools:
+    - ref: llm:llm_summarize
+      required: true
+      description: Generate concise summaries from input text

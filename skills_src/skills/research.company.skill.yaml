@@ -1,0 +1,34 @@
+# Skill: Company Research
+# Retrieves structured company intelligence records
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.research.company@0.1.0
+  name: research.company
+  version: 0.1.0
+  description: Retrieves structured company intelligence records
+  tags: [research, company, data]
+
+spec:
+  permissions:
+    egress: datasets
+    secrets: []
+
+  directives: |
+    Surface company overview plus key metrics relevant to go-to-market decisions.
+    Include funding history, customer segments, and product lines.
+    Highlight recent milestones and competitive positioning.
+
+  tools:
+    - ref: datasets:company_profile
+      required: true
+      description: Retrieve structured company profile
+
+  dataSources:
+    - id: datasets
+      description: Context about available dataset capabilities
+      text: |
+        Stub dataset describing company KPIs.
+        Data includes: overview, metrics, customer segments, product lines, milestones.

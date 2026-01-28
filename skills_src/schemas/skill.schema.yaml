@@ -1,0 +1,303 @@
+# =============================================================================
+# YAML Authoring Schema for Skill Files
+# =============================================================================
+# Version: 1.0.0
+# Purpose: Human-friendly skill authoring format
+#
+# IMPORTANT: This is an AUTHORING schema, NOT a runtime schema.
+#
+# Two schemas exist in the DCF skill system:
+#
+# 1. THIS FILE (Authoring Schema)
+#    - Location: skills_src/schemas/skill.schema.yaml
+#    - Format: Documentation (not yet machine-enforceable)
+#    - Used by: Skill authors writing .skill.yaml files
+#    - Optimized for: Human readability and convenience
+#
+# 2. Runtime Schema
+#    - Location: dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json
+#    - Format: JSON Schema 2020-12 (machine-enforceable)
+#    - Used by: load_skill.py, validate_skill_manifest.py
+#    - Optimized for: Machine processing and validation
+#
+# The generator (yaml_to_manifests.py) transforms YAML authoring files
+# into JSON runtime manifests. Key transformations:
+#
+#   - Tool refs (search:search_query) → Full definition objects
+#   - File data sources → Inline text content
+#   - Kubernetes-style structure → Flat JSON structure
+#   - Schema enrichment from tools.yaml → Embedded json_schema
+#
+# See skills_src/SKILLS.md for detailed transformation documentation.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Example Skill File
+# -----------------------------------------------------------------------------
+# apiVersion: skill/v1
+# kind: Skill
+#
+# metadata:
+#   manifestId: skill.research.web@0.1.0
+#   name: research.web
+#   version: 0.1.0
+#   description: Lightweight web research capability
+#   tags: [research, web]
+#
+# spec:
+#   permissions:
+#     egress: internet
+#     secrets: [BING_API_KEY]
+#
+#   directives: |
+#     Follow queries precisely.
+#     Extract key facts.
+#     Provide citations.
+#
+#   tools:
+#     - ref: search:search_query
+#       required: true
+#       description: Core search tool
+#
+#   dataSources:
+#     - id: aboutness
+#       text: This skill extracts key facts with citations.
+# -----------------------------------------------------------------------------
+
+schema:
+  # ===========================================================================
+  # Document Header (Kubernetes-style)
+  # ===========================================================================
+  # These fields identify the document type and schema version.
+  # They are NOT present in the generated JSON manifest.
+
+  apiVersion:
+    type: string
+    required: true
+    enum: ["skill/v1"]
+    description: |
+      Schema version identifier for the authoring format.
+      Maps to "manifestApiVersion": "v2.0.0" in generated JSON.
+
+  kind:
+    type: string
+    required: true
+    enum: ["Skill"]
+    description: |
+      Resource type identifier.
+      Used for validation; not present in generated JSON.
+
+  # ===========================================================================
+  # Metadata Section
+  # ===========================================================================
+  # Identifies the skill and provides discovery information.
+
+  metadata:
+    type: object
+    required: true
+    description: Skill identification and discovery metadata.
+    properties:
+      manifestId:
+        type: string
+        required: true
+        pattern: "^skill\\.[a-z0-9_.]+@\\d+\\.\\d+\\.\\d+$"
+        description: |
+          Unique identifier in format: skill.<domain>.<name>@<semver>
+          Example: skill.research.web@0.1.0
+          Maps directly to "manifestId" in generated JSON.
+
+      name:
+        type: string
+        required: true
+        description: |
+          Dot-separated skill name (e.g., research.web).
+          Maps to "skillName" in generated JSON.
+
+      version:
+        type: string
+        required: true
+        pattern: "^\\d+\\.\\d+\\.\\d+$"
+        description: |
+          Semantic version (e.g., 0.1.0).
+          Maps to "skillVersion" in generated JSON.
+
+      description:
+        type: string
+        required: false
+        description: |
+          Human-readable skill description.
+          Maps directly to "description" in generated JSON.
+
+      tags:
+        type: array
+        items: string
+        required: false
+        default: []
+        description: |
+          Categorization tags for skill discovery.
+          Maps directly to "tags" in generated JSON.
+
+  # ===========================================================================
+  # Spec Section
+  # ===========================================================================
+  # Defines the skill's capabilities, permissions, and resources.
+
+  spec:
+    type: object
+    required: true
+    description: Skill specification including directives, tools, and data.
+    properties:
+      # -------------------------------------------------------------------------
+      # Permissions
+      # -------------------------------------------------------------------------
+      permissions:
+        type: object
+        required: false
+        description: Security and access permissions.
+        properties:
+          egress:
+            type: string
+            enum: ["none", "intranet", "internet"]
+            default: "none"
+            description: |
+              Network access level required by this skill.
+              - none: No external network access
+              - intranet: Internal network only
+              - internet: Full internet access
+
+          secrets:
+            type: array
+            items: string
+            default: []
+            description: |
+              Names of required secrets/API keys.
+              Example: [BING_API_KEY, OPENAI_API_KEY]
+
+          riskLevel:
+            type: string
+            enum: ["low", "medium", "high"]
+            default: "low"
+            description: |
+              Risk classification for governance purposes.
+              NOTE: Not yet in JSON runtime schema.
+
+      # -------------------------------------------------------------------------
+      # Directives
+      # -------------------------------------------------------------------------
+      directives:
+        type: string
+        required: true
+        description: |
+          Behavioral instructions for the agent when this skill is loaded.
+          Use YAML multi-line strings (|) for readability.
+          Maps to "skillDirectives" in generated JSON.
+
+      # -------------------------------------------------------------------------
+      # Tools
+      # -------------------------------------------------------------------------
+      tools:
+        type: array
+        required: false
+        default: []
+        description: |
+          MCP tools required by this skill.
+          Each tool ref is expanded into a full definition in generated JSON.
+        items:
+          type: object
+          properties:
+            ref:
+              type: string
+              required: true
+              pattern: "^[a-z0-9_-]+:[a-z0-9_-]+$"
+              description: |
+                Tool reference in format: serverId:toolName
+                Example: search:search_query
+
+                TRANSFORMATION:
+                  YAML: ref: search:search_query
+                  JSON: {
+                    "definition": {
+                      "type": "mcp_server",
+                      "serverId": "search",
+                      "toolName": "search_query"
+                    },
+                    "json_schema": { ... from tools.yaml ... }
+                  }
+
+            required:
+              type: boolean
+              default: true
+              description: Whether this tool is mandatory for the skill.
+
+            description:
+              type: string
+              required: false
+              description: Notes about how this tool is used within the skill.
+
+      # -------------------------------------------------------------------------
+      # Data Sources
+      # -------------------------------------------------------------------------
+      dataSources:
+        type: array
+        required: false
+        default: []
+        description: |
+          Context data injected into agent memory when skill is loaded.
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              required: true
+              description: Unique identifier within this skill.
+
+            description:
+              type: string
+              required: false
+              description: Purpose of this data source.
+
+            destination:
+              type: string
+              enum: ["archival_memory", "working_memory"]
+              default: "archival_memory"
+              description: |
+                Where to inject the content in agent memory.
+                NOTE: JSON schema only supports "archival_memory" currently.
+
+            text:
+              type: string
+              required: false
+              description: |
+                Inline text content.
+                Mutually exclusive with 'file'.
+
+                TRANSFORMATION:
+                  YAML: text: "Content here"
+                  JSON: { "content": { "type": "text_content", "text": "Content here" } }
+
+            file:
+              type: string
+              required: false
+              description: |
+                Path to external file (relative to skill file).
+                File contents are inlined during generation.
+                NOT supported in JSON runtime schema.
+
+                TRANSFORMATION:
+                  YAML: file: ./data/guidelines.txt
+                  JSON: { "content": { "type": "text_content", "text": "... file contents ..." } }
+
+      # -------------------------------------------------------------------------
+      # Dependencies (Future Feature)
+      # -------------------------------------------------------------------------
+      dependencies:
+        type: array
+        required: false
+        default: []
+        description: |
+          Skill manifest IDs this skill depends on.
+          NOTE: Future feature - not yet supported in JSON runtime schema.
+        items:
+          type: string
+          pattern: "^skill\\.[a-z0-9_.]+@\\d+\\.\\d+\\.\\d+$"
+          description: Manifest ID of a dependent skill.

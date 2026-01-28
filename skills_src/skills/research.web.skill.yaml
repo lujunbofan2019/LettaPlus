@@ -1,0 +1,39 @@
+# Skill: Web Research
+# Lightweight web research capability for general queries
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.research.web@0.1.0
+  name: research.web
+  version: 0.1.0
+  description: Lightweight web research capability
+  tags: [research, web]
+
+spec:
+  permissions:
+    egress: internet
+    secrets: [BING_API_KEY]
+
+  directives: |
+    Follow queries precisely.
+    Extract key facts from search results.
+    Provide citations with source URLs.
+    When fetching pages, focus on relevant content sections.
+
+  tools:
+    - ref: search:search_query
+      required: true
+      description: Core search tool for web queries
+
+    - ref: web:web_fetch
+      required: true
+      description: Fetch full page content when needed
+
+  dataSources:
+    - id: aboutness
+      description: Skill context for the agent
+      text: |
+        This skill extracts key facts with citations.
+        Always include source URLs when reporting findings.

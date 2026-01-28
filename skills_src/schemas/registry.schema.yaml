@@ -1,0 +1,191 @@
+# =============================================================================
+# YAML Authoring Schema for Server Registry
+# =============================================================================
+# Version: 1.0.0
+# Purpose: Map logical server IDs to actual MCP endpoints
+#
+# The registry enables environment-specific endpoint configuration:
+#
+#   - TEST: All servers point to stub-mcp for deterministic simulation
+#   - STAGING: Mix of stub and real endpoints for integration testing
+#   - PRODUCTION: All servers point to real API endpoints
+#
+# This file is used by:
+#   1. load_skill.py - Resolves serverId to actual endpoint when loading skills
+#   2. Documentation - Shows available servers and their configurations
+#
+# The registry is NOT transformed during generation. It's read directly
+# at runtime by the skill loader.
+#
+# See skills_src/SKILLS.md for usage documentation.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Example registry.yaml
+# -----------------------------------------------------------------------------
+# apiVersion: registry/v1
+# kind: ServerRegistry
+#
+# env: test
+#
+# servers:
+#   search:
+#     transport: streamable_http
+#     endpoint: http://stub-mcp:8765
+#     path: /mcp
+#
+#   llm:
+#     transport: streamable_http
+#     endpoint: http://stub-mcp:8765
+#     path: /mcp
+#
+# # Production overrides
+# overrides:
+#   production:
+#     search:
+#       endpoint: https://api.bing.microsoft.com
+#       headers:
+#         Ocp-Apim-Subscription-Key: ${BING_API_KEY}
+# -----------------------------------------------------------------------------
+
+schema:
+  # ===========================================================================
+  # Document Header
+  # ===========================================================================
+
+  apiVersion:
+    type: string
+    required: true
+    enum: ["registry/v1"]
+    description: Schema version identifier.
+
+  kind:
+    type: string
+    required: true
+    enum: ["ServerRegistry"]
+    description: Resource type identifier.
+
+  # ===========================================================================
+  # Environment
+  # ===========================================================================
+
+  env:
+    type: string
+    required: true
+    enum: ["test", "staging", "production"]
+    description: |
+      Current environment identifier.
+      Determines which server configurations are active.
+      - test: Use stub endpoints for all servers
+      - staging: Mix of stub and real for integration testing
+      - production: Use real API endpoints
+
+  # ===========================================================================
+  # Servers Section
+  # ===========================================================================
+
+  servers:
+    type: object
+    required: true
+    description: |
+      Map of logical server IDs to connection configurations.
+
+      Server IDs are referenced in:
+        - Skill files: tools[].ref: <serverId>:<toolName>
+        - Generated manifests: definition.serverId
+
+      At runtime, the skill loader resolves serverId to the actual
+      endpoint using this registry.
+    additionalProperties:
+      type: object
+      description: Server connection configuration.
+      properties:
+        transport:
+          type: string
+          required: true
+          enum: ["streamable_http", "ws", "stdio", "sse"]
+          description: |
+            MCP transport protocol:
+            - streamable_http: HTTP with streaming (recommended for remote)
+            - ws: WebSocket connection
+            - stdio: Standard I/O (for local subprocess servers)
+            - sse: Server-Sent Events
+
+        endpoint:
+          type: string
+          required: true
+          format: uri
+          description: |
+            Base URL or connection string.
+            Examples:
+              - http://stub-mcp:8765
+              - https://api.example.com
+              - ws://localhost:9000
+
+        path:
+          type: string
+          required: false
+          default: "/"
+          description: |
+            Path suffix for HTTP-based transports.
+            Appended to endpoint URL.
+            Example: /mcp, /v1/tools
+
+        headers:
+          type: object
+          required: false
+          additionalProperties:
+            type: string
+          description: |
+            Additional HTTP headers for authentication.
+            Supports environment variable substitution: ${VAR_NAME}
+            Example:
+              headers:
+                Authorization: Bearer ${API_KEY}
+                X-Custom-Header: value
+
+        timeout:
+          type: integer
+          required: false
+          default: 30000
+          description: Connection timeout in milliseconds.
+
+        retries:
+          type: integer
+          required: false
+          default: 3
+          description: Number of retry attempts on connection failure.
+
+  # ===========================================================================
+  # Environment Overrides (Optional)
+  # ===========================================================================
+
+  overrides:
+    type: object
+    required: false
+    description: |
+      Per-environment server configuration overrides.
+
+      When env matches an override key, those server configs
+      are merged with (and override) the base server configs.
+
+      Example:
+        env: production
+        servers:
+          search:
+            endpoint: http://stub-mcp:8765  # Base config
+        overrides:
+          production:
+            search:
+              endpoint: https://api.bing.com  # Overrides base
+    additionalProperties:
+      type: object
+      description: |
+        Server overrides for this environment.
+        Keys are server IDs; values are partial server configs
+        that merge with the base configuration.
+      additionalProperties:
+        type: object
+        description: |
+          Partial server configuration.
+          Only specified fields override the base config.

@@ -1,0 +1,36 @@
+# Skill: Research Scope Planning
+# Drafts research scopes and clarifies objectives
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.plan.research_scope@0.1.0
+  name: plan.research_scope
+  version: 0.1.0
+  description: Drafts research scopes and clarifies objectives
+  tags: [plan, research, outline]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Capture stakeholder objectives, guardrails, and key questions.
+    Structure scope using MECE (Mutually Exclusive, Collectively Exhaustive) principles.
+    Output numbered steps for clarity.
+    Identify potential data and tooling needs upfront.
+
+  tools:
+    - ref: llm:llm_outline
+      required: true
+      description: Generate structured research outline
+
+  dataSources:
+    - id: prompt
+      description: Planning methodology guidance
+      text: |
+        Use MECE bulleting.
+        Output numbered steps.
+        Always clarify success metrics.

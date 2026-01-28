@@ -1,0 +1,36 @@
+# Skill: Executive Briefing
+# Produces executive-ready strategic briefings
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.write.briefing@0.1.0
+  name: write.briefing
+  version: 0.1.0
+  description: Produces executive-ready strategic briefings
+  tags: [write, briefing]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    Write in crisp executive tone.
+    Structure with clear sections for Opportunities and Risks.
+    Lead with the most impactful insights.
+    Include actionable recommendations.
+
+  tools:
+    - ref: llm:llm_briefing
+      required: true
+      description: Draft executive briefing from themes
+
+  dataSources:
+    - id: tone
+      description: Writing style guidance
+      text: |
+        Tone: executive concise.
+        Use bullet points for key findings.
+        Quantify claims where possible.

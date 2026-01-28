@@ -41,7 +41,7 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `dcf_mcp/schemas/` | JSON schemas (workflow v2.2.0, skill v2.0.0, control/data plane) |
 | `stub_mcp/` | Deterministic stub MCP server for BDD testing |
 | `graphiti/` | Knowledge graph memory layer (FalkorDB backend) |
-| `skills_src/` | CSV authoring inputs for skills and tools |
+| `skills_src/` | YAML skill definitions and tool specifications |
 | `generated/` | Generated artifacts: manifests, catalogs, stub config |
 | `workflows/` | Example workflow JSON files |
 | `prompts/` | Agent system prompts (Planner/Worker variants) |
@@ -86,8 +86,9 @@ Workers coordinate via Redis without a central orchestrator:
 - `finalize_workflow` — Compute final status, cleanup workers, write audit record
 
 **Generation Tools:**
-- `csv_to_manifests` — Generate skill manifests from CSV sources
-- `csv_to_stub_config` — Generate stub MCP server configuration
+- `generate_all` — Generate skill manifests and stub config from YAML
+- `yaml_to_manifests` — Generate skill manifests from YAML sources
+- `yaml_to_stub_config` — Generate stub MCP server configuration
 
 ## Commands
 
@@ -106,14 +107,15 @@ curl -sf http://localhost:8283/v1/health/  # Letta API
 curl -sf http://localhost:8765/healthz      # Stub MCP
 ```
 
-### Regenerate artifacts from CSV sources
+### Regenerate artifacts from YAML sources
 
 ```bash
-# Generate skill manifests + catalog
-python -c 'from dcf_mcp.tools.dcf.csv_to_manifests import csv_to_manifests; csv_to_manifests()'
+# Generate all artifacts (manifests + stub config)
+python -c 'from dcf_mcp.tools.dcf.generate import generate_all; print(generate_all())'
 
-# Generate stub MCP config
-python -c 'from dcf_mcp.tools.dcf.csv_to_stub_config import csv_to_stub_config; csv_to_stub_config()'
+# Or individual generators
+python -c 'from dcf_mcp.tools.dcf.yaml_to_manifests import yaml_to_manifests; yaml_to_manifests()'
+python -c 'from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config; yaml_to_stub_config()'
 ```
 
 ### Graphiti subproject (knowledge graph)
@@ -136,22 +138,22 @@ cd graphiti && pytest              # Run tests
 | Redis Stack | 6379 | Control plane |
 | FalkorDB | 8379 | Knowledge graph storage |
 
-## CSV-First Skill Pipeline
+## YAML Skill Pipeline
 
-Skills and tools are authored via CSV for rapid prototyping:
+Skills and tools are authored via YAML for clarity and maintainability:
 
-1. **`skills_src/skills.csv`** — Master list of skills (name, version, description, tags, permissions)
-2. **`skills_src/skill_tool_refs.csv`** — Maps skills to tools (many-to-many)
-3. **`skills_src/mcp_tools.csv`** — Tool schemas (name, JSON schema, server ID)
-4. **`skills_src/mcp_cases.csv`** — Deterministic stub test cases (input → output)
-5. **`skills_src/registry.json`** — Resolver map from server ID → endpoint (stub vs real)
+1. **`skills_src/skills/*.skill.yaml`** — Individual skill definitions (one per file)
+2. **`skills_src/tools.yaml`** — Tool specifications and test cases for simulation
+3. **`skills_src/registry.yaml`** — Resolver map from server ID → endpoint (stub vs real)
 
 **Pipeline:**
-1. Author CSVs
-2. Run `csv_to_manifests()` → `generated/manifests/`
-3. Run `csv_to_stub_config()` → `generated/stub/stub_config.json`
+1. Author YAML skill files in `skills_src/skills/`
+2. Define tools and test cases in `skills_src/tools.yaml`
+3. Run `generate_all()` → generates manifests + stub config
 4. Stub MCP server hot-reloads config automatically
-5. Switch to real backends by updating `registry.json`
+5. Switch to real backends by updating `registry.yaml`
+
+See `skills_src/SKILLS.md` for detailed authoring documentation.
 
 ## Workflow Execution Flow
 
@@ -192,7 +194,7 @@ The Streamable HTTP endpoint (`/mcp`) returns an `mcp-session` header; clients m
 `create_worker_agents` prefers `AgentBinding.agent_ref`. If a workflow only supplies `agent_template_ref`, templates may need to be embedded in `af_v2_entities` or bindings transformed before invoking.
 
 ### Generated Artifacts
-After editing `skills_src/` CSVs, regenerate `generated/` and commit outputs so workflows remain reproducible.
+After editing `skills_src/` YAML files, regenerate `generated/` and commit outputs so workflows remain reproducible.
 
 ### Workers are Ephemeral
 Created per workflow, optionally deleted after finalization via `finalize_workflow(..., delete_worker_agents=True)`.
