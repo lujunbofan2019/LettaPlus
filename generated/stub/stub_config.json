@@ -1,11 +1,12 @@
 {
+  "$schema": "stub_config_schema.json",
   "servers": {
     "search": {
+      "description": "Search and discovery tools for web content and news",
       "tools": {
         "search_query": {
-          "version": "0.1.0",
           "description": "Mock web search query tool",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "q": {
@@ -17,53 +18,21 @@
               "q"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "hits": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "url": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "url"
-                  ]
-                }
-              },
-              "total": {
-                "type": "integer"
-              },
-              "generated_at": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "hits": []
             },
-            "required": [
-              "hits"
-            ]
-          },
-          "defaultResponse": {
-            "hits": []
-          },
-          "rateLimit": {
-            "rps": 2
-          },
-          "latencyMs": {
-            "default": 150
+            "latencyMs": 150,
+            "rateLimit": {
+              "rps": 2
+            }
           },
           "cases": [
             {
-              "caseId": "case_python",
+              "id": "case_python",
               "match": {
                 "strategy": "exact",
-                "expr": "q",
+                "path": "q",
                 "value": "python"
               },
               "response": {
@@ -82,16 +51,13 @@
                   }
                 ],
                 "total": 3
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_market_scan",
+              "id": "case_market_scan",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*sustainable robotics market.*"
               },
               "response": {
@@ -114,17 +80,14 @@
                   }
                 ],
                 "total": 4,
-                "generated_at": "2025-03-04T08:20:00Z"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+                "generated_at": "{{ now_iso }}"
+              }
             },
             {
-              "caseId": "case_competitor_signal",
+              "id": "case_competitor_signal",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*Acme Robotics competitor.*"
               },
               "response": {
@@ -140,16 +103,13 @@
                 ],
                 "total": 2,
                 "notes": "Sorted by recency"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_agentic_sales",
+              "id": "case_agentic_sales",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*agentic sales enablement.*"
               },
               "response": {
@@ -168,17 +128,14 @@
                   }
                 ],
                 "total": 3,
-                "generated_at": "2025-03-05T10:00:00Z"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+                "generated_at": "{{ now_iso }}"
+              }
             },
             {
-              "caseId": "case_ev_infrastructure",
+              "id": "case_ev_infrastructure",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*EV charging network.*"
               },
               "response": {
@@ -197,16 +154,13 @@
                   }
                 ],
                 "total": 3
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_data_privacy",
+              "id": "case_data_privacy",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*data privacy compliance.*"
               },
               "response": {
@@ -222,20 +176,13 @@
                 ],
                 "total": 2,
                 "notes": "Weighted toward enterprise readiness"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "search_query"
-          }
+          ]
         },
         "news_headlines": {
-          "version": "0.1.0",
           "description": "Mock top headlines search",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "topic": {
@@ -247,53 +194,21 @@
               "topic"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "headlines": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "url": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "publishedAt": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "url"
-                  ]
-                }
-              }
+          "defaults": {
+            "response": {
+              "headlines": []
             },
-            "required": [
-              "headlines"
-            ]
-          },
-          "defaultResponse": {
-            "headlines": []
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 200
+            "latencyMs": 200,
+            "rateLimit": {
+              "rps": 1
+            }
           },
           "cases": [
             {
-              "caseId": "case_market_news",
+              "id": "case_market_news",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*market.*"
               },
               "response": {
@@ -302,31 +217,28 @@
                     "title": "Market shifts toward sustainable tech",
                     "url": "https://news.example/sustainable-tech",
                     "source": "TechWire",
-                    "publishedAt": "2025-03-03T11:00:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Analysts predict growth in AI tooling",
                     "url": "https://news.example/ai-tools",
                     "source": "MarketBeat",
-                    "publishedAt": "2025-03-02T09:30:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Supply chains prioritise carbon accounting",
                     "url": "https://news.example/carbon-ledgers",
                     "source": "GlobalSupply",
-                    "publishedAt": "2025-03-01T16:10:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_robotics_news",
+              "id": "case_robotics_news",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*robotics.*"
               },
               "response": {
@@ -335,31 +247,28 @@
                     "title": "Retailers pilot modular warehouse robots",
                     "url": "https://retailnews.example/pilot-modular-robots",
                     "source": "RetailNews",
-                    "publishedAt": "2025-03-04T07:45:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Venture funding accelerates robotics startups",
                     "url": "https://vcwatch.example/robotics-funding",
                     "source": "VCWatch",
-                    "publishedAt": "2025-03-03T12:25:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Analysts flag interoperability as adoption hurdle",
                     "url": "https://industryinsight.example/interoperability",
                     "source": "IndustryInsight",
-                    "publishedAt": "2025-03-02T05:15:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ai_agents",
+              "id": "case_ai_agents",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*agent.*"
               },
               "response": {
@@ -368,31 +277,28 @@
                     "title": "Enterprise pilots AI agents for revenue ops",
                     "url": "https://techpulse.example/agent-rev-ops",
                     "source": "TechPulse",
-                    "publishedAt": "2025-03-05T08:15:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Procurement teams test AI co-pilots",
                     "url": "https://procurement.example/ai-copilot",
                     "source": "ProcurementDaily",
-                    "publishedAt": "2025-03-04T13:40:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Analysts flag governance as adoption hurdle",
                     "url": "https://analystdesk.example/agent-governance",
                     "source": "AnalystDesk",
-                    "publishedAt": "2025-03-03T06:05:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ev_market",
+              "id": "case_ev_market",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*EV charging.*"
               },
               "response": {
@@ -401,39 +307,33 @@
                     "title": "Municipalities accelerate fast-charger RFPs",
                     "url": "https://cities.example/fast-charger-rfp",
                     "source": "CityWatch",
-                    "publishedAt": "2025-03-04T10:00:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Utilities test vehicle-to-grid pilots",
                     "url": "https://utilities.example/v2g-pilot",
                     "source": "GridToday",
-                    "publishedAt": "2025-03-03T14:20:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   },
                   {
                     "title": "Charging networks consolidate via M&A",
                     "url": "https://finance.example/charging-mna",
                     "source": "FinanceWire",
-                    "publishedAt": "2025-03-02T07:50:00Z"
+                    "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "news_headlines"
-          }
+          ]
         }
       }
     },
     "web": {
+      "description": "Web content fetching tools",
       "tools": {
         "web_fetch": {
-          "version": "0.1.0",
           "description": "Mock HTTP fetcher",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "url": {
@@ -445,40 +345,25 @@
               "url"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "integer"
-              },
-              "body": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "status": 200,
+              "body": "stub"
+            },
+            "latencyMs": 200,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "status": 200,
-            "body": "stub"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 200
-          },
-          "cases": [],
-          "meta": {
-            "originalToolName": "web_fetch"
           }
         }
       }
     },
     "datasets": {
+      "description": "Structured dataset access tools",
       "tools": {
         "company_profile": {
-          "version": "0.1.0",
           "description": "Mock company intelligence lookup",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "company": {
@@ -490,102 +375,24 @@
               "company"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
+          "defaults": {
+            "response": {
               "profile": {
-                "type": "object",
-                "properties": {
-                  "overview": {
-                    "type": "string"
-                  },
-                  "metrics": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "label": {
-                          "type": "string"
-                        },
-                        "value": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "label",
-                        "value"
-                      ]
-                    }
-                  },
-                  "customerSegments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "productLines": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "name"
-                      ]
-                    }
-                  },
-                  "recentMilestones": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "date": {
-                          "type": "string"
-                        },
-                        "detail": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "date",
-                        "detail"
-                      ]
-                    }
-                  }
-                },
-                "required": [
-                  "overview"
-                ]
+                "overview": "stub overview",
+                "metrics": []
               }
             },
-            "required": [
-              "profile"
-            ]
-          },
-          "defaultResponse": {
-            "profile": {
-              "overview": "stub overview",
-              "metrics": []
+            "latencyMs": 120,
+            "rateLimit": {
+              "rps": 1
             }
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 120
           },
           "cases": [
             {
-              "caseId": "case_acme",
+              "id": "case_acme",
               "match": {
                 "strategy": "exact",
-                "expr": "$.company",
+                "path": "company",
                 "value": "Acme Robotics"
               },
               "response": {
@@ -634,16 +441,13 @@
                     }
                   ]
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_swiftlift",
+              "id": "case_swiftlift",
               "match": {
                 "strategy": "regex",
-                "expr": "$.company",
+                "path": "company",
                 "value": ".*SwiftLift.*"
               },
               "response": {
@@ -680,16 +484,13 @@
                     }
                   ]
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ecocharge",
+              "id": "case_ecocharge",
               "match": {
                 "strategy": "exact",
-                "expr": "$.company",
+                "path": "company",
                 "value": "EcoCharge Networks"
               },
               "response": {
@@ -734,16 +535,13 @@
                     }
                   ]
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_northwind",
+              "id": "case_northwind",
               "match": {
                 "strategy": "regex",
-                "expr": "$.company",
+                "path": "company",
                 "value": ".*Northwind Analytics.*"
               },
               "response": {
@@ -785,24 +583,18 @@
                     }
                   ]
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "company_profile"
-          }
+          ]
         }
       }
     },
     "analysis": {
+      "description": "Research synthesis and analysis tools",
       "tools": {
         "insight_compare": {
-          "version": "0.1.0",
-          "description": "Mock synthesis tool combining research",
-          "paramsSchema": {
+          "description": "Mock synthesis tool combining research insights",
+          "inputSchema": {
             "type": "object",
             "properties": {
               "insights": {
@@ -816,47 +608,21 @@
               "insights"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "themes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "risks": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "confidence": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "themes": [],
+              "risks": []
             },
-            "required": [
-              "themes",
-              "risks"
-            ]
-          },
-          "defaultResponse": {
-            "themes": [],
-            "risks": []
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 180
+            "latencyMs": 180,
+            "rateLimit": {
+              "rps": 1
+            }
           },
           "cases": [
             {
-              "caseId": "case_themes",
+              "id": "case_themes",
               "match": {
-                "strategy": "regex",
-                "expr": "$.insights[*].category",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
                 "themes": [
@@ -870,17 +636,14 @@
                   "Integration complexity"
                 ],
                 "confidence": "medium"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_supply_chain",
+              "id": "case_supply_chain",
               "match": {
-                "strategy": "regex",
-                "expr": "$.insights",
-                "value": ".*supply chain.*"
+                "strategy": "contains",
+                "path": "insights",
+                "value": "supply chain"
               },
               "response": {
                 "themes": [
@@ -892,17 +655,14 @@
                   "Integration friction across legacy WMS"
                 ],
                 "confidence": "high"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ai_agent",
+              "id": "case_ai_agent",
               "match": {
-                "strategy": "regex",
-                "expr": "$.insights",
-                "value": ".*agentic.*"
+                "strategy": "contains",
+                "path": "insights",
+                "value": "agentic"
               },
               "response": {
                 "themes": [
@@ -914,24 +674,18 @@
                   "Model drift without audit"
                 ],
                 "confidence": "medium"
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "insight_compare"
-          }
+          ]
         }
       }
     },
     "llm": {
+      "description": "Language model tools for generation and analysis",
       "tools": {
         "llm_outline": {
-          "version": "0.1.0",
-          "description": "Mock planning LLM",
-          "paramsSchema": {
+          "description": "Mock planning LLM for research outlines",
+          "inputSchema": {
             "type": "object",
             "properties": {
               "topic": {
@@ -942,33 +696,20 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "outline": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "outline": []
+            },
+            "latencyMs": 80,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "outline": []
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 80
           },
           "cases": [
             {
-              "caseId": "case_outline",
+              "id": "case_outline",
               "match": {
-                "strategy": "regex",
-                "expr": "$.topic",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
                 "outline": [
@@ -978,17 +719,14 @@
                   "List required deliverables",
                   "Identify data and tooling needs"
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_outline_ev",
+              "id": "case_outline_ev",
               "match": {
-                "strategy": "regex",
-                "expr": "$.topic",
-                "value": ".*EV charging.*"
+                "strategy": "contains",
+                "path": "topic",
+                "value": "EV charging"
               },
               "response": {
                 "outline": [
@@ -998,20 +736,13 @@
                   "Identify target partners (utilities, parking operators)",
                   "Define ROI model for municipalities"
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_outline"
-          }
+          ]
         },
         "llm_briefing": {
-          "version": "0.1.0",
           "description": "Mock briefing writer",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "themes": {
@@ -1025,61 +756,41 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "briefing": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "briefing": "stub briefing"
+            },
+            "latencyMs": 100,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "briefing": "stub briefing"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 100
           },
           "cases": [
             {
-              "caseId": "case_briefing",
+              "id": "case_briefing",
               "match": {
-                "strategy": "regex",
-                "expr": "$.themes[*]",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
-                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Sustainability positioning resonates with enterprise RFP criteria.\n- AI-enabled optimisation reduces fulfilment cost by 18% in pilots.\nRisks:\n- Capital expenditure remains a barrier for mid-market prospects.\n- Integration complexity demands stronger SI partnerships.\nRecommended watch-outs: monitor interoperability roadmap and quantify carbon savings."
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Sustainability positioning resonates with enterprise RFP criteria.\n- AI-enabled optimisation reduces fulfilment cost by 18% in pilots.\nRisks:\n- Capital expenditure remains a barrier for mid-market prospects.\n- Integration complexity demands stronger SI partnerships.\nRecommended watch-outs: monitor interoperability roadmap and quantify carbon savings.\n"
+              }
             },
             {
-              "caseId": "case_briefing_agents",
+              "id": "case_briefing_agents",
               "match": {
-                "strategy": "regex",
-                "expr": "$.themes",
-                "value": ".*agentic.*"
+                "strategy": "contains",
+                "path": "themes",
+                "value": "agentic"
               },
               "response": {
-                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Agentic co-pilots automate 25-40% of revenue ops tasks.\n- Early movers show pipeline hygiene uplift and faster renewal cycles.\nRisks:\n- Access control and audit trails must satisfy compliance.\n- Change management is needed to avoid user backlash."
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+                "briefing": "Executive Briefing\n===================\nOpportunities:\n- Agentic co-pilots automate 25-40% of revenue ops tasks.\n- Early movers show pipeline hygiene uplift and faster renewal cycles.\nRisks:\n- Access control and audit trails must satisfy compliance.\n- Change management is needed to avoid user backlash.\n"
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_briefing"
-          }
+          ]
         },
         "llm_action_plan": {
-          "version": "0.1.0",
           "description": "Mock action plan generator",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "objectives": {
@@ -1093,42 +804,20 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "actions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "ownerRecommendations": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "actions": []
             },
-            "required": [
-              "actions"
-            ]
-          },
-          "defaultResponse": {
-            "actions": []
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 90
+            "latencyMs": 90,
+            "rateLimit": {
+              "rps": 0
+            }
           },
           "cases": [
             {
-              "caseId": "case_actions",
+              "id": "case_actions",
               "match": {
-                "strategy": "regex",
-                "expr": "$.objectives",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
                 "actions": [
@@ -1141,17 +830,14 @@
                   "product": "Own interoperability roadmap update",
                   "marketing": "Publish sustainability proof-points"
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_actions_ev",
+              "id": "case_actions_ev",
               "match": {
-                "strategy": "regex",
-                "expr": "$.objectives",
-                "value": ".*charging.*"
+                "strategy": "contains",
+                "path": "objectives",
+                "value": "charging"
               },
               "response": {
                 "actions": [
@@ -1164,20 +850,13 @@
                   "operations": "Own site-readiness checklist",
                   "product": "Finalize V2G pricing"
                 }
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_action_plan"
-          }
+          ]
         },
         "llm_quality_review": {
-          "version": "0.1.0",
           "description": "Mock quality assurance reviewer",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "draft": {
@@ -1194,47 +873,21 @@
               "draft"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "issues": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "status": {
-                "type": "string"
-              },
-              "suggestedFixes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "issues": [],
+              "status": "pass"
             },
-            "required": [
-              "issues",
-              "status"
-            ]
-          },
-          "defaultResponse": {
-            "issues": [],
-            "status": "pass"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 60
+            "latencyMs": 60,
+            "rateLimit": {
+              "rps": 0
+            }
           },
           "cases": [
             {
-              "caseId": "case_review",
+              "id": "case_review",
               "match": {
-                "strategy": "regex",
-                "expr": "$.draft",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
                 "issues": [
@@ -1246,17 +899,14 @@
                   "Reference 2025 market TAM estimate from CB Insights",
                   "Assign partner management lead to SI playbook development"
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_review_privacy",
+              "id": "case_review_privacy",
               "match": {
-                "strategy": "regex",
-                "expr": "$.draft",
-                "value": ".*privacy.*"
+                "strategy": "contains",
+                "path": "draft",
+                "value": "privacy"
               },
               "response": {
                 "issues": [
@@ -1268,20 +918,13 @@
                   "Reference latest enforcement actions",
                   "Name responsible data protection officer"
                 ]
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_quality_review"
-          }
+          ]
         },
         "llm_summarize": {
-          "version": "0.1.0",
           "description": "Mock summarisation endpoint",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "text": {
@@ -1293,56 +936,37 @@
               "text"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "summary": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "summary": "stub summary"
+            },
+            "latencyMs": 50,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "summary": "stub summary"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 50
           },
           "cases": [
             {
-              "caseId": "short_text",
+              "id": "short_text",
               "match": {
-                "strategy": "regex",
-                "expr": "$.text",
-                "value": ".*"
+                "strategy": "always"
               },
               "response": {
                 "summary": "Executive digest: Market momentum is accelerating for sustainable modular automation; top opportunities lie in enterprise retail pilots while capital intensity and integration remain key risks. Next steps focus on quantifying ROI and formalising partner enablement."
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_summary_finance",
+              "id": "case_summary_finance",
               "match": {
-                "strategy": "regex",
-                "expr": "$.text",
-                "value": ".*finance.*"
+                "strategy": "contains",
+                "path": "text",
+                "value": "finance"
               },
               "response": {
                 "summary": "Finance-focused digest: strong capital efficiency but dependence on regulatory clarity; continue tracking incentive timelines."
-              },
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_summarize"
-          }
+          ]
         }
       }
     }

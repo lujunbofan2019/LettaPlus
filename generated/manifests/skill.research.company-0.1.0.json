@@ -1,7 +1,7 @@
 {
+  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.research.company@0.1.0",
-  "skillPackageId": null,
   "skillName": "research.company",
   "skillVersion": "0.1.0",
   "description": "Retrieves structured company intelligence records",
@@ -11,44 +11,38 @@
     "data"
   ],
   "permissions": {
-    "egress": "none",
+    "egress": "intranet",
     "secrets": []
   },
-  "skillDirectives": "Surface overview plus key metrics relevant to go-to-market decisions.",
-  "requiredTools": [
+  "skillDirectives": "Surface company overview plus key metrics relevant to go-to-market decisions.\nInclude funding history, customer segments, and product lines.\nHighlight recent milestones and competitive positioning.\n",
+  "tools": [
     {
-      "toolName": "company_profile",
-      "description": "Retrieve structured profile",
-      "json_schema": {
-        "name": "company_profile",
-        "description": "Mock company intelligence lookup",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "company": {
-              "type": "string",
-              "description": "Company name"
-            }
-          },
-          "required": [
-            "company"
-          ]
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "datasets",
         "toolName": "company_profile"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string",
+            "description": "Company name"
+          }
+        },
+        "required": [
+          "company"
+        ]
+      }
     }
   ],
-  "requiredDataSources": [
+  "dataSources": [
     {
-      "dataSourceId": "datasets",
+      "id": "datasets",
+      "description": "Context about available dataset capabilities",
       "content": {
         "type": "text_content",
-        "text": "Stub dataset describing company KPIs."
+        "text": "Stub dataset describing company KPIs.\nData includes: overview, metrics, customer segments, product lines, milestones.\n"
       }
     }
   ]

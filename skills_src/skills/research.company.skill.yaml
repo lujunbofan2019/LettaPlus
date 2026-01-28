@@ -13,7 +13,7 @@ metadata:
 
 spec:
   permissions:
-    egress: datasets
+    egress: intranet
     secrets: []
 
   directives: |

@@ -94,6 +94,37 @@ See [Schema Transformation Details](#schema-transformation-details) for a comple
 
 ## Quick Start
 
+### Using the CLI (Recommended)
+
+The `skill` CLI provides commands for all common operations:
+
+```bash
+# Install the CLI (from project root)
+pip install -e .
+
+# Create a new skill interactively
+skill init
+
+# Or with options
+skill init my.skill --template research --egress internet
+
+# Validate all skills
+skill validate
+
+# Generate manifests and stub config
+skill generate
+
+# List all skills
+skill list
+
+# Run tests against stub server
+skill test
+```
+
+See [CLI Reference](#cli-reference) for detailed command documentation.
+
+### Manual Approach
+
 ### 1. Create a New Skill
 
 Create a file `skills_src/skills/my.skill.skill.yaml`:
@@ -724,3 +755,135 @@ dataSources:
 4. **Future extensibility**: The YAML format can evolve (e.g., skill dependencies) without changing the runtime schema until features are ready.
 
 5. **Human ergonomics**: YAML's multi-line strings, comments, and concise syntax are friendlier for authoring than JSON.
+
+---
+
+## CLI Reference
+
+The `skill` CLI provides commands for authoring, validating, and testing skills.
+
+### Installation
+
+```bash
+# From project root
+pip install -e .
+
+# Or run as module
+python -m skill_cli <command>
+```
+
+### Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--skills-dir PATH` | Path to skills_src directory (default: auto-detect) |
+| `--generated-dir PATH` | Path to generated output directory (default: auto-detect) |
+| `-q, --quiet` | Suppress non-essential output |
+| `-v, --verbose` | Increase verbosity (can be repeated) |
+| `-V, --version` | Show version and exit |
+
+### Commands
+
+#### `skill init`
+
+Create a new skill from a template:
+
+```bash
+skill init [NAME] [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `NAME` | Skill name in dot notation (e.g., `research.arxiv`) |
+| `-t, --template` | Template: `blank`, `research`, `write`, `plan`, `analyze`, `qa` |
+| `-d, --description` | Skill description |
+| `--tags` | Comma-separated tags |
+| `--egress` | Network permission: `none`, `intranet`, `internet` |
+| `-f, --force` | Overwrite existing skill |
+| `--no-interactive` | Disable interactive prompts |
+
+#### `skill validate`
+
+Validate skill YAML files:
+
+```bash
+skill validate [SKILLS...] [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `SKILLS` | Specific skills to validate (default: all) |
+| `--strict` | Treat warnings as errors |
+| `--format` | Output format: `text`, `json` |
+
+#### `skill generate`
+
+Generate JSON manifests and stub configuration:
+
+```bash
+skill generate [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--manifests-only` | Only generate skill manifests |
+| `--stub-only` | Only generate stub server config |
+| `--clean` | Clean generated directory first |
+| `-w, --watch` | Watch for changes (not yet implemented) |
+
+#### `skill list`
+
+List available skills:
+
+```bash
+skill list [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--format` | Output format: `table`, `json`, `yaml`, `names` |
+| `--tags` | Filter by tags (comma-separated) |
+| `--tools` | Include tool information |
+
+#### `skill test`
+
+Run test cases against stub MCP server:
+
+```bash
+skill test [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `-s, --skill` | Test specific skill (can be repeated) |
+| `-t, --tool` | Test specific tool (`serverId:toolName`) |
+| `-c, --case` | Test specific case ID |
+| `--stub-url` | Stub server URL (default: `http://localhost:8765`) |
+| `--coverage` | Show coverage report |
+| `--format` | Output format: `text`, `json`, `junit` |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SKILLS_SRC_DIR` | Override default skills_src directory path |
+| `GENERATED_DIR` | Override default generated output directory path |
+
+### Examples
+
+```bash
+# Create a research skill with all defaults
+skill init mycompany.research --template research --no-interactive
+
+# Validate specific skills with JSON output
+skill validate research.web plan.actions --format json
+
+# Generate only manifests, cleaning first
+skill generate --manifests-only --clean
+
+# List skills filtered by tag
+skill list --tags research --format table
+
+# Run tests for a specific tool with coverage
+skill test --tool search:search_query --coverage -v
+```
