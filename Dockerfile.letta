@@ -1,0 +1,6 @@
+FROM letta/letta:0.16.2
+
+COPY entrypoint.sh /entrypoint.sh
+COPY requirements.txt /app/requirements.txt
+
+RUN chmod +x /entrypoint.sh

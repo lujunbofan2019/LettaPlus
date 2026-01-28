@@ -8,7 +8,20 @@
       "WebSearch",
       "WebFetch(domain:docs.letta.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(dpkg:*)",
+      "Bash(snap list:*)",
+      "Bash(flatpak list:*)",
+      "Bash(systemctl:*)",
+      "Bash(sudo apt remove:*)",
+      "Bash(snap search:*)",
+      "Bash(snap find:*)",
+      "Bash(snap info:*)",
+      "Bash(docker run:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker volume:*)",
+      "Bash(ls:*)",
+      "Bash(mount:*)"
     ]
   }
 }

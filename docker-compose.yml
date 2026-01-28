@@ -1,6 +1,8 @@
 services:
   letta:
-    image: letta/letta:0.16.2
+    build:
+      context: .
+      dockerfile: Dockerfile.letta
     entrypoint: ["/entrypoint.sh"]
     command: ["./letta/server/startup.sh"]
     ports:
@@ -12,8 +14,6 @@ services:
       - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
-      - ./requirements.txt:/app/requirements.txt
-      - ./entrypoint.sh:/entrypoint.sh
       - ~/.letta+/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8283/v1/health/ || exit 1"]
