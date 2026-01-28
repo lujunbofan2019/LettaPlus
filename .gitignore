@@ -37,3 +37,16 @@ pnpm-debug.log*
 
 dcf_core_lib.egg-info/
 /graphiti/.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+ENV/
