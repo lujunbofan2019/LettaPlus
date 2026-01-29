@@ -1,6 +1,12 @@
 # DCF MCP Tools Documentation
 
-This document provides a comprehensive overview of the tools available in the DCF (Dynamic Capabilities Framework) MCP server. These tools enable Planner and Worker agents to orchestrate workflow execution, manage skills, and coordinate via the Redis control plane.
+> **Phase**: 1 (Workflow Execution)
+> **Pattern**: Planner → Workers (ephemeral) → Reflector
+> **See also**: [`dcf+/TOOLS.md`](dcf+/TOOLS.md) for Phase 2 (Delegated Execution) tools
+
+This document provides a comprehensive overview of the tools available in the DCF (Dynamic Capabilities Framework) MCP server for **Phase 1: Workflow Execution**. These tools enable Planner and Worker agents to orchestrate workflow execution, manage skills, and coordinate via the Redis control plane.
+
+For **Phase 2: Delegated Execution** (Conductor → Companions → Strategist), see [`dcf+/TOOLS.md`](dcf+/TOOLS.md).
 
 ## Architecture Overview
 

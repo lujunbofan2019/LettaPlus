@@ -785,12 +785,32 @@ Phase 2 requires:
 
 ## Appendix B: References
 
-- `prompts/Planner_final.txt` — Phase 1 Planner system prompt
-- `prompts/Worker_final.txt` — Phase 1 Worker system prompt
-- `prompts/Reflector_final.txt` — Phase 1 Reflector system prompt
-- `dcf_mcp/tools/TOOLS.md` — DCF tool documentation
+### Internal Documentation
+
+**Phase 1 (dcf) — Workflow Execution:**
+- `prompts/Planner_final.txt` — Planner system prompt
+- `prompts/Worker_final.txt` — Worker system prompt
+- `prompts/Reflector_final.txt` — Reflector system prompt
+- `dcf_mcp/tools/TOOLS.md` — Phase 1 tool documentation
+- `dcf_mcp/tools/dcf/` — Phase 1 tool implementations
+
+**Phase 2 (dcf+) — Delegated Execution:**
+- `prompts/dcf+/` — Conductor, Companion, Strategist system prompts (TBD)
+- `dcf_mcp/tools/dcf+/TOOLS.md` — Phase 2 tool documentation and Letta integration guide
+- `dcf_mcp/tools/dcf+/` — Phase 2 tool implementations (TBD)
+
+**Design Documents:**
 - `docs/Self-Evolving-Agent-Whitepaper.md` — Original vision document
 - `docs/DCF-Patent-Proposal.md` — Dynamic Capabilities Framework concept
+- `docs/Hybrid-Memory-Patent-Proposal.md` — Memory system design
+
+### External References (Letta Platform)
+
+- [Letta Multi-agent systems](https://docs.letta.com/guides/agents/multi-agent/) — Native multi-agent coordination
+- [Letta Multi-agent shared memory](https://docs.letta.com/guides/agents/multi-agent-shared-memory) — Shared memory blocks
+- [Letta Memory blocks](https://docs.letta.com/guides/agents/memory-blocks/) — Memory management
+- [Letta Python SDK](https://docs.letta.com/api/python/) — API reference
+- [Letta Overview](https://docs.letta.com/overview) — Platform documentation
 
 ---
 

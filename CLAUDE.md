@@ -235,10 +235,20 @@ All tools return `{status, error, ...}` where `error` is `None` on success, enab
 
 ## Related Documentation
 
+### Architecture & Design
 - `docs/Architectural_Evolution_Opus.md` — **Evolution from Workflow to Delegated Execution patterns**
 - `docs/Overall_Combined.md` — Comprehensive architecture overview
 - `docs/Self-Evolving-Agent-Whitepaper.md` — Detailed design rationale
 - `docs/DCF-Patent-Proposal.md` — Dynamic Capabilities Framework concept
 - `docs/Hybrid-Memory-Patent-Proposal.md` — Memory system design
+
+### Tool Documentation
+- `dcf_mcp/tools/TOOLS.md` — Phase 1 (dcf) tools: Planner, Worker, Reflector
+- `dcf_mcp/tools/dcf+/TOOLS.md` — **Phase 2 (dcf+) tools: Conductor, Companion, Strategist**
+
+### Agent Prompts
+- `prompts/dcf/` — Phase 1 agent prompts (Planner, Worker, Reflector)
+- `prompts/dcf+/` — Phase 2 agent prompts (Conductor, Companion, Strategist)
+
+### Testing
 - `docs/TESTING_PLAN_*.md` — End-to-end testing guides
-- `prompts/*.md` — Agent system prompts
