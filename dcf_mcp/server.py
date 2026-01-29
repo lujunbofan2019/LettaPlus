@@ -10,8 +10,8 @@ from tools.common.resolve_agent_name_to_id import resolve_agent_name_to_id as _r
 from tools.dcf.acquire_state_lease import acquire_state_lease as _acquire_state_lease
 from tools.dcf.create_workflow_control_plane import create_workflow_control_plane as _create_workflow_control_plane
 from tools.dcf.create_worker_agents import create_worker_agents as _create_worker_agents
-from tools.dcf.csv_to_manifests import csv_to_manifests as _csv_to_manifests
-from tools.dcf.csv_to_stub_config import csv_to_stub_config as _csv_to_stub_config
+from tools.dcf.yaml_to_manifests import yaml_to_manifests as _yaml_to_manifests
+from tools.dcf.yaml_to_stub_config import yaml_to_stub_config as _yaml_to_stub_config
 from tools.dcf.finalize_workflow import finalize_workflow as _finalize_workflow
 from tools.dcf.get_skillset import get_skillset as _get_skillset
 from tools.dcf.get_skillset_from_catalog import (
@@ -374,33 +374,31 @@ create_worker_agents.__doc__ = _create_worker_agents.__doc__
 
 
 @mcp.tool()
-def csv_to_manifests(skills_csv_path: str = "/app/skills_src/skills.csv",
-                     refs_csv_path: str = "/app/skills_src/skill_tool_refs.csv",
-                     out_dir: str = "/app/generated/manifests",
-                     catalog_path: str = "/app/generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
-    return _csv_to_manifests(
-        skills_csv_path=skills_csv_path,
-        refs_csv_path=refs_csv_path,
+def yaml_to_manifests(skills_dir: str = "/app/skills_src/skills",
+                      tools_yaml_path: str = "/app/skills_src/tools.yaml",
+                      out_dir: str = "/app/generated/manifests",
+                      catalog_path: str = "/app/generated/catalogs/skills_catalog.json") -> Dict[str, Any]:
+    return _yaml_to_manifests(
+        skills_dir=skills_dir,
+        tools_yaml_path=tools_yaml_path,
         out_dir=out_dir,
         catalog_path=catalog_path,
     )
 
 
-csv_to_manifests.__doc__ = _csv_to_manifests.__doc__
+yaml_to_manifests.__doc__ = _yaml_to_manifests.__doc__
 
 
 @mcp.tool()
-def csv_to_stub_config(mcp_tools_csv_path: str = "/app/skills_src/mcp_tools.csv",
-                       mcp_cases_csv_path: str = "/app/skills_src/mcp_cases.csv",
-                       out_path: str = "/app/generated/stub/stub_config.json") -> Dict[str, Any]:
-    return _csv_to_stub_config(
-        mcp_tools_csv_path=mcp_tools_csv_path,
-        mcp_cases_csv_path=mcp_cases_csv_path,
+def yaml_to_stub_config(tools_yaml_path: str = "/app/skills_src/tools.yaml",
+                        out_path: str = "/app/generated/stub/stub_config.json") -> Dict[str, Any]:
+    return _yaml_to_stub_config(
+        tools_yaml_path=tools_yaml_path,
         out_path=out_path,
     )
 
 
-csv_to_stub_config.__doc__ = _csv_to_stub_config.__doc__
+yaml_to_stub_config.__doc__ = _yaml_to_stub_config.__doc__
 
 
 @mcp.tool()
