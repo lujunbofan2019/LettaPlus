@@ -27,6 +27,101 @@ DCF+ implements the **Delegated Execution** pattern where a **Conductor** agent 
 
 ---
 
+## Skill Management (Critical Design Decision)
+
+### Who Is the Skill Authority?
+
+In both Phase 1 and Phase 2, **the orchestrating agent is the skill authority**:
+
+| Phase | Skill Authority | Executors | Advisor |
+|-------|-----------------|-----------|---------|
+| Phase 1 (dcf) | **Planner** | Workers | Reflector |
+| Phase 2 (dcf+) | **Conductor** | Companions | Strategist |
+
+### Skill Management Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SKILL MANAGEMENT FLOW                       │
+└─────────────────────────────────────────────────────────────────┘
+
+  Strategist                    Conductor                  Companion
+  (Advisor)                     (Authority)                (Executor)
+      │                              │                          │
+      │ 1. Observes outcomes         │                          │
+      │◄─────────────────────────────┼──────────────────────────┤
+      │                              │                          │
+      │ 2. Publishes skill_preferences                          │
+      ├─────────────────────────────►│                          │
+      │                              │                          │
+      │                   3. Discovers skills                   │
+      │                   get_skillset()                        │
+      │                              │                          │
+      │                   4. Selects skills                     │
+      │                   (applies preferences)                 │
+      │                              │                          │
+      │                   5. Delegates with required_skills     │
+      │                              ├─────────────────────────►│
+      │                              │                          │
+      │                              │         6. Loads skills  │
+      │                              │         load_skill()     │
+      │                              │                          │
+      │                              │         7. Executes task │
+      │                              │                          │
+      │                              │         8. Unloads skills│
+      │                              │         unload_skill()   │
+      │                              │                          │
+      │                   9. Receives results                   │
+      │                              │◄─────────────────────────┤
+      │                              │                          │
+      │ 10. Loop continues           │                          │
+      │◄─────────────────────────────┤                          │
+```
+
+### Why Companions Don't Discover Skills
+
+Companions are **simple executors** by design:
+
+1. **Predictability**: Companions do exactly what they're told
+2. **Centralized optimization**: Strategist can influence all skill decisions via Conductor
+3. **Lightweight**: Companions don't need catalog access or skill evaluation logic
+4. **Debuggability**: Skill selection issues always trace to Conductor/Strategist
+
+### The Feedback Loop
+
+The Strategist improves skill selection over time:
+
+1. Companion executes task with Conductor-assigned skills
+2. Companion reports success/failure with metrics
+3. Strategist observes outcomes and analyzes skill effectiveness
+4. Strategist publishes `skill_preferences` to guidelines
+5. Conductor reads preferences before next delegation
+6. Better skill selection → higher success rate
+7. Loop continues
+
+---
+
+## Strategist/Reflector Parallel
+
+The Strategist serves the same role in DCF+ that the Reflector serves in DCF:
+
+| Aspect | Phase 1 Reflector | Phase 2 Strategist |
+|--------|-------------------|-------------------|
+| Observes | Completed workflow executions | Ongoing session activity |
+| Reads | Planner's shared memory | `session_context` block |
+| Writes | `reflector_guidelines` block | `strategist_guidelines` block |
+| Persists | Graphiti (patterns, metrics) | Graphiti (patterns, metrics) |
+| Timing | Post-workflow (batch) | Real-time (continuous) |
+| Improves | Planner's workflow planning | Conductor's task delegation |
+
+Both use the same architectural pattern:
+- Read-only access to orchestrator's shared state
+- Write access to dedicated guidelines block
+- Long-term memory via Graphiti
+- Evidence-based recommendations
+
+---
+
 ## Letta Platform Integration
 
 DCF+ leverages Letta's native multi-agent capabilities. This section documents the Letta features used and best practices for DCF+.
@@ -664,8 +759,8 @@ Sent from Strategist to Conductor:
 3. [x] Create `list_session_companions` tool
 4. [x] Create `create_session_context` tool
 5. [x] Create `finalize_session` tool
-6. [ ] Write Conductor system prompt (`prompts/dcf_plus/Conductor.md`)
-7. [ ] Write Companion system prompt (`prompts/dcf_plus/Companion.md`)
+6. [x] Write Conductor system prompt (`prompts/dcf_plus/Conductor.md`)
+7. [x] Write Companion system prompt (`prompts/dcf_plus/Companion.md`)
 
 ### Phase 2.2: Delegation
 
@@ -680,7 +775,7 @@ Sent from Strategist to Conductor:
 
 1. [x] Create `read_session_activity` tool
 2. [x] Create `update_conductor_guidelines` tool
-3. [ ] Write Strategist system prompt (`prompts/dcf_plus/Strategist.md`)
+3. [x] Write Strategist system prompt (`prompts/dcf_plus/Strategist.md`)
 4. [ ] Integrate with Graphiti for pattern persistence
 5. [ ] Test end-to-end Conductor ↔ Companion ↔ Strategist flow
 
