@@ -31,6 +31,20 @@ from tools.dcf.register_reflector import register_reflector as _register_reflect
 from tools.dcf.read_shared_memory_blocks import read_shared_memory_blocks as _read_shared_memory_blocks
 from tools.dcf.update_reflector_guidelines import update_reflector_guidelines as _update_reflector_guidelines
 from tools.dcf.trigger_reflection import trigger_reflection as _trigger_reflection
+
+# DCF+ Tools (Delegated Execution Pattern)
+from tools.dcf_plus.create_companion import create_companion as _create_companion
+from tools.dcf_plus.dismiss_companion import dismiss_companion as _dismiss_companion
+from tools.dcf_plus.list_session_companions import list_session_companions as _list_session_companions
+from tools.dcf_plus.update_companion_status import update_companion_status as _update_companion_status
+from tools.dcf_plus.create_session_context import create_session_context as _create_session_context
+from tools.dcf_plus.update_session_context import update_session_context as _update_session_context
+from tools.dcf_plus.finalize_session import finalize_session as _finalize_session
+from tools.dcf_plus.delegate_task import delegate_task as _delegate_task
+from tools.dcf_plus.broadcast_task import broadcast_task as _broadcast_task
+from tools.dcf_plus.read_session_activity import read_session_activity as _read_session_activity
+from tools.dcf_plus.update_conductor_guidelines import update_conductor_guidelines as _update_conductor_guidelines
+
 from tools.redis_json.json_append import json_append as _json_append
 from tools.redis_json.json_copy import json_copy as _json_copy
 from tools.redis_json.json_create import json_create as _json_create
@@ -575,6 +589,216 @@ def trigger_reflection(workflow_id: str,
 
 
 trigger_reflection.__doc__ = _trigger_reflection.__doc__
+
+
+# --- DCF+ Tools (Delegated Execution Pattern) ---
+
+@mcp.tool()
+def create_companion(session_id: str,
+                     conductor_id: str,
+                     specialization: str = "generalist",
+                     shared_block_ids_json: str | None = None,
+                     initial_skills_json: str | None = None,
+                     companion_name: str | None = None,
+                     persona_override: str | None = None) -> Dict[str, Any]:
+    return _create_companion(
+        session_id=session_id,
+        conductor_id=conductor_id,
+        specialization=specialization,
+        shared_block_ids_json=shared_block_ids_json,
+        initial_skills_json=initial_skills_json,
+        companion_name=companion_name,
+        persona_override=persona_override,
+    )
+
+
+create_companion.__doc__ = _create_companion.__doc__
+
+
+@mcp.tool()
+def dismiss_companion(companion_id: str,
+                      unload_skills: bool = True,
+                      detach_shared_blocks: bool = True) -> Dict[str, Any]:
+    return _dismiss_companion(
+        companion_id=companion_id,
+        unload_skills=unload_skills,
+        detach_shared_blocks=detach_shared_blocks,
+    )
+
+
+dismiss_companion.__doc__ = _dismiss_companion.__doc__
+
+
+@mcp.tool()
+def list_session_companions(session_id: str,
+                            include_status: bool = True,
+                            specialization_filter: str | None = None) -> Dict[str, Any]:
+    return _list_session_companions(
+        session_id=session_id,
+        include_status=include_status,
+        specialization_filter=specialization_filter,
+    )
+
+
+list_session_companions.__doc__ = _list_session_companions.__doc__
+
+
+@mcp.tool()
+def update_companion_status(companion_id: str,
+                            status: str | None = None,
+                            specialization: str | None = None,
+                            current_task_id: str | None = None) -> Dict[str, Any]:
+    return _update_companion_status(
+        companion_id=companion_id,
+        status=status,
+        specialization=specialization,
+        current_task_id=current_task_id,
+    )
+
+
+update_companion_status.__doc__ = _update_companion_status.__doc__
+
+
+@mcp.tool()
+def create_session_context(session_id: str,
+                           conductor_id: str,
+                           objective: str | None = None,
+                           initial_context_json: str | None = None) -> Dict[str, Any]:
+    return _create_session_context(
+        session_id=session_id,
+        conductor_id=conductor_id,
+        objective=objective,
+        initial_context_json=initial_context_json,
+    )
+
+
+create_session_context.__doc__ = _create_session_context.__doc__
+
+
+@mcp.tool()
+def update_session_context(session_id: str,
+                           block_id: str,
+                           state: str | None = None,
+                           objective: str | None = None,
+                           add_active_task: str | None = None,
+                           complete_task: str | None = None,
+                           companion_count: int | None = None,
+                           announcement: str | None = None,
+                           shared_data_json: str | None = None) -> Dict[str, Any]:
+    return _update_session_context(
+        session_id=session_id,
+        block_id=block_id,
+        state=state,
+        objective=objective,
+        add_active_task=add_active_task,
+        complete_task=complete_task,
+        companion_count=companion_count,
+        announcement=announcement,
+        shared_data_json=shared_data_json,
+    )
+
+
+update_session_context.__doc__ = _update_session_context.__doc__
+
+
+@mcp.tool()
+def finalize_session(session_id: str,
+                     session_context_block_id: str,
+                     delete_companions: bool = True,
+                     delete_session_block: bool = False,
+                     preserve_wisdom: bool = True) -> Dict[str, Any]:
+    return _finalize_session(
+        session_id=session_id,
+        session_context_block_id=session_context_block_id,
+        delete_companions=delete_companions,
+        delete_session_block=delete_session_block,
+        preserve_wisdom=preserve_wisdom,
+    )
+
+
+finalize_session.__doc__ = _finalize_session.__doc__
+
+
+@mcp.tool()
+def delegate_task(conductor_id: str,
+                  companion_id: str,
+                  task_description: str,
+                  required_skills_json: str | None = None,
+                  input_data_json: str | None = None,
+                  priority: str = "normal",
+                  timeout_seconds: int = 300) -> Dict[str, Any]:
+    return _delegate_task(
+        conductor_id=conductor_id,
+        companion_id=companion_id,
+        task_description=task_description,
+        required_skills_json=required_skills_json,
+        input_data_json=input_data_json,
+        priority=priority,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+delegate_task.__doc__ = _delegate_task.__doc__
+
+
+@mcp.tool()
+def broadcast_task(conductor_id: str,
+                   session_id: str,
+                   task_description: str,
+                   specialization_filter: str | None = None,
+                   status_filter: str = "idle",
+                   required_skills_json: str | None = None,
+                   input_data_json: str | None = None,
+                   max_companions: int = 1) -> Dict[str, Any]:
+    return _broadcast_task(
+        conductor_id=conductor_id,
+        session_id=session_id,
+        task_description=task_description,
+        specialization_filter=specialization_filter,
+        status_filter=status_filter,
+        required_skills_json=required_skills_json,
+        input_data_json=input_data_json,
+        max_companions=max_companions,
+    )
+
+
+broadcast_task.__doc__ = _broadcast_task.__doc__
+
+
+@mcp.tool()
+def read_session_activity(session_id: str,
+                          session_context_block_id: str | None = None,
+                          include_companion_details: bool = True,
+                          include_task_history: bool = True) -> Dict[str, Any]:
+    return _read_session_activity(
+        session_id=session_id,
+        session_context_block_id=session_context_block_id,
+        include_companion_details=include_companion_details,
+        include_task_history=include_task_history,
+    )
+
+
+read_session_activity.__doc__ = _read_session_activity.__doc__
+
+
+@mcp.tool()
+def update_conductor_guidelines(conductor_id: str,
+                                guidelines_json: str | None = None,
+                                recommendation: str | None = None,
+                                skill_preferences_json: str | None = None,
+                                companion_scaling_json: str | None = None,
+                                clear_guidelines: bool = False) -> Dict[str, Any]:
+    return _update_conductor_guidelines(
+        conductor_id=conductor_id,
+        guidelines_json=guidelines_json,
+        recommendation=recommendation,
+        skill_preferences_json=skill_preferences_json,
+        companion_scaling_json=companion_scaling_json,
+        clear_guidelines=clear_guidelines,
+    )
+
+
+update_conductor_guidelines.__doc__ = _update_conductor_guidelines.__doc__
 
 
 @mcp.tool()
