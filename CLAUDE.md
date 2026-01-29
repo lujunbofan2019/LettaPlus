@@ -235,6 +235,7 @@ All tools return `{status, error, ...}` where `error` is `None` on success, enab
 
 ## Related Documentation
 
+- `docs/Architectural_Evolution_Opus.md` — **Evolution from Workflow to Delegated Execution patterns**
 - `docs/Overall_Combined.md` — Comprehensive architecture overview
 - `docs/Self-Evolving-Agent-Whitepaper.md` — Detailed design rationale
 - `docs/DCF-Patent-Proposal.md` — Dynamic Capabilities Framework concept
