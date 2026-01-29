@@ -26,7 +26,10 @@
       "Bash(pip install:*)",
       "Bash(python -c:*)",
       "Bash(python -m skill_cli.cli server:*)",
-      "Bash(python -m skill_cli.cli:*)"
+      "Bash(python -m skill_cli.cli:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Python entries to .gitignore\n\nAdded standard Python ignores: __pycache__/, *.pyc, *.pyo, *.egg-info/, .venv/, etc.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)"
     ]
   }
 }

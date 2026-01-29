@@ -664,11 +664,39 @@ Low-level JSON document operations for advanced control plane manipulation.
 10. finalize_workflow()               → Close states + delete workers
     ├── delete_worker_agents=True     (default: deletes ephemeral workers)
     └── preserve_planner=True         (default: keeps Planner agent)
-11. trigger_reflection() (optional)   → Trigger post-execution analysis
+11. Collect results + persist audit trail:
+    ├── read_workflow_control_plane() → Get meta, states, outputs
+    ├── create_directory()            → Create runs/<workflow_id>/ structure
+    ├── write_file()                  → Persist all execution artifacts
+    │   ├── workflow.json             (workflow definition)
+    │   ├── summary.json              (execution summary)
+    │   ├── control_plane/meta.json   (workflow metadata)
+    │   ├── control_plane/states/*.json (per-state status)
+    │   ├── data_plane/outputs/*.json (worker outputs)
+    │   └── data_plane/audit/*.json   (finalization record)
+    └── Present results to user       → Status, outputs, audit trail path
+12. trigger_reflection() (optional)   → Trigger post-execution analysis
 
 Edge cases:
 • delete_agent()                      → Manual cleanup of orphaned workers
                                         (failed finalization, interrupted workflows)
+```
+
+### Audit Trail Directory Structure
+
+```
+/app/workflows/runs/<workflow_id>/
+├── workflow.json                      # Workflow definition
+├── summary.json                       # Human-readable execution summary
+├── control_plane/
+│   ├── meta.json                      # cp:wf:{id}:meta
+│   └── states/
+│       └── <StateName>.json           # cp:wf:{id}:state:{StateName}
+└── data_plane/
+    ├── outputs/
+    │   └── <StateName>.json           # dp:wf:{id}:output:{StateName}
+    └── audit/
+        └── finalize.json              # dp:wf:{id}:audit:finalize
 ```
 
 ## Worker Tool Usage Flow

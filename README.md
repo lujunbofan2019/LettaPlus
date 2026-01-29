@@ -94,6 +94,7 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
 
 ## Planner Flow (from intent to ASL)
 
+**Planning Phase:**
 1. **Conversation**: collect objective, inputs, outputs, guardrails, budget/time, egress policy.
 2. **Skill discovery**: call `get_skillset(...)` (optionally with validation). Optionally enrich with a knowledge graph for better selection & justification.
 3. **Draft Workflow**: a linear `steps[]` plan with step names, inputs/outputs, and candidate skills.
@@ -101,7 +102,23 @@ Multiple agents could race to run a state (retries, scaling). A soft **lease** (
   - `agent_template_ref`: e.g., `"agent_template_worker@1.0.0"`
   - `skills`: e.g., `["skill://web.search@1.0.0", "skill://summarize@1.0.0"]`
 5. **Validate**: `validate_workflow(workflow_json, schema_path, imports_base_dir, skills_base_dir)`.
-6. **Approval**: confirm with user; persist workflow JSON if desired.
+6. **Approval**: confirm with user; persist workflow JSON to `workflows/generated/`.
+
+**Execution Phase:**
+7. **Create control plane**: `create_workflow_control_plane(...)` seeds Redis with meta and per-state docs.
+8. **Create workers**: `create_worker_agents(...)` instantiates ephemeral agents from `.af v2` templates.
+9. **Trigger execution**: `notify_next_worker_agent(..., source_state=None)` kicks off initial states.
+10. **Monitor** (optional): `read_workflow_control_plane(..., compute_readiness=True)` to track progress.
+11. **Finalize**: `finalize_workflow(...)` closes open states, deletes workers, writes audit record.
+12. **Collect results & persist audit trail**: Read all execution data and persist to `workflows/runs/<workflow_id>/`:
+    - `workflow.json` — Workflow definition
+    - `summary.json` — Human-readable execution summary
+    - `control_plane/meta.json` — Workflow metadata
+    - `control_plane/states/*.json` — Per-state status documents
+    - `data_plane/outputs/*.json` — Worker outputs per state
+    - `data_plane/audit/finalize.json` — Finalization record
+13. **Present results**: Communicate final status, key outputs, errors (if any), and audit trail path to user.
+14. **Trigger reflection** (optional): `trigger_reflection(...)` sends execution summary to Reflector for analysis.
 
 ---
 
@@ -317,6 +334,61 @@ finalize_workflow("71c76b4d-c004-4910-a789-466241d1170c",
                   finalize_note="Completed successfully.")
 ```
 This writes an audit record at `dp:wf:{id}:audit:finalize` and computes an overall status.
+
+### 8) Collect Results & Persist Audit Trail
+```python
+# Read complete execution state
+cp = read_workflow_control_plane("71c76b4d-c004-4910-a789-466241d1170c", include_meta=True)
+
+# Create audit trail directory structure
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c")
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/control_plane")
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/control_plane/states")
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/data_plane")
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/data_plane/outputs")
+create_directory("/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/data_plane/audit")
+
+# Persist all execution artifacts
+write_file("/app/workflows/runs/71c76b4d-.../control_plane/meta.json", json.dumps(cp["meta"]))
+write_file("/app/workflows/runs/71c76b4d-.../control_plane/states/Research.json", json.dumps(cp["states"]["Research"]))
+write_file("/app/workflows/runs/71c76b4d-.../control_plane/states/Summarize.json", json.dumps(cp["states"]["Summarize"]))
+write_file("/app/workflows/runs/71c76b4d-.../data_plane/outputs/Research.json", json.dumps(cp["outputs"]["Research"]))
+write_file("/app/workflows/runs/71c76b4d-.../data_plane/outputs/Summarize.json", json.dumps(cp["outputs"]["Summarize"]))
+
+# Generate and persist summary.json
+summary = {
+    "workflow_id": "71c76b4d-c004-4910-a789-466241d1170c",
+    "workflow_name": "Web Research and Summary",
+    "final_status": "succeeded",
+    "execution_summary": {"total_states": 2, "succeeded": 2, "failed": 0},
+    "terminal_outputs": [{"state": "Summarize", "output": cp["outputs"]["Summarize"]}],
+    "audit_trail_path": "/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/"
+}
+write_file("/app/workflows/runs/71c76b4d-.../summary.json", json.dumps(summary))
+
+# Present results to user
+print(f"Execution Complete: {summary['final_status']}")
+print(f"Result: {summary['terminal_outputs'][0]['output']}")
+print(f"Audit Trail: {summary['audit_trail_path']}")
+```
+
+The audit trail directory structure:
+```
+/app/workflows/runs/71c76b4d-c004-4910-a789-466241d1170c/
+├── workflow.json                      # Workflow definition
+├── summary.json                       # Human-readable execution summary
+├── control_plane/
+│   ├── meta.json                      # cp:wf:{id}:meta
+│   └── states/
+│       ├── Research.json              # cp:wf:{id}:state:Research
+│       └── Summarize.json             # cp:wf:{id}:state:Summarize
+└── data_plane/
+    ├── outputs/
+    │   ├── Research.json              # dp:wf:{id}:output:Research
+    │   └── Summarize.json             # dp:wf:{id}:output:Summarize
+    └── audit/
+        └── finalize.json              # dp:wf:{id}:audit:finalize
+```
 
 ---
 

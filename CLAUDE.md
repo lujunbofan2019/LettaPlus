@@ -44,6 +44,8 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `skills_src/` | YAML skill definitions and tool specifications |
 | `generated/` | Generated artifacts: manifests, catalogs, stub config |
 | `workflows/` | Example workflow JSON files |
+| `workflows/generated/` | Persisted workflow definitions |
+| `workflows/runs/` | Execution audit trails (per workflow_id) |
 | `prompts/` | Agent system prompts (Planner/Worker variants) |
 | `docs/` | Design documents and whitepapers |
 
@@ -159,12 +161,29 @@ See `skills_src/SKILLS.md` for detailed authoring documentation.
 
 ### Planner Flow
 
+**Planning Phase:**
 1. **Conversation**: Collect objective, inputs, outputs, guardrails
 2. **Skill discovery**: Call `get_skillset(...)` to find available capabilities
 3. **Draft workflow**: Create linear SOP with step names and candidate skills
 4. **Compile to ASL**: Transform to state machine with `AgentBinding` per Task
 5. **Validate**: `validate_workflow(...)` with import resolution
-6. **Approval**: Confirm with user; persist workflow JSON
+6. **Approval**: Confirm with user; persist workflow JSON to `workflows/generated/`
+
+**Execution Phase:**
+7. **Create control plane**: `create_workflow_control_plane(...)` seeds Redis
+8. **Create workers**: `create_worker_agents(...)` instantiates ephemeral agents
+9. **Trigger execution**: `notify_next_worker_agent(..., source_state=None)` kicks off initial states
+10. **Monitor** (optional): `read_workflow_control_plane(..., compute_readiness=True)`
+11. **Finalize**: `finalize_workflow(...)` closes states, deletes workers, writes audit record
+12. **Collect results & persist audit trail**: Read all execution data and persist to `workflows/runs/<workflow_id>/`:
+    - `workflow.json` — Workflow definition
+    - `summary.json` — Human-readable execution summary
+    - `control_plane/meta.json` — Workflow metadata
+    - `control_plane/states/*.json` — Per-state status documents
+    - `data_plane/outputs/*.json` — Worker outputs
+    - `data_plane/audit/finalize.json` — Finalization record
+13. **Present results**: Communicate final status, key outputs, and audit trail path to user
+14. **Trigger reflection** (optional): `trigger_reflection(...)` for self-improvement analysis
 
 ### Worker Flow (per state)
 
