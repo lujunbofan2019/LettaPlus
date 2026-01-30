@@ -723,6 +723,12 @@ servers:
             items:
               type: array
               description: Array of items with sku and quantity
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                required: [sku, quantity]
           required: [items]
         result:
           type: object
@@ -775,6 +781,12 @@ servers:
             address:
               type: object
               description: Shipping address object
+              properties:
+                street: { type: string }
+                city: { type: string }
+                state: { type: string }
+                zip: { type: string }
+              required: [street, city, state, zip]
           required: [address]
         result:
           type: object
@@ -840,6 +852,13 @@ servers:
             items:
               type: array
               description: Order items with quantity and unit_price
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                required: [sku, quantity, unit_price]
           required: [items]
         result:
           type: object
@@ -1017,9 +1036,33 @@ servers:
           type: object
           properties:
             order_id: { type: string }
-            customer_info: { type: object }
-            line_items: { type: array }
-            totals: { type: object }
+            customer_info:
+              type: object
+              properties:
+                customer_id: { type: string }
+                name: { type: string }
+                email: { type: string }
+              required: [customer_id, name]
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  item_description: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  amount: { type: number }
+                required: [sku, quantity, unit_price]
+            totals:
+              type: object
+              properties:
+                subtotal: { type: number }
+                discount: { type: number }
+                tax: { type: number }
+                shipping: { type: number }
+                total: { type: number }
+              required: [total]
           required: [order_id, totals]
         result:
           type: object
@@ -1028,9 +1071,32 @@ servers:
             invoice_date: { type: string }
             order_id: { type: string }
             status: { type: string }
-            customer_info: { type: object }
-            line_items: { type: array }
-            totals: { type: object }
+            customer_info:
+              type: object
+              properties:
+                customer_id: { type: string }
+                name: { type: string }
+                billing_address: { type: string }
+              required: [customer_id, name]
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  item_description: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  amount: { type: number }
+                required: [quantity, amount]
+            totals:
+              type: object
+              properties:
+                subtotal: { type: number }
+                discount: { type: number }
+                tax: { type: number }
+                shipping: { type: number }
+                total: { type: number }
+              required: [total]
             payment_terms: { type: string }
             due_date: { type: string }
             document_url: { type: string }
@@ -1054,11 +1120,11 @@ servers:
                 name: "Jane Smith"
                 billing_address: "123 Main Street, Austin, TX 78701"
               line_items:
-                - description: "WIDGET-A"
+                - item_description: "WIDGET-A"
                   quantity: 3
                   unit_price: 29.99
                   amount: 89.97
-                - description: "GADGET-B"
+                - item_description: "GADGET-B"
                   quantity: 1
                   unit_price: 149.99
                   amount: 149.99

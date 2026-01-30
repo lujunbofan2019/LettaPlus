@@ -1500,7 +1500,22 @@
             "properties": {
               "items": {
                 "type": "array",
-                "description": "Array of items with sku and quantity"
+                "description": "Array of items with sku and quantity",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity"
+                  ]
+                }
               }
             },
             "required": [
@@ -1613,7 +1628,27 @@
             "properties": {
               "address": {
                 "type": "object",
-                "description": "Shipping address object"
+                "description": "Shipping address object",
+                "properties": {
+                  "street": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "zip": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "street",
+                  "city",
+                  "state",
+                  "zip"
+                ]
               }
             },
             "required": [
@@ -1744,7 +1779,26 @@
             "properties": {
               "items": {
                 "type": "array",
-                "description": "Order items with quantity and unit_price"
+                "description": "Order items with quantity and unit_price",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unit_price": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unit_price"
+                  ]
+                }
               }
             },
             "required": [
@@ -2154,13 +2208,73 @@
                 "type": "string"
               },
               "customer_info": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "customer_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "customer_id",
+                  "name"
+                ]
               },
               "line_items": {
-                "type": "array"
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "item_description": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unit_price": {
+                      "type": "number"
+                    },
+                    "amount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unit_price"
+                  ]
+                }
               },
               "totals": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "subtotal": {
+                    "type": "number"
+                  },
+                  "discount": {
+                    "type": "number"
+                  },
+                  "tax": {
+                    "type": "number"
+                  },
+                  "shipping": {
+                    "type": "number"
+                  },
+                  "total": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total"
+                ]
               }
             },
             "required": [
@@ -2184,13 +2298,69 @@
                 "type": "string"
               },
               "customer_info": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "customer_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "billing_address": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "customer_id",
+                  "name"
+                ]
               },
               "line_items": {
-                "type": "array"
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "item_description": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unit_price": {
+                      "type": "number"
+                    },
+                    "amount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "quantity",
+                    "amount"
+                  ]
+                }
               },
               "totals": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "subtotal": {
+                    "type": "number"
+                  },
+                  "discount": {
+                    "type": "number"
+                  },
+                  "tax": {
+                    "type": "number"
+                  },
+                  "shipping": {
+                    "type": "number"
+                  },
+                  "total": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total"
+                ]
               },
               "payment_terms": {
                 "type": "string"
@@ -2234,13 +2404,13 @@
                 },
                 "line_items": [
                   {
-                    "description": "WIDGET-A",
+                    "item_description": "WIDGET-A",
                     "quantity": 3,
                     "unit_price": 29.99,
                     "amount": 89.97
                   },
                   {
-                    "description": "GADGET-B",
+                    "item_description": "GADGET-B",
                     "quantity": 1,
                     "unit_price": 149.99,
                     "amount": 149.99
