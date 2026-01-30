@@ -1,6 +1,6 @@
 # DCF Skills Authoring & Simulation Guide
 
-This document explains the skill simulation and authoring infrastructure for the Dynamic Capabilities Framework (DCF). It covers both simulated skills for testing and real skills for production use.
+This document explains the skill simulation and authoring infrastructure for the Dynamic Capabilities Framework (DCF). It covers the complete testing methodology, from YAML authoring through artifact generation to runtime simulation.
 
 ## Overview
 
@@ -10,6 +10,22 @@ The DCF skill system enables agents to dynamically load and unload capabilities 
 - **Tools**: MCP tools the skill requires
 - **Data Sources**: Context injected into agent memory
 - **Permissions**: Network access and secret requirements
+
+### Testing Methodology
+
+The DCF testing infrastructure provides **deterministic, reproducible testing** of agent workflows without requiring real external services. The methodology follows this flow:
+
+1. **Author** skills and tool specifications in YAML format
+2. **Generate** JSON manifests and stub server configuration
+3. **Simulate** tool responses via the stub MCP server
+4. **Execute** agent workflows with predictable, verifiable outcomes
+5. **Validate** results against expected test case responses
+
+This approach enables:
+- **Isolation**: Tests run without network dependencies
+- **Determinism**: Same inputs always produce same outputs
+- **Speed**: No external API latency
+- **Coverage**: Error scenarios and edge cases can be explicitly tested
 
 ### Architecture
 
@@ -303,7 +319,21 @@ servers:
 
 ### Server Registry (`registry.yaml`)
 
-Maps logical server IDs to actual endpoints.
+Maps logical server IDs to actual MCP endpoints. In test mode, all servers point to the stub MCP server for deterministic simulation.
+
+**Current Servers:**
+
+| Server ID | Purpose | Tools |
+|-----------|---------|-------|
+| `search` | Web and news search | `search_query`, `news_headlines` |
+| `web` | Web content fetching | `web_fetch` |
+| `llm` | LLM operations | `llm_summarize`, `llm_qa` |
+| `datasets` | Dataset access | `load_dataset`, `query_dataset` |
+| `analysis` | Data analysis | `analyze_sentiment`, `extract_entities` |
+| `orders` | Order validation (Phase 1) | `verify_customer`, `check_inventory`, `validate_address` |
+| `pricing` | Pricing calculation (Phase 1) | `calculate_subtotal`, `apply_discount`, `calculate_tax`, `calculate_shipping` |
+| `documents` | Document generation (Phase 1) | `create_invoice` |
+| `support` | Customer support (Phase 2) | `get_customer_profile`, `get_interaction_history`, `search_known_issues`, `check_system_status`, `analyze_account_logs`, `get_response_templates` |
 
 ```yaml
 apiVersion: registry/v1
@@ -312,7 +342,13 @@ kind: ServerRegistry
 env: test   # test | staging | production
 
 servers:
+  # Core research servers
   search:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  web:
     transport: streamable_http
     endpoint: http://stub-mcp:8765
     path: /mcp
@@ -322,7 +358,29 @@ servers:
     endpoint: http://stub-mcp:8765
     path: /mcp
 
-# Production overrides (commented example)
+  # Phase 1 Testing - Order Processing
+  orders:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  pricing:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  documents:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  # Phase 2 Testing - Customer Support
+  support:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+# Production overrides (example)
 # overrides:
 #   production:
 #     search:
@@ -330,6 +388,8 @@ servers:
 #       headers:
 #         Ocp-Apim-Subscription-Key: ${BING_API_KEY}
 ```
+
+**Important**: When adding new skills that reference new servers, you must add the server to `registry.yaml` before regenerating artifacts.
 
 ---
 
@@ -451,9 +511,96 @@ curl -X POST http://localhost:8765/metrics/reset
 
 ---
 
-## Generation Commands
+## Artifact Generation
 
-### Unified Generator (Recommended)
+### Generated Artifacts
+
+The generation pipeline produces three types of artifacts:
+
+#### 1. Skill Manifests (`generated/manifests/*.json`)
+
+JSON files consumed by `load_skill()` at runtime. Each manifest contains:
+
+| Field | Description |
+|-------|-------------|
+| `manifestId` | Unique identifier: `skill.<domain>.<name>@<version>` |
+| `skillName` | Dot-separated skill name |
+| `skillVersion` | Semantic version |
+| `skillDirectives` | Agent behavioral instructions |
+| `requiredTools` | Array of tool definitions with full JSON schemas |
+| `requiredDataSources` | Context injected into agent memory |
+| `permissions` | Network egress and secret requirements |
+
+**Tool Definition Expansion:**
+
+YAML compact reference:
+```yaml
+- ref: orders:verify_customer
+  required: true
+```
+
+Expands to full definition in JSON:
+```json
+{
+  "toolName": "verify_customer",
+  "json_schema": {
+    "name": "verify_customer",
+    "parameters": { ... }
+  },
+  "definition": {
+    "type": "mcp_server",
+    "serverId": "orders",
+    "toolName": "verify_customer"
+  },
+  "required": true
+}
+```
+
+#### 2. Skills Catalog (`generated/catalogs/skills_catalog.json`)
+
+Index file used by `get_skillset()` for skill discovery:
+
+```json
+{
+  "skills": [
+    {
+      "manifestId": "skill.validate.order@0.1.0",
+      "skillName": "validate.order",
+      "skillVersion": "0.1.0",
+      "path": "generated/manifests/skill.validate.order-0.1.0.json"
+    }
+  ]
+}
+```
+
+#### 3. Stub Configuration (`generated/stub/stub_config.json`)
+
+Configuration for the stub MCP server, containing all tool definitions and test cases:
+
+```json
+{
+  "servers": {
+    "orders": {
+      "tools": {
+        "verify_customer": {
+          "version": "0.1.0",
+          "description": "...",
+          "paramsSchema": { ... },
+          "resultSchema": { ... },
+          "defaultResponse": { ... },
+          "latencyMs": { "default": 100 },
+          "rateLimit": { "rps": 5 },
+          "cases": [ ... ]
+        }
+      }
+    }
+  }
+}
+```
+
+### Generation Commands
+
+#### Unified Generator (Recommended)
 
 ```python
 from dcf_mcp.tools.dcf.generate import generate_all
@@ -461,21 +608,62 @@ from dcf_mcp.tools.dcf.generate import generate_all
 # Generate everything
 result = generate_all()
 
-# Custom paths
+# Custom paths (useful outside Docker)
 result = generate_all(
-    skills_src_dir="/path/to/skills_src",
-    generated_dir="/path/to/generated"
+    skills_src_dir="/Users/me/project/skills_src",
+    generated_dir="/Users/me/project/generated"
 )
+
+# Result:
+# {
+#   "ok": True,
+#   "manifests_result": { "ok": True, "manifests": [...] },
+#   "stub_config_result": { "ok": True, "tool_count": 24, "case_count": 54 },
+#   "summary": "Generated: 15 skill manifest(s), 24 tool(s) with 54 case(s)"
+# }
 ```
 
-### Individual Generators
+#### Individual Generators
 
 ```python
 from dcf_mcp.tools.dcf.yaml_to_manifests import yaml_to_manifests
 from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config
 
-yaml_to_manifests()
-yaml_to_stub_config()
+# Generate only manifests
+yaml_to_manifests(
+    skills_dir="/path/to/skills_src/skills",
+    tools_yaml_path="/path/to/skills_src/tools.yaml",
+    out_dir="/path/to/generated/manifests",
+    catalog_path="/path/to/generated/catalogs/skills_catalog.json"
+)
+
+# Generate only stub config
+yaml_to_stub_config(
+    tools_yaml_path="/path/to/skills_src/tools.yaml",
+    out_path="/path/to/generated/stub/stub_config.json"
+)
+```
+
+#### Docker vs Local Paths
+
+Default paths are configured for Docker (`/app/skills_src`, `/app/generated`). When running locally:
+
+```python
+# Local development
+from dcf_mcp.tools.dcf.yaml_to_manifests import yaml_to_manifests
+from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config
+
+yaml_to_manifests(
+    skills_dir="./skills_src/skills",
+    tools_yaml_path="./skills_src/tools.yaml",
+    out_dir="./generated/manifests",
+    catalog_path="./generated/catalogs/skills_catalog.json"
+)
+
+yaml_to_stub_config(
+    tools_yaml_path="./skills_src/tools.yaml",
+    out_path="./generated/stub/stub_config.json"
+)
 ```
 
 ---
@@ -485,18 +673,187 @@ yaml_to_stub_config()
 ```
 skills_src/
 ├── SKILLS.md                   # This documentation
-├── tools.yaml                  # Tool specifications + test cases
-├── registry.yaml               # Server endpoint mappings
-├── skills/                     # Individual skill definitions
+├── tools.yaml                  # Tool specifications + test cases (24 tools)
+├── registry.yaml               # Server endpoint mappings (9 servers)
+├── skills/                     # Individual skill definitions (15 skills)
+│   │
+│   │ # Research & Analysis Skills
 │   ├── research.web.skill.yaml
 │   ├── research.news.skill.yaml
+│   ├── research.company.skill.yaml
+│   ├── analyze.synthesis.skill.yaml
+│   │
+│   │ # Planning & QA Skills
+│   ├── plan.actions.skill.yaml
+│   ├── plan.research_scope.skill.yaml
+│   ├── qa.review.skill.yaml
+│   │
+│   │ # Writing Skills
 │   ├── write.summary.skill.yaml
-│   └── ...
+│   ├── write.briefing.skill.yaml
+│   │
+│   │ # Phase 1 Testing: Order Processing Pipeline
+│   ├── validate.order.skill.yaml      # orders server tools
+│   ├── calculate.pricing.skill.yaml   # pricing server tools
+│   ├── generate.invoice.skill.yaml    # documents server tools
+│   │
+│   │ # Phase 2 Testing: Customer Support Session
+│   ├── lookup.customer.skill.yaml     # support server tools
+│   ├── diagnose.issue.skill.yaml      # support server tools
+│   └── compose.response.skill.yaml    # support server tools
+│
 └── schemas/                    # YAML schema documentation
     ├── skill.schema.yaml
     ├── tools.schema.yaml
     └── registry.schema.yaml
+
+generated/
+├── manifests/                  # Generated skill manifests (15 files)
+│   ├── skill.research.web-0.1.0.json
+│   ├── skill.validate.order-0.1.0.json
+│   └── ...
+├── catalogs/
+│   └── skills_catalog.json     # Discovery index for get_skillset()
+└── stub/
+    └── stub_config.json        # Stub MCP server configuration
 ```
+
+---
+
+## Testing Infrastructure
+
+### The Stub MCP Server
+
+The stub MCP server (`stub_mcp/stub_mcp_server.py`) provides deterministic tool simulation for testing agent workflows. It:
+
+1. **Loads configuration** from `generated/stub/stub_config.json` at startup
+2. **Hot-reloads** configuration when the file changes (no restart needed)
+3. **Matches test cases** against tool arguments using configurable strategies
+4. **Processes templates** in responses for dynamic values
+5. **Simulates latency** and rate limits as specified
+6. **Injects errors** for testing error handling paths
+
+**Docker Compose Configuration:**
+```yaml
+stub-mcp:
+  build: ./stub_mcp
+  ports:
+    - "8765:8765"
+  volumes:
+    - ./generated:/app/generated:ro
+  environment:
+    - STUB_CONFIG=/app/generated/stub/stub_config.json
+```
+
+**Endpoints:**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/mcp` | POST | MCP Streamable HTTP transport |
+| `/healthz` | GET | Health check (`{"ok": true}`) |
+| `/metrics` | GET | Tool call and case hit statistics |
+| `/metrics/reset` | POST | Reset metrics counters |
+
+### Testing Scenarios
+
+The project includes two complete testing scenarios:
+
+#### Phase 1: Order Processing Pipeline (Workflow Execution)
+
+Tests the Planner → Worker → Reflector pattern with a three-stage workflow:
+
+| Stage | Skill | Server | Tools |
+|-------|-------|--------|-------|
+| 1 | `validate.order` | orders | `verify_customer`, `check_inventory`, `validate_address` |
+| 2 | `calculate.pricing` | pricing | `calculate_subtotal`, `apply_discount`, `calculate_tax`, `calculate_shipping` |
+| 3 | `generate.invoice` | documents | `create_invoice` |
+
+**Test Flow:**
+1. Planner compiles workflow from skill requirements
+2. Workers execute sequentially with Redis coordination
+3. Reflector analyzes execution outcomes
+
+#### Phase 2: Customer Support Session (Delegated Execution)
+
+Tests the Conductor → Companion → Strategist pattern with parallel task handling:
+
+| Task | Skill | Server | Tools |
+|------|-------|--------|-------|
+| Lookup | `lookup.customer` | support | `get_customer_profile`, `get_interaction_history` |
+| Diagnose | `diagnose.issue` | support | `search_known_issues`, `check_system_status`, `analyze_account_logs` |
+| Respond | `compose.response` | support | `get_response_templates` |
+
+**Test Flow:**
+1. Conductor creates Companions with skill assignments
+2. Companions execute tasks concurrently
+3. Strategist observes and provides optimization guidelines
+
+### Designing Test Cases
+
+Test cases in `tools.yaml` define how the stub server responds to specific inputs:
+
+```yaml
+cases:
+  - id: happy_path           # Unique case identifier
+    match:
+      strategy: exact        # Matching strategy
+      path: customer_id      # Parameter path to match
+      value: "CUST-1234"     # Expected value
+    response:                # Response when matched
+      status: "active"
+      name: "Jane Smith"
+
+  - id: not_found
+    match:
+      strategy: regex
+      path: customer_id
+      value: "UNKNOWN-.*"
+    response:
+      status: "not_found"
+      error: "Customer not found"
+
+  - id: fallback
+    match:
+      strategy: always       # Matches any input
+    response:
+      status: "active"
+      name: "Default Customer"
+```
+
+**Best Practices:**
+1. Include a happy path case with realistic data
+2. Add error cases (not found, validation failure, etc.)
+3. Always include a fallback (`strategy: always`) case
+4. Use `weight` to prioritize specific cases over general ones
+5. Test template variables work correctly (`{{ uuid }}`, `{{ now_iso }}`)
+
+### JSON Schema Requirements
+
+The stub MCP server validates tool schemas. Common issues:
+
+1. **Array properties** must have `items` schema:
+   ```yaml
+   items:
+     type: array
+     items:           # Required!
+       type: object
+       properties:
+         sku: { type: string }
+   ```
+
+2. **Object properties** must have `properties` defined:
+   ```yaml
+   customer_info:
+     type: object
+     properties:      # Required!
+       id: { type: string }
+       name: { type: string }
+     required: [id]   # Recommended
+   ```
+
+3. **Avoid reserved JSON Schema keywords** as property names:
+   - Use `item_description` instead of `description`
+   - Use `value_type` instead of `type`
 
 ---
 
@@ -524,6 +881,170 @@ skills_src/
 2. Tools are called against actual APIs
 3. Test cases are ignored (only used by stub server)
 4. Use for: production deployments, real API integration
+
+---
+
+## End-to-End Workflow
+
+This section illustrates the complete flow from authoring a new skill to executing it in a test workflow.
+
+### Step 1: Author the Skill
+
+Create `skills_src/skills/my.skill.skill.yaml`:
+
+```yaml
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.my.skill@0.1.0
+  name: my.skill
+  version: 0.1.0
+  description: My custom skill
+  tags: [custom, testing]
+
+spec:
+  permissions:
+    egress: intranet
+    secrets: []
+
+  directives: |
+    You are a specialized agent for my task.
+    Follow these steps:
+    1. Use `myserver:my_tool` to get data
+    2. Process the results
+    3. Return structured output
+
+  tools:
+    - ref: myserver:my_tool
+      required: true
+      description: Gets data for processing
+```
+
+### Step 2: Define Tools and Test Cases
+
+Add to `skills_src/tools.yaml`:
+
+```yaml
+servers:
+  myserver:
+    description: My custom server
+    tools:
+      my_tool:
+        version: 0.1.0
+        description: Gets data for processing
+        params:
+          type: object
+          properties:
+            query:
+              type: string
+              description: Query parameter
+          required: [query]
+        result:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  value: { type: string }
+                required: [id, value]
+        defaults:
+          response: { data: [] }
+          latencyMs: 100
+        cases:
+          - id: happy_path
+            match:
+              strategy: exact
+              path: query
+              value: "test"
+            response:
+              data:
+                - id: "1"
+                  value: "Test result"
+          - id: fallback
+            match:
+              strategy: always
+            response:
+              data: []
+```
+
+### Step 3: Register the Server
+
+Add to `skills_src/registry.yaml`:
+
+```yaml
+servers:
+  myserver:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+```
+
+### Step 4: Generate Artifacts
+
+```python
+from dcf_mcp.tools.dcf.generate import generate_all
+
+result = generate_all(
+    skills_src_dir="./skills_src",
+    generated_dir="./generated"
+)
+print(result["summary"])
+# Generated: 16 skill manifest(s), 25 tool(s) with 56 case(s)
+```
+
+### Step 5: Verify Generation
+
+```bash
+# Check manifest was created
+ls generated/manifests/skill.my.skill-0.1.0.json
+
+# Check tool is in stub config
+cat generated/stub/stub_config.json | jq '.servers.myserver.tools | keys'
+
+# Check skill is in catalog
+cat generated/catalogs/skills_catalog.json | jq '.skills[] | select(.skillName == "my.skill")'
+```
+
+### Step 6: Start Services
+
+```bash
+docker compose up -d
+
+# Verify stub server loaded the new tool
+docker compose logs stub-mcp | grep "loaded"
+# [stub-mcp] loaded 25 tools from /app/generated/stub/stub_config.json
+```
+
+### Step 7: Test the Skill
+
+```python
+from dcf_mcp.tools.dcf.load_skill import load_skill
+from dcf_mcp.tools.dcf.unload_skill import unload_skill
+
+# Load the skill onto an agent
+result = load_skill(
+    skill_manifest="generated/manifests/skill.my.skill-0.1.0.json",
+    agent_id="test-agent-123"
+)
+
+# Agent can now use my_tool via MCP
+# ... execute workflow ...
+
+# Unload when done
+unload_skill(skill_manifest_id="skill.my.skill@0.1.0", agent_id="test-agent-123")
+```
+
+### Step 8: Verify Test Cases
+
+```bash
+# Check which cases were hit
+curl -s http://localhost:8765/metrics | jq '.metrics.case_hits'
+# { "myserver:my_tool:happy_path": 3, "myserver:my_tool:fallback": 1 }
+```
 
 ---
 
@@ -562,34 +1083,96 @@ pip install pyyaml
 ```
 
 **"Tool not found"**
-- Verify the tool exists in `tools.yaml`
+- Verify the tool exists in `tools.yaml` under the correct server
 - Check the `ref` format: `serverId:toolName`
+- Ensure the server is registered in `registry.yaml`
 - Regenerate artifacts after adding tools
 
 **"No case matched"**
 - Check match strategy and path
 - Verify input arguments match expected values
 - Add an `always` fallback case
+- Check the stub server metrics: `curl http://localhost:8765/metrics`
+
+**"Invalid Schema" in stub server UI**
+- Ensure array properties have `items` schema defined
+- Ensure object properties have `properties` defined
+- Add `required` arrays to nested objects
+- Avoid reserved JSON Schema keywords as property names (`description`, `type`, etc.)
 
 **"Manifest validation failed"**
 - Ensure `manifestId` matches pattern: `skill.<domain>.<name>@<version>`
 - Verify all required fields are present
-- Check permissions have valid egress values
+- Check permissions have valid egress values (`none`, `intranet`, `internet`)
+
+**"Server not found" when loading skill**
+- Verify the server ID in skill's tool refs exists in `registry.yaml`
+- Run `generate_all()` after updating `registry.yaml`
+- Restart the stub MCP server to pick up new configuration
+
+**Generation fails with Docker paths**
+When running generation outside Docker, specify local paths:
+```python
+yaml_to_manifests(
+    skills_dir="./skills_src/skills",
+    tools_yaml_path="./skills_src/tools.yaml",
+    out_dir="./generated/manifests",
+    catalog_path="./generated/catalogs/skills_catalog.json"
+)
+```
 
 ### Debug Commands
 
 ```bash
-# Verify stub config
+# List all servers in stub config
 cat generated/stub/stub_config.json | jq '.servers | keys'
 
-# Check skill manifest
-cat generated/manifests/skill.research.web-0.1.0.json | jq '.requiredTools'
+# List tools for a specific server
+cat generated/stub/stub_config.json | jq '.servers.orders.tools | keys'
 
-# Test stub server
-curl -X POST http://localhost:8765/mcp \
+# Check skill manifest tools
+cat generated/manifests/skill.validate.order-0.1.0.json | jq '.requiredTools[].toolName'
+
+# Verify stub server health
+curl -sf http://localhost:8765/healthz
+
+# Check stub server metrics (tool calls, case hits)
+curl -s http://localhost:8765/metrics | jq
+
+# Reset metrics before test run
+curl -X POST http://localhost:8765/metrics/reset
+
+# Check stub server logs
+docker compose logs -f stub-mcp
+
+# Rebuild and restart stub server after config changes
+docker compose restart stub-mcp
+
+# Test MCP connection (requires proper headers)
+curl -s -X POST http://localhost:8765/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
+
+### Verification Checklist
+
+When adding new skills or tools:
+
+1. **YAML Authoring**
+   - [ ] Created `skills_src/skills/<name>.skill.yaml`
+   - [ ] Added tools to `skills_src/tools.yaml` under correct server
+   - [ ] Added server to `skills_src/registry.yaml` (if new)
+
+2. **Generation**
+   - [ ] Ran `generate_all()` successfully
+   - [ ] Verified manifest created in `generated/manifests/`
+   - [ ] Verified tools in `generated/stub/stub_config.json`
+
+3. **Runtime**
+   - [ ] Stub server restarted or auto-reloaded config
+   - [ ] Tool appears in stub server tool list (no "Invalid Schema")
+   - [ ] Test cases return expected responses
 
 ---
 
