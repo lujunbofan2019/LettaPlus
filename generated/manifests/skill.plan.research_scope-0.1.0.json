@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.plan.research_scope@0.1.0",
+  "skillPackageId": null,
   "skillName": "plan.research_scope",
   "skillVersion": "0.1.0",
   "description": "Drafts research scopes and clarifies objectives",
@@ -14,31 +14,39 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Capture stakeholder objectives, guardrails, and key questions.\nStructure scope using MECE (Mutually Exclusive, Collectively Exhaustive) principles.\nOutput numbered steps for clarity.\nIdentify potential data and tooling needs upfront.\n",
-  "tools": [
+  "skillDirectives": "Capture stakeholder objectives, guardrails, and key questions.\nStructure scope using MECE (Mutually Exclusive, Collectively Exhaustive) principles.\nOutput numbered steps for clarity.\nIdentify potential data and tooling needs upfront.",
+  "requiredTools": [
     {
+      "toolName": "llm_outline",
+      "description": "Generate structured research outline",
+      "json_schema": {
+        "name": "llm_outline",
+        "description": "Mock planning LLM for research outlines",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string"
+            },
+            "constraints": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
         "toolName": "llm_outline"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "topic": {
-            "type": "string"
-          },
-          "constraints": {
-            "type": "string"
-          }
-        }
-      }
+      "required": true
     }
   ],
-  "dataSources": [
+  "requiredDataSources": [
     {
-      "id": "prompt",
+      "dataSourceId": "prompt",
       "description": "Planning methodology guidance",
+      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "Use MECE bulleting.\nOutput numbered steps.\nAlways clarify success metrics.\n"

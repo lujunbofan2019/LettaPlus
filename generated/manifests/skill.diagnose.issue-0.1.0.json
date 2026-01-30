@@ -1,0 +1,114 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.diagnose.issue@0.1.0",
+  "skillPackageId": null,
+  "skillName": "diagnose.issue",
+  "skillVersion": "0.1.0",
+  "description": "Analyzes customer issue symptoms and identifies root causes",
+  "tags": [
+    "support",
+    "diagnosis",
+    "troubleshooting",
+    "testing",
+    "phase-2"
+  ],
+  "permissions": {
+    "egress": "intranet",
+    "secrets": []
+  },
+  "skillDirectives": "You are a technical diagnosis specialist. Your task is to analyze reported\nissues and identify root causes.\n\n## Diagnosis Steps\n1. Use `support:search_known_issues` to check for matching known issues\n2. Use `support:check_system_status` to verify any system-wide problems\n3. Use `support:analyze_account_logs` to review account-specific events\n\n## Output Format\nReturn a diagnosis report with:\n- `issue_category`: Classification of the issue\n- `probable_cause`: Most likely root cause\n- `confidence`: Confidence level (high/medium/low)\n- `matched_known_issues`: Any matching known issues from KB\n- `recommended_resolution`: Suggested fix steps\n- `escalation_needed`: Whether to escalate to engineering",
+  "requiredTools": [
+    {
+      "toolName": "search_known_issues",
+      "description": "Searches knowledge base for known issues",
+      "json_schema": {
+        "name": "search_known_issues",
+        "description": "Searches knowledge base for known issues",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "symptoms": {
+              "type": "string",
+              "description": "Issue symptoms to search for"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "symptoms"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "support",
+        "toolName": "search_known_issues"
+      },
+      "required": true
+    },
+    {
+      "toolName": "check_system_status",
+      "description": "Checks current system status and outages",
+      "json_schema": {
+        "name": "check_system_status",
+        "description": "Checks current system status and outages",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "service": {
+              "type": "string",
+              "default": "all"
+            }
+          }
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "support",
+        "toolName": "check_system_status"
+      },
+      "required": true
+    },
+    {
+      "toolName": "analyze_account_logs",
+      "description": "Analyzes account activity logs for anomalies",
+      "json_schema": {
+        "name": "analyze_account_logs",
+        "description": "Analyzes account activity logs for anomalies",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string"
+            },
+            "hours_back": {
+              "type": "integer",
+              "default": 24
+            }
+          },
+          "required": [
+            "customer_id"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "support",
+        "toolName": "analyze_account_logs"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": [
+    {
+      "dataSourceId": "support",
+      "description": "Context about issue diagnosis capabilities",
+      "destination": "archival_memory",
+      "content": {
+        "type": "text_content",
+        "text": "Diagnosis tools search knowledge bases, check system status,\nand analyze account logs to identify issue root causes.\n"
+      }
+    }
+  ]
+}

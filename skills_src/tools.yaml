@@ -666,3 +666,828 @@ servers:
               summary: >-
                 Finance-focused digest: strong capital efficiency but dependence on regulatory
                 clarity; continue tracking incentive timelines.
+
+  # ============================================================================
+  # ORDERS SERVER - Order validation tools (Phase 1 Testing)
+  # ============================================================================
+  orders:
+    description: Order validation tools for customer, inventory, and address verification
+
+    tools:
+      verify_customer:
+        version: 0.1.0
+        description: Verifies customer exists and is in good standing
+        params:
+          type: object
+          properties:
+            customer_id:
+              type: string
+              description: Customer identifier
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            valid: { type: boolean }
+            customer_name: { type: string }
+            account_status: { type: string }
+            credit_limit: { type: number }
+            current_balance: { type: number }
+        defaults:
+          response: { valid: false, error: "Customer not found" }
+          latencyMs: 50
+          rateLimit: { rps: 5 }
+        cases:
+          - id: customer_valid
+            match: { strategy: exact, path: customer_id, value: "CUST-1234" }
+            response:
+              valid: true
+              customer_name: "Jane Smith"
+              account_status: "active"
+              credit_limit: 5000.00
+              current_balance: 250.00
+
+          - id: customer_inactive
+            match: { strategy: exact, path: customer_id, value: "CUST-5678" }
+            response:
+              valid: false
+              customer_name: "Bob Jones"
+              account_status: "suspended"
+              error: "Account suspended - payment overdue"
+
+      check_inventory:
+        version: 0.1.0
+        description: Checks inventory availability for order items
+        params:
+          type: object
+          properties:
+            items:
+              type: array
+              description: Array of items with sku and quantity
+          required: [items]
+        result:
+          type: object
+          properties:
+            all_available: { type: boolean }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  requested: { type: integer }
+                  available: { type: integer }
+                  status: { type: string }
+        defaults:
+          response: { all_available: false, items: [] }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: items_in_stock
+            match: { strategy: regex, path: "items[0].sku", value: "WIDGET.*" }
+            response:
+              all_available: true
+              items:
+                - sku: "WIDGET-A"
+                  requested: 3
+                  available: 150
+                  status: "in_stock"
+                - sku: "GADGET-B"
+                  requested: 1
+                  available: 25
+                  status: "in_stock"
+
+          - id: items_out_of_stock
+            match: { strategy: exact, path: "items[0].sku", value: "RARE-ITEM" }
+            response:
+              all_available: false
+              items:
+                - sku: "RARE-ITEM"
+                  requested: 1
+                  available: 0
+                  status: "out_of_stock"
+
+      validate_address:
+        version: 0.1.0
+        description: Validates shipping address is deliverable
+        params:
+          type: object
+          properties:
+            address:
+              type: object
+              description: Shipping address object
+          required: [address]
+        result:
+          type: object
+          properties:
+            valid: { type: boolean }
+            normalized_address:
+              type: object
+              properties:
+                street: { type: string }
+                city: { type: string }
+                state: { type: string }
+                zip: { type: string }
+            delivery_zone: { type: string }
+            estimated_delivery_days: { type: integer }
+        defaults:
+          response: { valid: false, error: "Invalid address" }
+          latencyMs: 100
+          rateLimit: { rps: 5 }
+        cases:
+          - id: texas_address
+            match: { strategy: exact, path: "address.state", value: "TX" }
+            response:
+              valid: true
+              normalized_address:
+                street: "123 Main Street"
+                city: "Austin"
+                state: "TX"
+                zip: "78701-1234"
+              delivery_zone: "ZONE-A"
+              estimated_delivery_days: 3
+
+          - id: california_address
+            match: { strategy: exact, path: "address.state", value: "CA" }
+            response:
+              valid: true
+              normalized_address:
+                street: "456 Oak Avenue"
+                city: "San Francisco"
+                state: "CA"
+                zip: "94102-5678"
+              delivery_zone: "ZONE-B"
+              estimated_delivery_days: 5
+
+          - id: invalid_zip
+            match: { strategy: exact, path: "address.zip", value: "00000" }
+            response:
+              valid: false
+              error: "Invalid ZIP code"
+
+  # ============================================================================
+  # PRICING SERVER - Order pricing tools (Phase 1 Testing)
+  # ============================================================================
+  pricing:
+    description: Pricing calculation tools for subtotals, discounts, taxes, and shipping
+
+    tools:
+      calculate_subtotal:
+        version: 0.1.0
+        description: Calculates subtotal from order items
+        params:
+          type: object
+          properties:
+            items:
+              type: array
+              description: Order items with quantity and unit_price
+          required: [items]
+        result:
+          type: object
+          properties:
+            subtotal: { type: number }
+            item_count: { type: integer }
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  line_total: { type: number }
+        defaults:
+          response: { subtotal: 0, item_count: 0, line_items: [] }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: standard_order
+            match: { strategy: regex, path: "items[0].sku", value: ".*" }
+            response:
+              subtotal: 239.96
+              item_count: 4
+              line_items:
+                - sku: "WIDGET-A"
+                  quantity: 3
+                  unit_price: 29.99
+                  line_total: 89.97
+                - sku: "GADGET-B"
+                  quantity: 1
+                  unit_price: 149.99
+                  line_total: 149.99
+
+      apply_discount:
+        version: 0.1.0
+        description: Applies discount code and returns discount amount
+        params:
+          type: object
+          properties:
+            subtotal: { type: number }
+            discount_code: { type: string }
+          required: [subtotal]
+        result:
+          type: object
+          properties:
+            discount_applied: { type: boolean }
+            discount_code: { type: string }
+            discount_type: { type: string }
+            discount_percent: { type: number }
+            discount_amount: { type: number }
+            subtotal_after_discount: { type: number }
+        defaults:
+          response: { discount_applied: false, discount_amount: 0 }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: save10_discount
+            match: { strategy: exact, path: discount_code, value: "SAVE10" }
+            response:
+              discount_applied: true
+              discount_code: "SAVE10"
+              discount_type: "percentage"
+              discount_percent: 10
+              discount_amount: 24.00
+              subtotal_after_discount: 215.96
+
+          - id: save20_discount
+            match: { strategy: exact, path: discount_code, value: "SAVE20" }
+            response:
+              discount_applied: true
+              discount_code: "SAVE20"
+              discount_type: "percentage"
+              discount_percent: 20
+              discount_amount: 48.00
+              subtotal_after_discount: 191.96
+
+          - id: no_discount
+            match: { strategy: exact, path: discount_code, value: "" }
+            response:
+              discount_applied: false
+              discount_amount: 0
+              subtotal_after_discount: 239.96
+
+      calculate_tax:
+        version: 0.1.0
+        description: Calculates tax based on address and subtotal
+        params:
+          type: object
+          properties:
+            subtotal: { type: number }
+            state: { type: string }
+          required: [subtotal, state]
+        result:
+          type: object
+          properties:
+            tax_rate: { type: number }
+            tax_amount: { type: number }
+            jurisdiction: { type: string }
+        defaults:
+          response: { tax_rate: 0, tax_amount: 0, jurisdiction: "Unknown" }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: texas_tax
+            match: { strategy: exact, path: state, value: "TX" }
+            response:
+              tax_rate: 0.0825
+              tax_amount: 17.82
+              jurisdiction: "Texas State + Austin Local"
+
+          - id: california_tax
+            match: { strategy: exact, path: state, value: "CA" }
+            response:
+              tax_rate: 0.0875
+              tax_amount: 18.90
+              jurisdiction: "California State + San Francisco Local"
+
+          - id: oregon_no_tax
+            match: { strategy: exact, path: state, value: "OR" }
+            response:
+              tax_rate: 0.0
+              tax_amount: 0.0
+              jurisdiction: "Oregon (No Sales Tax)"
+
+      calculate_shipping:
+        version: 0.1.0
+        description: Calculates shipping cost based on items and address
+        params:
+          type: object
+          properties:
+            item_count: { type: integer }
+            delivery_zone: { type: string }
+          required: [item_count, delivery_zone]
+        result:
+          type: object
+          properties:
+            shipping_method: { type: string }
+            shipping_amount: { type: number }
+            estimated_days: { type: integer }
+            carrier: { type: string }
+        defaults:
+          response: { shipping_method: "Standard", shipping_amount: 9.99, estimated_days: 7, carrier: "USPS" }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: zone_a_shipping
+            match: { strategy: exact, path: delivery_zone, value: "ZONE-A" }
+            response:
+              shipping_method: "Ground"
+              shipping_amount: 8.99
+              estimated_days: 3
+              carrier: "FastShip"
+
+          - id: zone_b_shipping
+            match: { strategy: exact, path: delivery_zone, value: "ZONE-B" }
+            response:
+              shipping_method: "Ground"
+              shipping_amount: 12.99
+              estimated_days: 5
+              carrier: "FastShip"
+
+  # ============================================================================
+  # DOCUMENTS SERVER - Document generation tools (Phase 1 Testing)
+  # ============================================================================
+  documents:
+    description: Document generation tools for invoices and business documents
+
+    tools:
+      create_invoice:
+        version: 0.1.0
+        description: Creates formatted invoice document from order data
+        params:
+          type: object
+          properties:
+            order_id: { type: string }
+            customer_info: { type: object }
+            line_items: { type: array }
+            totals: { type: object }
+          required: [order_id, totals]
+        result:
+          type: object
+          properties:
+            invoice_id: { type: string }
+            invoice_date: { type: string }
+            order_id: { type: string }
+            status: { type: string }
+            customer_info: { type: object }
+            line_items: { type: array }
+            totals: { type: object }
+            payment_terms: { type: string }
+            due_date: { type: string }
+            document_url: { type: string }
+        defaults:
+          response:
+            invoice_id: "INV-DEFAULT"
+            status: "generated"
+            payment_terms: "NET-30"
+          latencyMs: 150
+          rateLimit: { rps: 3 }
+        cases:
+          - id: standard_invoice
+            match: { strategy: regex, path: order_id, value: "ORD-.*" }
+            response:
+              invoice_id: "INV-2025-0042"
+              invoice_date: "2025-01-30T10:30:00Z"
+              order_id: "ORD-2025-0042"
+              status: "generated"
+              customer_info:
+                customer_id: "CUST-1234"
+                name: "Jane Smith"
+                billing_address: "123 Main Street, Austin, TX 78701"
+              line_items:
+                - description: "WIDGET-A"
+                  quantity: 3
+                  unit_price: 29.99
+                  amount: 89.97
+                - description: "GADGET-B"
+                  quantity: 1
+                  unit_price: 149.99
+                  amount: 149.99
+              totals:
+                subtotal: 239.96
+                discount: -24.00
+                tax: 17.82
+                shipping: 8.99
+                total: 242.77
+              payment_terms: "NET-30"
+              due_date: "2025-03-01"
+              document_url: "https://docs.example.com/invoices/INV-2025-0042.pdf"
+
+  # ============================================================================
+  # SUPPORT SERVER - Customer support tools (Phase 2 Testing)
+  # ============================================================================
+  support:
+    description: Customer support tools for profile lookup, issue diagnosis, and response composition
+
+    tools:
+      get_customer_profile:
+        version: 0.1.0
+        description: Retrieves customer profile and account details
+        params:
+          type: object
+          properties:
+            customer_id:
+              type: string
+              description: Customer account identifier
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            name: { type: string }
+            email: { type: string }
+            phone: { type: string }
+            account_type: { type: string }
+            account_status: { type: string }
+            created_date: { type: string }
+            subscription_tier: { type: string }
+            payment_status: { type: string }
+            flags: { type: array, items: { type: string } }
+        defaults:
+          response: { error: "Customer not found", customer_id: null }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: premium_customer
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              name: "Michael Chen"
+              email: "m.chen@example.com"
+              phone: "+1-555-0142"
+              account_type: "Premium"
+              account_status: "active"
+              created_date: "2023-06-15"
+              subscription_tier: "Business Plus"
+              payment_status: "current"
+              flags:
+                - "VIP_CUSTOMER"
+                - "BETA_FEATURES_ENABLED"
+
+          - id: standard_customer
+            match: { strategy: exact, path: customer_id, value: "ACCT-1234" }
+            response:
+              customer_id: "ACCT-1234"
+              name: "Sarah Johnson"
+              email: "s.johnson@example.com"
+              phone: "+1-555-0198"
+              account_type: "Standard"
+              account_status: "active"
+              created_date: "2024-01-10"
+              subscription_tier: "Starter"
+              payment_status: "current"
+              flags: []
+
+      get_interaction_history:
+        version: 0.1.0
+        description: Retrieves recent customer interactions
+        params:
+          type: object
+          properties:
+            customer_id: { type: string }
+            limit: { type: integer, default: 5 }
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            interactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  date: { type: string }
+                  channel: { type: string }
+                  type: { type: string }
+                  status: { type: string }
+                  agent: { type: string }
+                  summary: { type: string }
+            total_interactions: { type: integer }
+            avg_resolution_time_hours: { type: number }
+        defaults:
+          response: { customer_id: null, interactions: [], total_interactions: 0 }
+          latencyMs: 100
+          rateLimit: { rps: 5 }
+        cases:
+          - id: recent_interactions
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              interactions:
+                - id: "INT-4521"
+                  date: "2025-01-28"
+                  channel: "email"
+                  type: "password_reset_request"
+                  status: "completed"
+                  agent: "auto"
+                  summary: "Customer requested password reset"
+                - id: "INT-4498"
+                  date: "2025-01-15"
+                  channel: "chat"
+                  type: "billing_inquiry"
+                  status: "resolved"
+                  agent: "Sarah K."
+                  summary: "Question about invoice charges"
+                - id: "INT-4312"
+                  date: "2024-12-20"
+                  channel: "phone"
+                  type: "feature_request"
+                  status: "logged"
+                  agent: "David M."
+                  summary: "Request for API access"
+              total_interactions: 12
+              avg_resolution_time_hours: 4.2
+
+      search_known_issues:
+        version: 0.1.0
+        description: Searches knowledge base for known issues
+        params:
+          type: object
+          properties:
+            symptoms:
+              type: string
+              description: Issue symptoms to search for
+            category: { type: string }
+          required: [symptoms]
+        result:
+          type: object
+          properties:
+            matches_found: { type: integer }
+            known_issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  category: { type: string }
+                  severity: { type: string }
+                  root_cause: { type: string }
+                  resolution: { type: string }
+                  workaround: { type: string }
+                  status: { type: string }
+                  fix_version: { type: string }
+        defaults:
+          response: { matches_found: 0, known_issues: [] }
+          latencyMs: 150
+          rateLimit: { rps: 3 }
+        cases:
+          - id: password_reset_issue
+            match: { strategy: regex, path: symptoms, value: ".*password.*reset.*" }
+            response:
+              matches_found: 2
+              known_issues:
+                - id: "KB-2024-1847"
+                  title: "Dashboard access blocked after password reset"
+                  category: "authentication"
+                  severity: "medium"
+                  root_cause: "Session cache not cleared after password change"
+                  resolution: "Clear browser cache and cookies, then log in again"
+                  workaround: "Use incognito/private browsing window"
+                  status: "fix_deployed"
+                  fix_version: "2.5.1"
+                - id: "KB-2024-1652"
+                  title: "MFA token sync delay after credential change"
+                  category: "authentication"
+                  severity: "low"
+                  root_cause: "MFA token propagation delay (up to 5 minutes)"
+                  resolution: "Wait 5 minutes after password reset before logging in"
+                  status: "known_limitation"
+
+          - id: login_issue
+            match: { strategy: regex, path: symptoms, value: ".*login.*fail.*" }
+            response:
+              matches_found: 1
+              known_issues:
+                - id: "KB-2024-1901"
+                  title: "Login failures during peak hours"
+                  category: "authentication"
+                  severity: "high"
+                  root_cause: "Rate limiting triggers during high traffic"
+                  resolution: "Wait 15 minutes and retry"
+                  status: "monitoring"
+
+      check_system_status:
+        version: 0.1.0
+        description: Checks current system status and outages
+        params:
+          type: object
+          properties:
+            service: { type: string, default: "all" }
+        result:
+          type: object
+          properties:
+            overall_status: { type: string }
+            last_updated: { type: string }
+            services:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  status: { type: string }
+                  uptime_30d: { type: string }
+            recent_incidents: { type: array }
+            scheduled_maintenance: { type: object }
+        defaults:
+          response:
+            overall_status: "operational"
+            services: []
+          latencyMs: 50
+          rateLimit: { rps: 10 }
+        cases:
+          - id: all_systems_normal
+            match: { strategy: exact, path: service, value: "all" }
+            response:
+              overall_status: "operational"
+              last_updated: "2025-01-30T10:00:00Z"
+              services:
+                - name: "Authentication Service"
+                  status: "operational"
+                  uptime_30d: "99.98%"
+                - name: "Dashboard"
+                  status: "operational"
+                  uptime_30d: "99.95%"
+                - name: "API Gateway"
+                  status: "operational"
+                  uptime_30d: "99.99%"
+                - name: "Database Cluster"
+                  status: "operational"
+                  uptime_30d: "99.99%"
+              recent_incidents: []
+              scheduled_maintenance: null
+
+          - id: auth_degraded
+            match: { strategy: exact, path: service, value: "auth" }
+            response:
+              overall_status: "degraded"
+              last_updated: "2025-01-30T10:00:00Z"
+              services:
+                - name: "Authentication Service"
+                  status: "degraded"
+                  uptime_30d: "99.85%"
+              recent_incidents:
+                - id: "INC-2025-0142"
+                  start: "2025-01-30T09:45:00Z"
+                  summary: "Elevated login latency"
+                  status: "investigating"
+
+      analyze_account_logs:
+        version: 0.1.0
+        description: Analyzes account activity logs for anomalies
+        params:
+          type: object
+          properties:
+            customer_id: { type: string }
+            hours_back: { type: integer, default: 24 }
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            analysis_period: { type: string }
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  timestamp: { type: string }
+                  event: { type: string }
+                  source: { type: string }
+                  ip: { type: string }
+                  status: { type: string }
+                  error_code: { type: string }
+            anomalies:
+              type: array
+              items:
+                type: object
+                properties:
+                  type: { type: string }
+                  description: { type: string }
+                  error_code: { type: string }
+                  recommendation: { type: string }
+        defaults:
+          response: { customer_id: null, events: [], anomalies: [] }
+          latencyMs: 200
+          rateLimit: { rps: 3 }
+        cases:
+          - id: password_reset_logs
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              analysis_period: "24 hours"
+              events:
+                - timestamp: "2025-01-30T08:15:22Z"
+                  event: "PASSWORD_RESET_INITIATED"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:16:45Z"
+                  event: "PASSWORD_RESET_COMPLETED"
+                  source: "email_link"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:17:30Z"
+                  event: "LOGIN_ATTEMPT"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:17:35Z"
+                  event: "DASHBOARD_ACCESS"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "failed"
+                  error_code: "SESSION_CACHE_STALE"
+                - timestamp: "2025-01-30T08:18:00Z"
+                  event: "DASHBOARD_ACCESS"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "failed"
+                  error_code: "SESSION_CACHE_STALE"
+              anomalies:
+                - type: "repeated_failure"
+                  description: "Multiple dashboard access failures after successful login"
+                  error_code: "SESSION_CACHE_STALE"
+                  recommendation: "Clear session cache or use private browsing"
+
+      get_response_templates:
+        version: 0.1.0
+        description: Retrieves response templates for issue category
+        params:
+          type: object
+          properties:
+            category: { type: string }
+            tone: { type: string, default: "professional" }
+          required: [category]
+        result:
+          type: object
+          properties:
+            templates:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  subject_template: { type: string }
+                  body_template: { type: string }
+                  tone: { type: string }
+                  tags: { type: array, items: { type: string } }
+        defaults:
+          response: { templates: [] }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: auth_templates
+            match: { strategy: exact, path: category, value: "authentication" }
+            response:
+              templates:
+                - id: "TPL-AUTH-001"
+                  name: "Password Reset Follow-up"
+                  subject_template: "Re: Access Issue After Password Reset - [TICKET_ID]"
+                  body_template: |
+                    Hi [CUSTOMER_NAME],
+
+                    Thank you for reaching out about the dashboard access issue you're experiencing after your recent password reset.
+
+                    We've identified this as a known issue (KB-2024-1847) related to session caching. Here's how to resolve it:
+
+                    **Quick Fix:**
+                    1. Clear your browser cache and cookies
+                    2. Close all browser windows
+                    3. Open a new browser window and log in again
+
+                    **Alternative:**
+                    - Try accessing the dashboard in an incognito/private browsing window
+
+                    This issue has been fixed in our latest release (v2.5.1), which will be automatically applied to your account within the next 24 hours.
+
+                    If you continue experiencing issues after trying these steps, please reply to this email and we'll investigate further.
+
+                    Best regards,
+                    [AGENT_NAME]
+                    Customer Support Team
+                  tone: "professional"
+                  tags: ["password", "access", "cache"]
+
+          - id: billing_templates
+            match: { strategy: exact, path: category, value: "billing" }
+            response:
+              templates:
+                - id: "TPL-BILL-001"
+                  name: "Billing Inquiry Response"
+                  subject_template: "Re: Billing Question - [TICKET_ID]"
+                  body_template: |
+                    Hi [CUSTOMER_NAME],
+
+                    Thank you for contacting us about your billing question.
+
+                    [BILLING_DETAILS]
+
+                    If you have any additional questions, please don't hesitate to reach out.
+
+                    Best regards,
+                    [AGENT_NAME]
+                    Customer Support Team
+                  tone: "professional"
+                  tags: ["billing", "invoice", "payment"]

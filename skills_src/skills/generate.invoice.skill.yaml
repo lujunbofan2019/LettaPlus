@@ -1,0 +1,47 @@
+# Skill: Invoice Generation
+# Generates formatted invoice documents from validated and priced orders
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.generate.invoice@0.1.0
+  name: generate.invoice
+  version: 0.1.0
+  description: Generates formatted invoice documents from validated and priced orders
+  tags: [generation, invoice, document, testing, phase-1]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    You are an invoice generation specialist. Your task is to create formatted invoices.
+
+    ## Generation Steps
+    1. Use `documents:create_invoice` to generate the invoice document
+    2. The tool will return a formatted invoice with all order details
+
+    ## Output Format
+    Return the generated invoice with:
+    - `invoice_id`: unique invoice identifier
+    - `invoice_date`: generation timestamp
+    - `order_id`: reference to original order
+    - `customer_info`: customer details
+    - `line_items`: itemized list with prices
+    - `totals`: pricing breakdown
+    - `payment_terms`: standard NET-30 terms
+    - `document_url`: link to PDF version (simulated)
+
+  tools:
+    - ref: documents:create_invoice
+      required: true
+      description: Creates formatted invoice document from order data
+
+  dataSources:
+    - id: documents
+      description: Context about document generation capabilities
+      text: |
+        Document generation tools create formatted business documents
+        including invoices with standard payment terms and PDF output.

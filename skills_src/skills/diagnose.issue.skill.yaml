@@ -1,0 +1,53 @@
+# Skill: Issue Diagnosis
+# Analyzes customer issue symptoms and identifies root causes
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.diagnose.issue@0.1.0
+  name: diagnose.issue
+  version: 0.1.0
+  description: Analyzes customer issue symptoms and identifies root causes
+  tags: [support, diagnosis, troubleshooting, testing, phase-2]
+
+spec:
+  permissions:
+    egress: intranet
+    secrets: []
+
+  directives: |
+    You are a technical diagnosis specialist. Your task is to analyze reported
+    issues and identify root causes.
+
+    ## Diagnosis Steps
+    1. Use `support:search_known_issues` to check for matching known issues
+    2. Use `support:check_system_status` to verify any system-wide problems
+    3. Use `support:analyze_account_logs` to review account-specific events
+
+    ## Output Format
+    Return a diagnosis report with:
+    - `issue_category`: Classification of the issue
+    - `probable_cause`: Most likely root cause
+    - `confidence`: Confidence level (high/medium/low)
+    - `matched_known_issues`: Any matching known issues from KB
+    - `recommended_resolution`: Suggested fix steps
+    - `escalation_needed`: Whether to escalate to engineering
+
+  tools:
+    - ref: support:search_known_issues
+      required: true
+      description: Searches knowledge base for known issues
+    - ref: support:check_system_status
+      required: true
+      description: Checks current system status and outages
+    - ref: support:analyze_account_logs
+      required: true
+      description: Analyzes account activity logs for anomalies
+
+  dataSources:
+    - id: support
+      description: Context about issue diagnosis capabilities
+      text: |
+        Diagnosis tools search knowledge bases, check system status,
+        and analyze account logs to identify issue root causes.

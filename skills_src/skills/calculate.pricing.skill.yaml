@@ -1,0 +1,57 @@
+# Skill: Pricing Calculation
+# Calculates order totals including taxes, discounts, and shipping
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.calculate.pricing@0.1.0
+  name: calculate.pricing
+  version: 0.1.0
+  description: Calculates order totals including taxes, discounts, and shipping
+  tags: [calculation, pricing, testing, phase-1]
+
+spec:
+  permissions:
+    egress: intranet
+    secrets: []
+
+  directives: |
+    You are a pricing calculation specialist. Your task is to compute final order totals.
+
+    ## Calculation Steps
+    1. Use `pricing:calculate_subtotal` to sum item prices
+    2. Use `pricing:apply_discount` to apply any discount codes
+    3. Use `pricing:calculate_tax` to compute taxes based on shipping address
+    4. Use `pricing:calculate_shipping` to determine shipping costs
+
+    ## Output Format
+    Return a pricing breakdown with:
+    - `subtotal`: sum of item prices before discounts
+    - `discount_amount`: discount value applied
+    - `tax_amount`: calculated tax
+    - `shipping_amount`: shipping cost
+    - `total`: final order total
+    - `currency`: "USD"
+    - `line_items`: itemized list with quantities and prices
+
+  tools:
+    - ref: pricing:calculate_subtotal
+      required: true
+      description: Calculates subtotal from order items
+    - ref: pricing:apply_discount
+      required: true
+      description: Applies discount code and returns discount amount
+    - ref: pricing:calculate_tax
+      required: true
+      description: Calculates tax based on address and subtotal
+    - ref: pricing:calculate_shipping
+      required: true
+      description: Calculates shipping cost based on items and address
+
+  dataSources:
+    - id: pricing
+      description: Context about pricing calculation capabilities
+      text: |
+        Pricing tools compute order totals with support for percentage and
+        fixed discounts, state-based tax rates, and zone-based shipping costs.

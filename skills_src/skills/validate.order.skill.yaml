@@ -1,0 +1,51 @@
+# Skill: Order Validation
+# Validates order data including customer, inventory, and address verification
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.validate.order@0.1.0
+  name: validate.order
+  version: 0.1.0
+  description: Validates order data including customer, inventory, and address verification
+  tags: [validation, order, testing, phase-1]
+
+spec:
+  permissions:
+    egress: intranet
+    secrets: []
+
+  directives: |
+    You are an order validation specialist. Your task is to validate incoming orders.
+
+    ## Validation Steps
+    1. Use `orders:verify_customer` to confirm the customer exists and is in good standing
+    2. Use `orders:check_inventory` to verify all items are in stock
+    3. Use `orders:validate_address` to confirm the shipping address is deliverable
+
+    ## Output Format
+    Return a validation result with:
+    - `valid`: boolean indicating overall validity
+    - `customer_status`: customer verification details
+    - `inventory_status`: per-item availability
+    - `address_status`: address validation result
+    - `errors`: array of any validation errors (empty if valid)
+
+  tools:
+    - ref: orders:verify_customer
+      required: true
+      description: Verifies customer exists and is in good standing
+    - ref: orders:check_inventory
+      required: true
+      description: Checks inventory availability for order items
+    - ref: orders:validate_address
+      required: true
+      description: Validates shipping address is deliverable
+
+  dataSources:
+    - id: orders
+      description: Context about order validation capabilities
+      text: |
+        Order validation tools verify customer accounts, inventory levels,
+        and shipping address deliverability before order processing.

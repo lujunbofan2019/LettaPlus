@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.qa.review@0.1.0",
+  "skillPackageId": null,
   "skillName": "qa.review",
   "skillVersion": "0.1.0",
   "description": "Reviews deliverables for completeness and gaps",
@@ -13,32 +13,39 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Check clarity of all assertions.\nQuantify claims where metrics are missing.\nFlag missing data or unsupported conclusions.\nProvide specific, actionable fixes for each issue.\n",
-  "tools": [
+  "skillDirectives": "Check clarity of all assertions.\nQuantify claims where metrics are missing.\nFlag missing data or unsupported conclusions.\nProvide specific, actionable fixes for each issue.",
+  "requiredTools": [
     {
+      "toolName": "llm_quality_review",
+      "description": "Review deliverable quality and identify issues",
+      "json_schema": {
+        "name": "llm_quality_review",
+        "description": "Mock quality assurance reviewer",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "draft": {
+              "type": "string"
+            },
+            "criteria": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "draft"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
         "toolName": "llm_quality_review"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "draft": {
-            "type": "string"
-          },
-          "criteria": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "draft"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": []
+  "requiredDataSources": []
 }

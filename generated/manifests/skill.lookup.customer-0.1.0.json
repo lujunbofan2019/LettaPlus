@@ -1,0 +1,88 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.lookup.customer@0.1.0",
+  "skillPackageId": null,
+  "skillName": "lookup.customer",
+  "skillVersion": "0.1.0",
+  "description": "Retrieves customer account information and interaction history",
+  "tags": [
+    "support",
+    "customer",
+    "lookup",
+    "testing",
+    "phase-2"
+  ],
+  "permissions": {
+    "egress": "intranet",
+    "secrets": []
+  },
+  "skillDirectives": "You are a customer data specialist. Your task is to retrieve comprehensive\ncustomer information for support purposes.\n\n## Lookup Steps\n1. Use `support:get_customer_profile` to retrieve basic account information\n2. Use `support:get_interaction_history` to retrieve recent support interactions\n\n## Output Format\nReturn a customer summary with:\n- `customer_id`: Account identifier\n- `profile`: Name, email, account type, status\n- `history`: Recent interactions (last 5)\n- `flags`: Any account flags or notes",
+  "requiredTools": [
+    {
+      "toolName": "get_customer_profile",
+      "description": "Retrieves customer profile and account details",
+      "json_schema": {
+        "name": "get_customer_profile",
+        "description": "Retrieves customer profile and account details",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string",
+              "description": "Customer account identifier"
+            }
+          },
+          "required": [
+            "customer_id"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "support",
+        "toolName": "get_customer_profile"
+      },
+      "required": true
+    },
+    {
+      "toolName": "get_interaction_history",
+      "description": "Retrieves recent customer interactions",
+      "json_schema": {
+        "name": "get_interaction_history",
+        "description": "Retrieves recent customer interactions",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "default": 5
+            }
+          },
+          "required": [
+            "customer_id"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "support",
+        "toolName": "get_interaction_history"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": [
+    {
+      "dataSourceId": "support",
+      "description": "Context about customer support data capabilities",
+      "destination": "archival_memory",
+      "content": {
+        "type": "text_content",
+        "text": "Support tools provide access to customer profiles, account status,\ninteraction history, and account flags for support operations.\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Skill: Response Composition
+# Generates professional customer support response messages
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.compose.response@0.1.0
+  name: compose.response
+  version: 0.1.0
+  description: Generates professional customer support response messages
+  tags: [support, writing, response, testing, phase-2]
+
+spec:
+  permissions:
+    egress: none
+    secrets: []
+
+  directives: |
+    You are a customer communication specialist. Your task is to compose
+    professional, empathetic support responses.
+
+    ## Composition Guidelines
+    1. Use `support:get_response_templates` to retrieve relevant templates
+    2. Personalize the response with customer name and specific issue details
+    3. Include clear resolution steps
+    4. Maintain professional, empathetic tone
+
+    ## Output Format
+    Return a response package with:
+    - `subject`: Email subject line
+    - `greeting`: Personalized greeting
+    - `body`: Main response content with resolution steps
+    - `closing`: Professional closing
+    - `internal_notes`: Notes for support team (not sent to customer)
+
+  tools:
+    - ref: support:get_response_templates
+      required: true
+      description: Retrieves response templates for issue category
+
+  dataSources:
+    - id: support
+      description: Context about response composition capabilities
+      text: |
+        Response tools provide access to templates for various issue
+        categories with professional, empathetic messaging guidelines.

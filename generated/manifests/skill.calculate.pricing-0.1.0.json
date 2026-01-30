@@ -1,0 +1,144 @@
+{
+  "manifestApiVersion": "v2.0.0",
+  "manifestId": "skill.calculate.pricing@0.1.0",
+  "skillPackageId": null,
+  "skillName": "calculate.pricing",
+  "skillVersion": "0.1.0",
+  "description": "Calculates order totals including taxes, discounts, and shipping",
+  "tags": [
+    "calculation",
+    "pricing",
+    "testing",
+    "phase-1"
+  ],
+  "permissions": {
+    "egress": "intranet",
+    "secrets": []
+  },
+  "skillDirectives": "You are a pricing calculation specialist. Your task is to compute final order totals.\n\n## Calculation Steps\n1. Use `pricing:calculate_subtotal` to sum item prices\n2. Use `pricing:apply_discount` to apply any discount codes\n3. Use `pricing:calculate_tax` to compute taxes based on shipping address\n4. Use `pricing:calculate_shipping` to determine shipping costs\n\n## Output Format\nReturn a pricing breakdown with:\n- `subtotal`: sum of item prices before discounts\n- `discount_amount`: discount value applied\n- `tax_amount`: calculated tax\n- `shipping_amount`: shipping cost\n- `total`: final order total\n- `currency`: \"USD\"\n- `line_items`: itemized list with quantities and prices",
+  "requiredTools": [
+    {
+      "toolName": "calculate_subtotal",
+      "description": "Calculates subtotal from order items",
+      "json_schema": {
+        "name": "calculate_subtotal",
+        "description": "Calculates subtotal from order items",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "description": "Order items with quantity and unit_price"
+            }
+          },
+          "required": [
+            "items"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "pricing",
+        "toolName": "calculate_subtotal"
+      },
+      "required": true
+    },
+    {
+      "toolName": "apply_discount",
+      "description": "Applies discount code and returns discount amount",
+      "json_schema": {
+        "name": "apply_discount",
+        "description": "Applies discount code and returns discount amount",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "subtotal": {
+              "type": "number"
+            },
+            "discount_code": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "subtotal"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "pricing",
+        "toolName": "apply_discount"
+      },
+      "required": true
+    },
+    {
+      "toolName": "calculate_tax",
+      "description": "Calculates tax based on address and subtotal",
+      "json_schema": {
+        "name": "calculate_tax",
+        "description": "Calculates tax based on address and subtotal",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "subtotal": {
+              "type": "number"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "subtotal",
+            "state"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "pricing",
+        "toolName": "calculate_tax"
+      },
+      "required": true
+    },
+    {
+      "toolName": "calculate_shipping",
+      "description": "Calculates shipping cost based on items and address",
+      "json_schema": {
+        "name": "calculate_shipping",
+        "description": "Calculates shipping cost based on items and address",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "item_count": {
+              "type": "integer"
+            },
+            "delivery_zone": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_count",
+            "delivery_zone"
+          ]
+        }
+      },
+      "definition": {
+        "type": "mcp_server",
+        "serverId": "pricing",
+        "toolName": "calculate_shipping"
+      },
+      "required": true
+    }
+  ],
+  "requiredDataSources": [
+    {
+      "dataSourceId": "pricing",
+      "description": "Context about pricing calculation capabilities",
+      "destination": "archival_memory",
+      "content": {
+        "type": "text_content",
+        "text": "Pricing tools compute order totals with support for percentage and\nfixed discounts, state-based tax rates, and zone-based shipping costs.\n"
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.write.summary@0.1.0",
+  "skillPackageId": null,
   "skillName": "write.summary",
   "skillVersion": "0.1.0",
   "description": "Short factual summary writer",
@@ -13,27 +13,34 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Write concise, factual summaries under 150 words.\nNo speculation or unsupported claims.\nUse clear, professional language.\nHighlight the most important points first.\n",
-  "tools": [
+  "skillDirectives": "Write concise, factual summaries under 150 words.\nNo speculation or unsupported claims.\nUse clear, professional language.\nHighlight the most important points first.",
+  "requiredTools": [
     {
+      "toolName": "llm_summarize",
+      "description": "Generate concise summaries from input text",
+      "json_schema": {
+        "name": "llm_summarize",
+        "description": "Mock summarisation endpoint",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Text to summarise"
+            }
+          },
+          "required": [
+            "text"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
         "toolName": "llm_summarize"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "description": "Text to summarise"
-          }
-        },
-        "required": [
-          "text"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": []
+  "requiredDataSources": []
 }

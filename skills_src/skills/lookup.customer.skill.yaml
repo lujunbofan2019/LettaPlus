@@ -1,0 +1,47 @@
+# Skill: Customer Lookup
+# Retrieves customer account information and interaction history
+
+apiVersion: skill/v1
+kind: Skill
+
+metadata:
+  manifestId: skill.lookup.customer@0.1.0
+  name: lookup.customer
+  version: 0.1.0
+  description: Retrieves customer account information and interaction history
+  tags: [support, customer, lookup, testing, phase-2]
+
+spec:
+  permissions:
+    egress: intranet
+    secrets: []
+
+  directives: |
+    You are a customer data specialist. Your task is to retrieve comprehensive
+    customer information for support purposes.
+
+    ## Lookup Steps
+    1. Use `support:get_customer_profile` to retrieve basic account information
+    2. Use `support:get_interaction_history` to retrieve recent support interactions
+
+    ## Output Format
+    Return a customer summary with:
+    - `customer_id`: Account identifier
+    - `profile`: Name, email, account type, status
+    - `history`: Recent interactions (last 5)
+    - `flags`: Any account flags or notes
+
+  tools:
+    - ref: support:get_customer_profile
+      required: true
+      description: Retrieves customer profile and account details
+    - ref: support:get_interaction_history
+      required: true
+      description: Retrieves recent customer interactions
+
+  dataSources:
+    - id: support
+      description: Context about customer support data capabilities
+      text: |
+        Support tools provide access to customer profiles, account status,
+        interaction history, and account flags for support operations.
