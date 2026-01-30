@@ -111,13 +111,12 @@ def update_companion_status(
 
     # Update the agent
     try:
-        # The Letta API may require modifying agent settings
-        # We use the modify endpoint if available
-        client.agents.modify(agent_id=companion_id, tags=new_tags)
+        # The Letta SDK uses .update() method for agents
+        client.agents.update(agent_id=companion_id, tags=new_tags)
     except AttributeError:
-        # Some SDK versions use update instead
+        # Fallback for older SDK versions
         try:
-            client.agents.update(agent_id=companion_id, tags=new_tags)
+            client.agents.modify(agent_id=companion_id, tags=new_tags)
         except Exception as e:
             return {
                 "status": None,

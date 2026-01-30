@@ -84,35 +84,44 @@ def report_task_result(
             "run_id": None,
         }
 
-    # Parse output data
+    # Parse output data (handles both string and pre-parsed dict from Letta)
     output_data: Dict[str, Any] = {}
     if output_data_json:
-        try:
-            parsed = json.loads(output_data_json)
-            if isinstance(parsed, dict):
-                output_data = parsed
-        except Exception:
-            pass
+        if isinstance(output_data_json, dict):
+            output_data = output_data_json
+        elif isinstance(output_data_json, str):
+            try:
+                parsed = json.loads(output_data_json)
+                if isinstance(parsed, dict):
+                    output_data = parsed
+            except Exception:
+                pass
 
-    # Parse artifacts
+    # Parse artifacts (handles both string and pre-parsed list from Letta)
     artifacts: List[Dict[str, Any]] = []
     if artifacts_json:
-        try:
-            parsed = json.loads(artifacts_json)
-            if isinstance(parsed, list):
-                artifacts = parsed
-        except Exception:
-            pass
+        if isinstance(artifacts_json, list):
+            artifacts = artifacts_json
+        elif isinstance(artifacts_json, str):
+            try:
+                parsed = json.loads(artifacts_json)
+                if isinstance(parsed, list):
+                    artifacts = parsed
+            except Exception:
+                pass
 
-    # Parse metrics
+    # Parse metrics (handles both string and pre-parsed dict from Letta)
     metrics: Dict[str, Any] = {}
     if metrics_json:
-        try:
-            parsed = json.loads(metrics_json)
-            if isinstance(parsed, dict):
-                metrics = parsed
-        except Exception:
-            pass
+        if isinstance(metrics_json, dict):
+            metrics = metrics_json
+        elif isinstance(metrics_json, str):
+            try:
+                parsed = json.loads(metrics_json)
+                if isinstance(parsed, dict):
+                    metrics = parsed
+            except Exception:
+                pass
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -223,7 +232,10 @@ def report_task_result(
         tags = list(getattr(companion, "tags", []) or [])
         new_tags = [t for t in tags if not t.startswith("status:") and not t.startswith("task:")]
         new_tags.append(f"status:{new_status}")
-        client.agents.modify(agent_id=companion_id, tags=new_tags)
+        try:
+            client.agents.update(agent_id=companion_id, tags=new_tags)
+        except AttributeError:
+            client.agents.modify(agent_id=companion_id, tags=new_tags)
     except Exception:
         # Non-fatal: continue
         pass

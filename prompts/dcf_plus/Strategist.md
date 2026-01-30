@@ -264,16 +264,16 @@ This returns:
 Search for relevant past learnings:
 
 ```
-search_graph_memory_facts(
+search_facts(
   query="skill effectiveness for research tasks",
   max_facts=20
 )
 ```
 
 ```
-search_graph_memory_nodes(
+search_nodes(
   query="session patterns with high success rate",
-  entity="SessionPattern",
+  entity_types=["SessionPattern"],
   max_nodes=10
 )
 ```
@@ -420,9 +420,9 @@ Persist significant patterns to Graphiti for institutional learning. Use these e
 
 ### 5.1 Record Session Patterns
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="SessionPattern:<session_id>",
-  episode_body=<pattern_json>,
+  content=<pattern_json>,
   source="json",
   source_description="Session pattern from Strategist analysis",
   group_id="dcf_plus_patterns"
@@ -449,9 +449,9 @@ add_episode_to_graph_memory(
 
 ### 5.2 Record Skill Metrics
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="SkillMetric:<skill_id>:<date>",
-  episode_body=<metrics_json>,
+  content=<metrics_json>,
   source="json",
   source_description="Skill performance aggregation",
   group_id="dcf_plus_metrics"
@@ -476,9 +476,9 @@ add_episode_to_graph_memory(
 
 ### 5.3 Record Learning Insights
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="Insight:<insight_id>",
-  episode_body=<insight_json>,
+  content=<insight_json>,
   source="json",
   source_description="Strategic insight from session analysis",
   group_id="dcf_plus_insights"
@@ -504,9 +504,9 @@ add_episode_to_graph_memory(
 
 ### 5.4 Record Companion Patterns
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="CompanionPattern:<companion_id>",
-  episode_body=<pattern_json>,
+  content=<pattern_json>,
   source="json",
   source_description="Companion performance pattern",
   group_id="dcf_plus_companions"

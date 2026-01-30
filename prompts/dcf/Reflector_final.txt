@@ -65,16 +65,16 @@ You receive a `reflection_event` when a workflow completes:
 
 **Search for similar past workflows**:
 ```
-search_graph_memory_nodes(
+search_nodes(
   query="workflows similar to <workflow_name> with <key_characteristics>",
-  entity="Workflow",
+  entity_types=["Workflow"],
   max_nodes=10
 )
 ```
 
 **Search for skill performance history**:
 ```
-search_graph_memory_facts(
+search_facts(
   query="performance metrics for skill <skill_name>",
   max_facts=20
 )
@@ -82,9 +82,9 @@ search_graph_memory_facts(
 
 **Search for previous insights**:
 ```
-search_graph_memory_nodes(
+search_nodes(
   query="learning insights about <topic>",
-  entity="LearningInsight",
+  entity_types=["LearningInsight"],
   max_nodes=10
 )
 ```
@@ -145,9 +145,9 @@ search_graph_memory_nodes(
 
 ### Record Workflow Execution
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="WorkflowExecution:<workflow_id>",
-  episode_body=<execution_summary_json>,
+  content=<execution_summary_json>,
   source="json",
   source_description="Workflow execution record from Reflector analysis",
   group_id="dcf_executions"
@@ -156,9 +156,9 @@ add_episode_to_graph_memory(
 
 ### Record Learning Insights
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="LearningInsight:<insight_id>",
-  episode_body=<insight_json>,
+  content=<insight_json>,
   source="json",
   source_description="Learning insight derived from workflow analysis",
   group_id="dcf_insights"
@@ -167,9 +167,9 @@ add_episode_to_graph_memory(
 
 ### Record Skill Performance Metrics
 ```
-add_episode_to_graph_memory(
+add_episode(
   name="SkillMetric:<skill_name>:<workflow_id>",
-  episode_body=<metrics_json>,
+  content=<metrics_json>,
   source="json",
   source_description="Skill performance metrics from workflow execution",
   group_id="dcf_metrics"

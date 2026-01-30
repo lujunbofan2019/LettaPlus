@@ -299,7 +299,7 @@ Soft leases (token + TTL) prevent race conditions when multiple workers are avai
 4. **Query historical context**: Search Graphiti for similar patterns and past insights
 5. **Analyze patterns**: Identify skill effectiveness, Companion performance, and delegation patterns
 6. **Generate recommendations**: Formulate optimization advice (skill preferences, Companion specializations)
-7. **Persist to Graphiti**: Write significant patterns via `add_episode_to_graph_memory` (SessionPattern, SkillMetric, Insight)
+7. **Persist to Graphiti**: Write significant patterns via `add_episode` (SessionPattern, SkillMetric, Insight)
 8. **Publish guidelines**: Write recommendations to `strategist_guidelines` block via `update_conductor_guidelines`
 
 ### Architecture Comparison

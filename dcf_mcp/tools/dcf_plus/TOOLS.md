@@ -920,9 +920,9 @@ Each agent type requires a specific set of tools. Use this table when configurin
 | **Communication** | | |
 | `send_message_to_agent_async` | ✅ | Send proactive advice to Conductor |
 | **Knowledge Graph (Graphiti MCP)** | | |
-| `add_episode_to_graph_memory` | ✅ | Persist patterns and insights |
-| `search_graph_memory_nodes` | ✅ | Find similar patterns |
-| `search_graph_memory_facts` | ✅ | Query skill performance |
+| `add_episode` | ✅ | Persist patterns and insights |
+| `search_nodes` | ✅ | Find similar entity patterns |
+| `search_facts` | ✅ | Query skill performance relationships |
 
 **Legend**: ✅ = Required, ⚪ = Optional/Situational
 
@@ -949,12 +949,12 @@ Each agent type requires a specific set of tools. Use this table when configurin
 │    delegate_task            │    send_message_to_       │      agent_async     │
 │    broadcast_task           │      agent_async          │                      │
 │                             │                           │  Graphiti MCP:       │
-│  Skills (Authority):        │  Files:                   │    add_episode_to_   │
-│    get_skillset             │    read_file              │      graph_memory    │
-│    get_skillset_from_       │    write_file             │    search_graph_     │
-│      catalog                │                           │      memory_nodes    │
-│    load_skill               │  + Skill-specific tools   │    search_graph_     │
-│    unload_skill             │    (loaded dynamically)   │      memory_facts    │
+│  Skills (Authority):        │  Files:                   │    add_episode       │
+│    get_skillset             │    read_file              │    search_nodes      │
+│    get_skillset_from_       │    write_file             │    search_facts      │
+│      catalog                │                           │                      │
+│    load_skill               │  + Skill-specific tools   │                      │
+│    unload_skill             │    (loaded dynamically)   │                      │
 │                             │                           │                      │
 │  Strategist:                │                           │                      │
 │    register_strategist      │                           │                      │
@@ -1259,9 +1259,9 @@ Companion management during session:
    └── Skill usage metrics
 
 4. (Query Graphiti for historical context)
-   ├── search_graph_memory_nodes()    → Find similar sessions
-   ├── search_graph_memory_facts()    → Get skill performance history
-   └── search_graph_memory_nodes()    → Retrieve past insights
+   ├── search_nodes()                 → Find similar sessions
+   ├── search_facts()                 → Get skill performance history
+   └── search_nodes()                 → Retrieve past insights
 
 5. (Analyze patterns and derive insights)
    ├── Compare with historical data
@@ -1270,10 +1270,10 @@ Companion management during session:
    └── Generate recommendations
 
 6. (Persist to Graphiti)
-   ├── add_episode_to_graph_memory()  → SessionPattern record
-   ├── add_episode_to_graph_memory()  → SkillMetric records
-   ├── add_episode_to_graph_memory()  → Insight records
-   └── add_episode_to_graph_memory()  → CompanionPattern records
+   ├── add_episode()                  → SessionPattern record
+   ├── add_episode()                  → SkillMetric records
+   ├── add_episode()                  → Insight records
+   └── add_episode()                  → CompanionPattern records
 
 7. update_conductor_guidelines()      → Publish to Conductor
    ├── skill_preferences              → Recommended skills by task type

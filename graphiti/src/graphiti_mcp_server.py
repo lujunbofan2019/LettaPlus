@@ -5,6 +5,7 @@ Graphiti MCP Server - Exposes Graphiti functionality through the Model Context P
 
 import argparse
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -329,48 +330,52 @@ class GraphitiService:
 
 
 @mcp.tool()
-async def add_memory(
+async def add_episode(
     name: str,
-    episode_body: str,
+    content: str,
     group_id: str | None = None,
     source: str = 'text',
     source_description: str = '',
     uuid: str | None = None,
 ) -> SuccessResponse | ErrorResponse:
-    """Add an episode to memory. This is the primary way to add information to the graph.
+    """Add an episode to the knowledge graph.
 
-    This function returns immediately and processes the episode addition in the background.
+    Episodes are the primary input unit in Graphiti. When you add an episode, Graphiti:
+    1. Processes the content using an LLM to extract entities (nodes)
+    2. Identifies relationships between entities (edges/facts)
+    3. Stores temporal metadata for point-in-time queries
+
+    This function returns immediately and processes the episode in the background.
     Episodes for the same group_id are processed sequentially to avoid race conditions.
 
     Args:
-        name (str): Name of the episode
-        episode_body (str): The content of the episode to persist to memory. When source='json', this must be a
-                           properly escaped JSON string, not a raw Python dictionary. The JSON data will be
-                           automatically processed to extract entities and relationships.
-        group_id (str, optional): A unique ID for this graph. If not provided, uses the default group_id from CLI
-                                 or a generated one.
-        source (str, optional): Source type, must be one of:
-                               - 'text': For plain text content (default)
-                               - 'json': For structured data
-                               - 'message': For conversation-style content
-        source_description (str, optional): Description of the source
-        uuid (str, optional): Optional UUID for the episode
+        name (str): Name/label for this episode (e.g., "Meeting Notes", "Customer Update")
+        content (str): The episode content to process. Graphiti will extract entities and
+                      relationships from this content. When source='json', provide a JSON string.
+        group_id (str, optional): Graph partition ID. Episodes with the same group_id share
+                                 a knowledge graph. Defaults to configured group_id.
+        source (str, optional): Episode type for processing hints:
+                               - 'text': Plain text content (default)
+                               - 'json': Structured data (entities extracted from structure)
+                               - 'message': Conversation-style content
+        source_description (str, optional): Provenance description (e.g., "CRM export", "user input")
+        uuid (str, optional): Custom UUID for the episode (auto-generated if not provided)
 
     Examples:
-        # Adding plain text content
-        add_memory(
+        # Adding plain text - Graphiti extracts entities and relationships
+        add_episode(
             name="Company News",
-            episode_body="Acme Corp announced a new product line today.",
+            content="Acme Corp announced a partnership with TechStart today. CEO Jane Smith signed the deal.",
             source="text",
             source_description="news article",
-            group_id="some_arbitrary_string"
+            group_id="acme_knowledge"
         )
+        # Graphiti extracts: Nodes(Acme Corp, TechStart, Jane Smith) + Edges(partnership, CEO of, signed)
 
         # Adding structured JSON data
-        # NOTE: episode_body should be a JSON string (standard JSON escaping)
-        add_memory(
+        add_episode(
             name="Customer Profile",
-            episode_body='{"company": {"name": "Acme Technologies"}, "products": [{"id": "P001", "name": "CloudSync"}, {"id": "P002", "name": "DataMiner"}]}',
+            content='{"company": "Acme", "contacts": [{"name": "Jane", "role": "CEO"}]}',
             source="json",
             source_description="CRM data"
         )
@@ -398,7 +403,7 @@ async def add_memory(
         await queue_service.add_episode(
             group_id=effective_group_id,
             name=name,
-            content=episode_body,
+            content=content,
             source_description=source_description,
             episode_type=episode_type,
             entity_types=graphiti_service.entity_types,
@@ -421,13 +426,21 @@ async def search_nodes(
     max_nodes: int = 10,
     entity_types: list[str] | None = None,
 ) -> NodeSearchResponse | ErrorResponse:
-    """Search for nodes in the graph memory.
+    """Search for entity nodes in the knowledge graph.
+
+    Nodes represent entities (people, organizations, concepts, etc.) extracted from episodes.
+    Each node has a summary synthesized from all episodes that mention the entity.
+
+    Uses hybrid search combining semantic similarity and keyword matching.
 
     Args:
-        query: The search query
-        group_ids: Optional list of group IDs to filter results
+        query: Natural language search query (e.g., "software engineers", "Acme Corp")
+        group_ids: Filter to specific graph partitions. Defaults to configured group_id.
         max_nodes: Maximum number of nodes to return (default: 10)
-        entity_types: Optional list of entity type names to filter by
+        entity_types: Filter by entity type labels (e.g., ["Person", "Organization"])
+
+    Returns:
+        Nodes with: uuid, name, labels, summary, attributes, and creation timestamp
     """
     global graphiti_service
 
@@ -495,19 +508,31 @@ async def search_nodes(
 
 
 @mcp.tool()
-async def search_memory_facts(
+async def search_facts(
     query: str,
     group_ids: list[str] | None = None,
     max_facts: int = 10,
     center_node_uuid: str | None = None,
 ) -> FactSearchResponse | ErrorResponse:
-    """Search the graph memory for relevant facts.
+    """Search the knowledge graph for relevant facts (edges between entities).
+
+    Facts in Graphiti represent relationships between entities, extracted from episodes.
+    Each fact has temporal metadata (valid_at, invalid_at) for point-in-time queries.
+
+    Uses hybrid search combining:
+    - Semantic similarity (vector embeddings)
+    - Keyword matching (BM25)
+    - Graph traversal (relationship paths)
 
     Args:
-        query: The search query
-        group_ids: Optional list of group IDs to filter results
+        query: Natural language search query (e.g., "What partnerships does Acme have?")
+        group_ids: Filter to specific graph partitions. Defaults to configured group_id.
         max_facts: Maximum number of facts to return (default: 10)
-        center_node_uuid: Optional UUID of a node to center the search around
+        center_node_uuid: Optional - focus search around a specific entity node
+
+    Returns:
+        Facts as triplets: source_entity -> relationship -> target_entity
+        Each fact includes: uuid, validity period, and the originating episode
     """
     global graphiti_service
 
@@ -550,10 +575,13 @@ async def search_memory_facts(
 
 @mcp.tool()
 async def delete_entity_edge(uuid: str) -> SuccessResponse | ErrorResponse:
-    """Delete an entity edge from the graph memory.
+    """Delete a fact (entity edge) from the knowledge graph.
+
+    Removes a relationship between two entities. Use this to correct erroneous
+    facts or remove outdated relationships.
 
     Args:
-        uuid: UUID of the entity edge to delete
+        uuid: UUID of the entity edge (fact) to delete
     """
     global graphiti_service
 
@@ -576,7 +604,10 @@ async def delete_entity_edge(uuid: str) -> SuccessResponse | ErrorResponse:
 
 @mcp.tool()
 async def delete_episode(uuid: str) -> SuccessResponse | ErrorResponse:
-    """Delete an episode from the graph memory.
+    """Delete an episode from the knowledge graph.
+
+    Removes the raw episode record. Note: Entities and facts extracted from
+    this episode may remain if they were also mentioned in other episodes.
 
     Args:
         uuid: UUID of the episode to delete
@@ -602,10 +633,13 @@ async def delete_episode(uuid: str) -> SuccessResponse | ErrorResponse:
 
 @mcp.tool()
 async def get_entity_edge(uuid: str) -> dict[str, Any] | ErrorResponse:
-    """Get an entity edge from the graph memory by its UUID.
+    """Retrieve a specific fact (entity edge) by UUID.
+
+    Returns the full fact including source/target entities, relationship type,
+    temporal validity (valid_at, invalid_at), and the originating episode.
 
     Args:
-        uuid: UUID of the entity edge to retrieve
+        uuid: UUID of the entity edge (fact) to retrieve
     """
     global graphiti_service
 
@@ -632,11 +666,17 @@ async def get_episodes(
     group_ids: list[str] | None = None,
     max_episodes: int = 10,
 ) -> EpisodeSearchResponse | ErrorResponse:
-    """Get episodes from the graph memory.
+    """Retrieve recent episodes from the knowledge graph.
+
+    Episodes are the raw input records that were processed to extract entities
+    and facts. Useful for auditing data provenance or reviewing ingested content.
 
     Args:
-        group_ids: Optional list of group IDs to filter results
+        group_ids: Filter to specific graph partitions. Defaults to configured group_id.
         max_episodes: Maximum number of episodes to return (default: 10)
+
+    Returns:
+        Episodes with: uuid, name, content, source type, and creation timestamp
     """
     global graphiti_service
 
@@ -697,10 +737,13 @@ async def get_episodes(
 
 @mcp.tool()
 async def clear_graph(group_ids: list[str] | None = None) -> SuccessResponse | ErrorResponse:
-    """Clear all data from the graph for specified group IDs.
+    """Clear all data from the knowledge graph for specified partitions.
+
+    WARNING: This permanently deletes all episodes, nodes, and edges for the
+    specified group_ids. Use with caution.
 
     Args:
-        group_ids: Optional list of group IDs to clear. If not provided, clears the default group.
+        group_ids: Graph partitions to clear. Defaults to configured group_id.
     """
     global graphiti_service
 

@@ -11,10 +11,10 @@ GUIDELINES_BLOCK_LABEL = os.getenv("GUIDELINES_BLOCK_LABEL", "strategist_guideli
 
 def update_conductor_guidelines(
     conductor_id: str,
-    guidelines_json: Optional[str] = None,
+    guidelines_json: Any = None,  # Accepts str or dict (Letta auto-parses)
     recommendation: Optional[str] = None,
-    skill_preferences_json: Optional[str] = None,
-    companion_scaling_json: Optional[str] = None,
+    skill_preferences_json: Any = None,  # Accepts str or dict (Letta auto-parses)
+    companion_scaling_json: Any = None,  # Accepts str or dict (Letta auto-parses)
     clear_guidelines: bool = False,
 ) -> Dict[str, Any]:
     """Update Conductor guidelines based on Strategist analysis.
@@ -52,32 +52,38 @@ def update_conductor_guidelines(
             "updated_fields": [],
         }
 
-    # Parse input JSONs
+    # Parse input JSONs (handles both string and pre-parsed dict from Letta)
     guidelines_data: Optional[Dict[str, Any]] = None
     if guidelines_json:
-        try:
-            parsed = json.loads(guidelines_json)
-            if isinstance(parsed, dict):
-                guidelines_data = parsed
-        except Exception as e:
-            return {
-                "status": None,
-                "error": f"Failed to parse guidelines_json: {e}",
-                "conductor_id": conductor_id,
-                "guidelines_block_id": None,
-                "updated_fields": [],
-            }
+        if isinstance(guidelines_json, dict):
+            guidelines_data = guidelines_json
+        elif isinstance(guidelines_json, str):
+            try:
+                parsed = json.loads(guidelines_json)
+                if isinstance(parsed, dict):
+                    guidelines_data = parsed
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse guidelines_json: {e}",
+                    "conductor_id": conductor_id,
+                    "guidelines_block_id": None,
+                    "updated_fields": [],
+                }
 
     skill_preferences: Optional[Dict[str, Any]] = None
     if skill_preferences_json:
-        try:
-            parsed = json.loads(skill_preferences_json)
-            if isinstance(parsed, dict):
-                skill_preferences = parsed
-        except Exception as e:
-            return {
-                "status": None,
-                "error": f"Failed to parse skill_preferences_json: {e}",
+        if isinstance(skill_preferences_json, dict):
+            skill_preferences = skill_preferences_json
+        elif isinstance(skill_preferences_json, str):
+            try:
+                parsed = json.loads(skill_preferences_json)
+                if isinstance(parsed, dict):
+                    skill_preferences = parsed
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse skill_preferences_json: {e}",
                 "conductor_id": conductor_id,
                 "guidelines_block_id": None,
                 "updated_fields": [],
@@ -85,18 +91,21 @@ def update_conductor_guidelines(
 
     companion_scaling: Optional[Dict[str, Any]] = None
     if companion_scaling_json:
-        try:
-            parsed = json.loads(companion_scaling_json)
-            if isinstance(parsed, dict):
-                companion_scaling = parsed
-        except Exception as e:
-            return {
-                "status": None,
-                "error": f"Failed to parse companion_scaling_json: {e}",
-                "conductor_id": conductor_id,
-                "guidelines_block_id": None,
-                "updated_fields": [],
-            }
+        if isinstance(companion_scaling_json, dict):
+            companion_scaling = companion_scaling_json
+        elif isinstance(companion_scaling_json, str):
+            try:
+                parsed = json.loads(companion_scaling_json)
+                if isinstance(parsed, dict):
+                    companion_scaling = parsed
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse companion_scaling_json: {e}",
+                    "conductor_id": conductor_id,
+                    "guidelines_block_id": None,
+                    "updated_fields": [],
+                }
 
     # Initialize Letta client
     try:

@@ -71,43 +71,51 @@ def delegate_task(
             "run_id": None,
         }
 
-    # Parse required skills
+    # Parse required skills (handles both string and pre-parsed list from Letta)
     required_skills: List[str] = []
     if required_skills_json:
-        try:
-            parsed = json.loads(required_skills_json)
-            if isinstance(parsed, list):
-                required_skills = [str(s) for s in parsed if s]
-        except Exception as e:
-            return {
-                "status": None,
-                "error": f"Failed to parse required_skills_json: {e}",
-                "task_id": None,
-                "conductor_id": conductor_id,
-                "companion_id": companion_id,
-                "message_sent": False,
-                "delegation_logged": False,
-                "run_id": None,
-            }
+        if isinstance(required_skills_json, list):
+            # Already parsed by Letta
+            required_skills = [str(s) for s in required_skills_json if s]
+        elif isinstance(required_skills_json, str):
+            try:
+                parsed = json.loads(required_skills_json)
+                if isinstance(parsed, list):
+                    required_skills = [str(s) for s in parsed if s]
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse required_skills_json: {e}",
+                    "task_id": None,
+                    "conductor_id": conductor_id,
+                    "companion_id": companion_id,
+                    "message_sent": False,
+                    "delegation_logged": False,
+                    "run_id": None,
+                }
 
-    # Parse input data
+    # Parse input data (handles both string and pre-parsed dict from Letta)
     input_data: Dict[str, Any] = {}
     if input_data_json:
-        try:
-            parsed = json.loads(input_data_json)
-            if isinstance(parsed, dict):
-                input_data = parsed
-        except Exception as e:
-            return {
-                "status": None,
-                "error": f"Failed to parse input_data_json: {e}",
-                "task_id": None,
-                "conductor_id": conductor_id,
-                "companion_id": companion_id,
-                "message_sent": False,
-                "delegation_logged": False,
-                "run_id": None,
-            }
+        if isinstance(input_data_json, dict):
+            # Already parsed by Letta
+            input_data = input_data_json
+        elif isinstance(input_data_json, str):
+            try:
+                parsed = json.loads(input_data_json)
+                if isinstance(parsed, dict):
+                    input_data = parsed
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse input_data_json: {e}",
+                    "task_id": None,
+                    "conductor_id": conductor_id,
+                    "companion_id": companion_id,
+                    "message_sent": False,
+                    "delegation_logged": False,
+                    "run_id": None,
+                }
 
     # Generate task ID
     task_id = f"task-{str(uuid.uuid4())[:8]}"
@@ -187,7 +195,10 @@ def delegate_task(
         new_tags = [t for t in tags if not t.startswith("status:") and not t.startswith("task:")]
         new_tags.append("status:busy")
         new_tags.append(f"task:{task_id}")
-        client.agents.modify(agent_id=companion_id, tags=new_tags)
+        try:
+            client.agents.update(agent_id=companion_id, tags=new_tags)
+        except AttributeError:
+            client.agents.modify(agent_id=companion_id, tags=new_tags)
     except Exception as e:
         return {
             "status": None,
@@ -312,7 +323,10 @@ def delegate_task(
         try:
             revert_tags = [t for t in new_tags if not t.startswith("status:") and not t.startswith("task:")]
             revert_tags.append("status:idle")
-            client.agents.modify(agent_id=companion_id, tags=revert_tags)
+            try:
+                client.agents.update(agent_id=companion_id, tags=revert_tags)
+            except AttributeError:
+                client.agents.modify(agent_id=companion_id, tags=revert_tags)
         except Exception:
             pass
 

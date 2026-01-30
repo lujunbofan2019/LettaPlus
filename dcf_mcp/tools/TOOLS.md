@@ -141,9 +141,9 @@ Each agent type requires a specific set of tools. Use this table when configurin
 | **File Operations** | | |
 | `read_file` | ⚪ | Read workflow definitions |
 | **Knowledge Graph (Graphiti MCP)** | | |
-| `add_episode_to_graph_memory` | ✅ | Persist workflow executions and insights |
-| `search_graph_memory_nodes` | ✅ | Find similar workflows, skills, insights |
-| `search_graph_memory_facts` | ✅ | Query skill performance and relationships |
+| `add_episode` | ✅ | Persist workflow executions and insights |
+| `search_nodes` | ✅ | Find similar workflows, skills, insights |
+| `search_facts` | ✅ | Query skill performance and relationships |
 
 **Legend**: ✅ = Required, ⚪ = Optional/Situational
 
@@ -170,12 +170,12 @@ Each agent type requires a specific set of tools. Use this table when configurin
 │  Execution:               │    load_skill             │    read_file         │
 │    read_workflow_         │    unload_skill           │                      │
 │      control_plane        │                           │  Graphiti MCP:       │
-│    notify_next_worker_    │  Notify:                  │    add_episode_to_   │
-│      agent                │    notify_next_worker_    │      graph_memory    │
-│    notify_if_ready        │      agent                │    search_graph_     │
-│    finalize_workflow      │                           │      memory_nodes    │
-│                           │  Data:                    │    search_graph_     │
-│  Reflector:               │    json_read              │      memory_facts    │
+│    notify_next_worker_    │  Notify:                  │    add_episode       │
+│      agent                │    notify_next_worker_    │    search_nodes      │
+│    notify_if_ready        │      agent                │    search_facts      │
+│    finalize_workflow      │                           │                      │
+│                           │  Data:                    │                      │
+│  Reflector:               │    json_read              │                      │
 │    register_reflector     │    read_file              │                      │
 │    trigger_reflection     │    write_file             │                      │
 │                           │                           │                      │
@@ -734,9 +734,9 @@ Edge cases:
    └── Output data from data plane
 
 4. (Query Graphiti for historical context)
-   ├── search_graph_memory_nodes()   → Find similar workflows
-   ├── search_graph_memory_facts()   → Get skill performance history
-   └── search_graph_memory_nodes()   → Retrieve past insights
+   ├── search_nodes()                → Find similar workflows
+   ├── search_facts()                → Get skill performance history
+   └── search_nodes()                → Retrieve past insights
 
 5. (Analyze patterns and derive insights)
    ├── Compare with historical data
@@ -744,9 +744,9 @@ Edge cases:
    └── Generate recommendations
 
 6. (Persist to Graphiti)
-   ├── add_episode_to_graph_memory() → WorkflowExecution record
-   ├── add_episode_to_graph_memory() → LearningInsight records
-   └── add_episode_to_graph_memory() → SkillMetric records
+   ├── add_episode()                 → WorkflowExecution record
+   ├── add_episode()                 → LearningInsight records
+   └── add_episode()                 → SkillMetric records
 
 7. update_reflector_guidelines()     → Publish to Planner
    ├── add_skill_recommendation      → Skill preferences

@@ -18,12 +18,7 @@
         "tool-10",
         "tool-11",
         "tool-12",
-        "tool-13",
-        "tool-14",
-        "tool-15",
-        "tool-16",
-        "tool-17",
-        "tool-18"
+        "tool-13"
       ],
       "source_ids": [],
       "folder_ids": null,
@@ -186,26 +181,26 @@
   "sources": [],
   "tools": [
     {
-      "id": "tool-10",
+      "id": "tool-1",
       "tool_type": "external_mcp",
-      "description": "Add an episode to memory. This is the primary way to add information to the graph.\n\n    This function returns immediately and processes the episode addition in the background.\n    Episodes for the same group_id are processed sequentially to avoid race conditions.\n\n    Args:\n        name (str): Name of the episode\n        episode_body (str): The content of the episode to persist to memory. When source='json', this must be a\n                           properly escaped JSON string, not a raw Python dictionary. The JSON data will be\n                           automatically processed to extract entities and relationships.\n        group_id (str, optional): A unique ID for this graph. If not provided, uses the default group_id from CLI\n                                 or a generated one.\n        source (str, optional): Source type, must be one of:\n                               - 'text': For plain text content (default)\n                               - 'json': For structured data\n                               - 'message': For conversation-style content\n        source_description (str, optional): Description of the source\n        uuid (str, optional): Optional UUID for the episode\n\n    Examples:\n        # Adding plain text content\n        add_memory(\n            name=\"Company News\",\n            episode_body=\"Acme Corp announced a new product line today.\",\n            source=\"text\",\n            source_description=\"news article\",\n            group_id=\"some_arbitrary_string\"\n        )\n\n        # Adding structured JSON data\n        # NOTE: episode_body should be a JSON string (standard JSON escaping)\n        add_memory(\n            name=\"Customer Profile\",\n            episode_body='{\"company\": {\"name\": \"Acme Technologies\"}, \"products\": [{\"id\": \"P001\", \"name\": \"CloudSync\"}, {\"id\": \"P002\", \"name\": \"DataMiner\"}]}',\n            source=\"json\",\n            source_description=\"CRM data\"\n        )\n    ",
+      "description": "Add an episode to the knowledge graph.\n\n    Episodes are the primary input unit in Graphiti. When you add an episode, Graphiti:\n    1. Processes the content using an LLM to extract entities (nodes)\n    2. Identifies relationships between entities (edges/facts)\n    3. Stores temporal metadata for point-in-time queries\n\n    This function returns immediately and processes the episode in the background.\n    Episodes for the same group_id are processed sequentially to avoid race conditions.\n\n    Args:\n        name (str): Name/label for this episode (e.g., \"Meeting Notes\", \"Customer Update\")\n        content (str): The episode content to process. Graphiti will extract entities and\n                      relationships from this content. When source='json', provide a JSON string.\n        group_id (str, optional): Graph partition ID. Episodes with the same group_id share\n                                 a knowledge graph. Defaults to configured group_id.\n        source (str, optional): Episode type for processing hints:\n                               - 'text': Plain text content (default)\n                               - 'json': Structured data (entities extracted from structure)\n                               - 'message': Conversation-style content\n        source_description (str, optional): Provenance description (e.g., \"CRM export\", \"user input\")\n        uuid (str, optional): Custom UUID for the episode (auto-generated if not provided)\n\n    Examples:\n        # Adding plain text - Graphiti extracts entities and relationships\n        add_episode(\n            name=\"Company News\",\n            content=\"Acme Corp announced a partnership with TechStart today. CEO Jane Smith signed the deal.\",\n            source=\"text\",\n            source_description=\"news article\",\n            group_id=\"acme_knowledge\"\n        )\n        # Graphiti extracts: Nodes(Acme Corp, TechStart, Jane Smith) + Edges(partnership, CEO of, signed)\n\n        # Adding structured JSON data\n        add_episode(\n            name=\"Customer Profile\",\n            content='{\"company\": \"Acme\", \"contacts\": [{\"name\": \"Jane\", \"role\": \"CEO\"}]}',\n            source=\"json\",\n            source_description=\"CRM data\"\n        )\n    ",
       "source_type": "python",
-      "name": "add_memory",
+      "name": "add_episode",
       "tags": [
         "mcp:graphiti"
       ],
-      "source_code": "def add_memory(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "source_code": "def add_episode(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
       "json_schema": {
-        "name": "add_memory",
-        "description": "Add an episode to memory. This is the primary way to add information to the graph.\n\n    This function returns immediately and processes the episode addition in the background.\n    Episodes for the same group_id are processed sequentially to avoid race conditions.\n\n    Args:\n        name (str): Name of the episode\n        episode_body (str): The content of the episode to persist to memory. When source='json', this must be a\n                           properly escaped JSON string, not a raw Python dictionary. The JSON data will be\n                           automatically processed to extract entities and relationships.\n        group_id (str, optional): A unique ID for this graph. If not provided, uses the default group_id from CLI\n                                 or a generated one.\n        source (str, optional): Source type, must be one of:\n                               - 'text': For plain text content (default)\n                               - 'json': For structured data\n                               - 'message': For conversation-style content\n        source_description (str, optional): Description of the source\n        uuid (str, optional): Optional UUID for the episode\n\n    Examples:\n        # Adding plain text content\n        add_memory(\n            name=\"Company News\",\n            episode_body=\"Acme Corp announced a new product line today.\",\n            source=\"text\",\n            source_description=\"news article\",\n            group_id=\"some_arbitrary_string\"\n        )\n\n        # Adding structured JSON data\n        # NOTE: episode_body should be a JSON string (standard JSON escaping)\n        add_memory(\n            name=\"Customer Profile\",\n            episode_body='{\"company\": {\"name\": \"Acme Technologies\"}, \"products\": [{\"id\": \"P001\", \"name\": \"CloudSync\"}, {\"id\": \"P002\", \"name\": \"DataMiner\"}]}',\n            source=\"json\",\n            source_description=\"CRM data\"\n        )\n    ",
+        "name": "add_episode",
+        "description": "Add an episode to the knowledge graph.\n\n    Episodes are the primary input unit in Graphiti. When you add an episode, Graphiti:\n    1. Processes the content using an LLM to extract entities (nodes)\n    2. Identifies relationships between entities (edges/facts)\n    3. Stores temporal metadata for point-in-time queries\n\n    This function returns immediately and processes the episode in the background.\n    Episodes for the same group_id are processed sequentially to avoid race conditions.\n\n    Args:\n        name (str): Name/label for this episode (e.g., \"Meeting Notes\", \"Customer Update\")\n        content (str): The episode content to process. Graphiti will extract entities and\n                      relationships from this content. When source='json', provide a JSON string.\n        group_id (str, optional): Graph partition ID. Episodes with the same group_id share\n                                 a knowledge graph. Defaults to configured group_id.\n        source (str, optional): Episode type for processing hints:\n                               - 'text': Plain text content (default)\n                               - 'json': Structured data (entities extracted from structure)\n                               - 'message': Conversation-style content\n        source_description (str, optional): Provenance description (e.g., \"CRM export\", \"user input\")\n        uuid (str, optional): Custom UUID for the episode (auto-generated if not provided)\n\n    Examples:\n        # Adding plain text - Graphiti extracts entities and relationships\n        add_episode(\n            name=\"Company News\",\n            content=\"Acme Corp announced a partnership with TechStart today. CEO Jane Smith signed the deal.\",\n            source=\"text\",\n            source_description=\"news article\",\n            group_id=\"acme_knowledge\"\n        )\n        # Graphiti extracts: Nodes(Acme Corp, TechStart, Jane Smith) + Edges(partnership, CEO of, signed)\n\n        # Adding structured JSON data\n        add_episode(\n            name=\"Customer Profile\",\n            content='{\"company\": \"Acme\", \"contacts\": [{\"name\": \"Jane\", \"role\": \"CEO\"}]}',\n            source=\"json\",\n            source_description=\"CRM data\"\n        )\n    ",
         "parameters": {
           "properties": {
             "name": {
               "title": "Name",
               "type": "string"
             },
-            "episode_body": {
-              "title": "Episode Body",
+            "content": {
+              "title": "Content",
               "type": "string"
             },
             "group_id": {
@@ -249,10 +244,10 @@
           },
           "required": [
             "name",
-            "episode_body",
+            "content",
             "request_heartbeat"
           ],
-          "title": "add_memoryArguments",
+          "title": "add_episodeArguments",
           "type": "object",
           "additionalProperties": false
         },
@@ -272,12 +267,12 @@
           "server_name": "graphiti",
           "server_id": "mcp_server-adfa9729-2262-4f98-9feb-a021c8cc2bc0"
         },
-        "tool_hash": "6e013617399f"
+        "tool_hash": "eb639b062c50"
       },
       "project_id": null
     },
     {
-      "id": "tool-13",
+      "id": "tool-7",
       "tool_type": "letta_core",
       "description": "Search prior conversation history using hybrid search (text + semantic similarity).\n\nExamples:\n        # Search all messages\n        conversation_search(query=\"project updates\")\n\n        # Search only assistant messages\n        conversation_search(query=\"error handling\", roles=[\"assistant\"])\n\n        # Search with date range (inclusive of both dates)\n        conversation_search(query=\"meetings\", start_date=\"2024-01-15\", end_date=\"2024-01-20\")\n        # This includes all messages from Jan 15 00:00:00 through Jan 20 23:59:59\n\n        # Search messages from a specific day (inclusive)\n        conversation_search(query=\"bug reports\", start_date=\"2024-09-04\", end_date=\"2024-09-04\")\n        # This includes ALL messages from September 4, 2024\n\n        # Search with specific time boundaries\n        conversation_search(query=\"deployment\", start_date=\"2024-01-15T09:00\", end_date=\"2024-01-15T17:30\")\n        # This includes messages from 9 AM to 5:30 PM on Jan 15\n\n        # Search with limit\n        conversation_search(query=\"debugging\", limit=10)\n\n    Returns:\n        str: Query result string containing matching messages with timestamps and content.",
       "source_type": "python",
@@ -338,300 +333,7 @@
       "project_id": null
     },
     {
-      "id": "tool-5",
-      "tool_type": "external_mcp",
-      "description": "",
-      "source_type": "python",
-      "name": "csv_to_manifests",
-      "tags": [
-        "mcp:DCF"
-      ],
-      "source_code": "def csv_to_manifests(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
-      "json_schema": {
-        "name": "csv_to_manifests",
-        "description": "",
-        "parameters": {
-          "properties": {
-            "skills_csv_path": {
-              "default": "/app/skills_src/skills.csv",
-              "title": "Skills Csv Path",
-              "type": "string"
-            },
-            "refs_csv_path": {
-              "default": "/app/skills_src/skill_tool_refs.csv",
-              "title": "Refs Csv Path",
-              "type": "string"
-            },
-            "out_dir": {
-              "default": "/app/generated/manifests",
-              "title": "Out Dir",
-              "type": "string"
-            },
-            "catalog_path": {
-              "default": "/app/generated/catalogs/skills_catalog.json",
-              "title": "Catalog Path",
-              "type": "string"
-            },
-            "request_heartbeat": {
-              "type": "boolean",
-              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
-            }
-          },
-          "title": "csv_to_manifestsArguments",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "request_heartbeat"
-          ]
-        },
-        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
-        "mcp:SCHEMA_WARNINGS": []
-      },
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "enable_parallel_execution": false,
-      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "metadata_": {
-        "mcp": {
-          "server_name": "DCF",
-          "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
-      },
-      "project_id": null
-    },
-    {
-      "id": "tool-16",
-      "tool_type": "external_mcp",
-      "description": "",
-      "source_type": "python",
-      "name": "csv_to_stub_config",
-      "tags": [
-        "mcp:DCF"
-      ],
-      "source_code": "def csv_to_stub_config(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
-      "json_schema": {
-        "name": "csv_to_stub_config",
-        "description": "",
-        "parameters": {
-          "properties": {
-            "mcp_tools_csv_path": {
-              "default": "/app/skills_src/mcp_tools.csv",
-              "title": "Mcp Tools Csv Path",
-              "type": "string"
-            },
-            "mcp_cases_csv_path": {
-              "default": "/app/skills_src/mcp_cases.csv",
-              "title": "Mcp Cases Csv Path",
-              "type": "string"
-            },
-            "out_path": {
-              "default": "/app/generated/stub/stub_config.json",
-              "title": "Out Path",
-              "type": "string"
-            },
-            "request_heartbeat": {
-              "type": "boolean",
-              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
-            }
-          },
-          "title": "csv_to_stub_configArguments",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "request_heartbeat"
-          ]
-        },
-        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
-        "mcp:SCHEMA_WARNINGS": []
-      },
-      "args_json_schema": null,
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "enable_parallel_execution": false,
-      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "metadata_": {
-        "mcp": {
-          "server_name": "DCF",
-          "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
-      },
-      "project_id": null
-    },
-    {
-      "id": "tool-4",
-      "tool_type": "external_mcp",
-      "description": "Get an entity edge from the graph memory by its UUID.\n\n    Args:\n        uuid: UUID of the entity edge to retrieve\n    ",
-      "source_type": "python",
-      "name": "get_entity_edge",
-      "tags": [
-        "mcp:graphiti"
-      ],
-      "source_code": "def get_entity_edge(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
-      "json_schema": {
-        "name": "get_entity_edge",
-        "description": "Get an entity edge from the graph memory by its UUID.\n\n    Args:\n        uuid: UUID of the entity edge to retrieve\n    ",
-        "parameters": {
-          "properties": {
-            "uuid": {
-              "title": "Uuid",
-              "type": "string"
-            },
-            "request_heartbeat": {
-              "type": "boolean",
-              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
-            }
-          },
-          "required": [
-            "uuid",
-            "request_heartbeat"
-          ],
-          "title": "get_entity_edgeArguments",
-          "type": "object",
-          "additionalProperties": false
-        },
-        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
-        "mcp:SCHEMA_WARNINGS": []
-      },
-      "args_json_schema": {},
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "enable_parallel_execution": false,
-      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "metadata_": {
-        "mcp": {
-          "server_name": "graphiti",
-          "server_id": "mcp_server-adfa9729-2262-4f98-9feb-a021c8cc2bc0"
-        },
-        "tool_hash": "d3c6c219fc2b"
-      },
-      "project_id": null
-    },
-    {
-      "id": "tool-3",
-      "tool_type": "external_mcp",
-      "description": "Get episodes from the graph memory.\n\n    Args:\n        group_ids: Optional list of group IDs to filter results\n        max_episodes: Maximum number of episodes to return (default: 10)\n    ",
-      "source_type": "python",
-      "name": "get_episodes",
-      "tags": [
-        "mcp:graphiti"
-      ],
-      "source_code": "def get_episodes(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
-      "json_schema": {
-        "name": "get_episodes",
-        "description": "Get episodes from the graph memory.\n\n    Args:\n        group_ids: Optional list of group IDs to filter results\n        max_episodes: Maximum number of episodes to return (default: 10)\n    ",
-        "parameters": {
-          "properties": {
-            "group_ids": {
-              "anyOf": [
-                {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Group Ids"
-            },
-            "max_episodes": {
-              "default": 10,
-              "title": "Max Episodes",
-              "type": "integer"
-            },
-            "request_heartbeat": {
-              "type": "boolean",
-              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
-            }
-          },
-          "title": "get_episodesArguments",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "request_heartbeat"
-          ]
-        },
-        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
-        "mcp:SCHEMA_WARNINGS": []
-      },
-      "args_json_schema": {},
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "enable_parallel_execution": false,
-      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "metadata_": {
-        "mcp": {
-          "server_name": "graphiti",
-          "server_id": "mcp_server-adfa9729-2262-4f98-9feb-a021c8cc2bc0"
-        },
-        "tool_hash": "fbef16cc9812"
-      },
-      "project_id": null
-    },
-    {
-      "id": "tool-1",
-      "tool_type": "external_mcp",
-      "description": "Get the status of the Graphiti MCP server and database connection.",
-      "source_type": "python",
-      "name": "get_status",
-      "tags": [
-        "mcp:graphiti"
-      ],
-      "source_code": "def get_status(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
-      "json_schema": {
-        "name": "get_status",
-        "description": "Get the status of the Graphiti MCP server and database connection.",
-        "parameters": {
-          "properties": {
-            "request_heartbeat": {
-              "type": "boolean",
-              "description": "Request an immediate heartbeat after function execution. You MUST set this value to `True` if you want to send a follow-up message or run a follow-up tool call (chain multiple tools together). If set to `False` (the default), then the chain of execution will end immediately after this function call."
-            }
-          },
-          "title": "get_statusArguments",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "request_heartbeat"
-          ]
-        },
-        "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
-        "mcp:SCHEMA_WARNINGS": []
-      },
-      "args_json_schema": {},
-      "return_char_limit": 50000,
-      "pip_requirements": null,
-      "npm_requirements": null,
-      "default_requires_approval": null,
-      "enable_parallel_execution": false,
-      "created_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "last_updated_by_id": "user-00000000-0000-4000-8000-000000000000",
-      "metadata_": {
-        "mcp": {
-          "server_name": "graphiti",
-          "server_id": "mcp_server-adfa9729-2262-4f98-9feb-a021c8cc2bc0"
-        },
-        "tool_hash": "6314557e9b2c"
-      },
-      "project_id": null
-    },
-    {
-      "id": "tool-17",
+      "id": "tool-12",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -693,7 +395,7 @@
       "project_id": null
     },
     {
-      "id": "tool-0",
+      "id": "tool-8",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -749,7 +451,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -761,12 +463,13 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "6257d43f8e6e"
       },
       "project_id": null
     },
     {
-      "id": "tool-11",
+      "id": "tool-10",
       "tool_type": "letta_sleeptime_core",
       "description": "The memory_insert command allows you to insert text at a specific location in a memory block.\n\nExamples:\n        # Update a block containing information about the user (append to the end of the block)\n        memory_insert(label=\"customer\", new_str=\"The customer's ticket number is 12345\")\n\n        # Update a block containing information about the user (insert at the beginning of the block)\n        memory_insert(label=\"customer\", new_str=\"The customer's ticket number is 12345\", insert_line=0)\n\n    Returns:\n        Optional[str]: None is always returned as this function does not produce a response.",
       "source_type": "python",
@@ -812,7 +515,7 @@
       "project_id": null
     },
     {
-      "id": "tool-14",
+      "id": "tool-2",
       "tool_type": "letta_sleeptime_core",
       "description": "The memory_replace command allows you to replace a specific string in a memory block with a new string. This is used for making precise edits.\n\nDo NOT attempt to replace long strings, e.g. do not attempt to replace the entire contents of a memory block with a new string.\n\nExamples:\n        # Update a block containing information about the user\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"Their name is Bob\")\n\n        # Update a block containing a todo list\n        memory_replace(label=\"todos\", old_str=\"- [ ] Step 5: Search the web\", new_str=\"- [x] Step 5: Search the web\")\n\n        # Pass an empty string to\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"\")\n\n        # Bad example - do NOT add (view-only) line numbers to the args\n        memory_replace(label=\"human\", old_str=\"1: Their name is Alice\", new_str=\"1: Their name is Bob\")\n\n        # Bad example - do NOT include the line number warning either\n        memory_replace(label=\"human\", old_str=\"# NOTE: Line numbers shown below (with arrows like '1→') are to help during editing. Do NOT include line number prefixes in your memory edit tool calls.\\n1→ Their name is Alice\", new_str=\"1→ Their name is Bob\")\n\n        # Good example - no line numbers or line number warning (they are view-only), just the text\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"Their name is Bob\")\n\n    Returns:\n        str: The success message",
       "source_type": "python",
@@ -859,7 +562,7 @@
       "project_id": null
     },
     {
-      "id": "tool-12",
+      "id": "tool-6",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -915,7 +618,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -927,12 +630,13 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "dcedb83234d3"
       },
       "project_id": null
     },
     {
-      "id": "tool-2",
+      "id": "tool-3",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1025,7 +729,7 @@
       "project_id": null
     },
     {
-      "id": "tool-9",
+      "id": "tool-5",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1111,7 +815,7 @@
       "project_id": null
     },
     {
-      "id": "tool-15",
+      "id": "tool-11",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1163,7 +867,7 @@
       "project_id": null
     },
     {
-      "id": "tool-8",
+      "id": "tool-4",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1215,18 +919,18 @@
       "project_id": null
     },
     {
-      "id": "tool-6",
+      "id": "tool-0",
       "tool_type": "external_mcp",
-      "description": "Search the graph memory for relevant facts.\n\n    Args:\n        query: The search query\n        group_ids: Optional list of group IDs to filter results\n        max_facts: Maximum number of facts to return (default: 10)\n        center_node_uuid: Optional UUID of a node to center the search around\n    ",
+      "description": "Search the knowledge graph for relevant facts (edges between entities).\n\n    Facts in Graphiti represent relationships between entities, extracted from episodes.\n    Each fact has temporal metadata (valid_at, invalid_at) for point-in-time queries.\n\n    Uses hybrid search combining:\n    - Semantic similarity (vector embeddings)\n    - Keyword matching (BM25)\n    - Graph traversal (relationship paths)\n\n    Args:\n        query: Natural language search query (e.g., \"What partnerships does Acme have?\")\n        group_ids: Filter to specific graph partitions. Defaults to configured group_id.\n        max_facts: Maximum number of facts to return (default: 10)\n        center_node_uuid: Optional - focus search around a specific entity node\n\n    Returns:\n        Facts as triplets: source_entity -> relationship -> target_entity\n        Each fact includes: uuid, validity period, and the originating episode\n    ",
       "source_type": "python",
-      "name": "search_memory_facts",
+      "name": "search_facts",
       "tags": [
         "mcp:graphiti"
       ],
-      "source_code": "def search_memory_facts(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
+      "source_code": "def search_facts(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
       "json_schema": {
-        "name": "search_memory_facts",
-        "description": "Search the graph memory for relevant facts.\n\n    Args:\n        query: The search query\n        group_ids: Optional list of group IDs to filter results\n        max_facts: Maximum number of facts to return (default: 10)\n        center_node_uuid: Optional UUID of a node to center the search around\n    ",
+        "name": "search_facts",
+        "description": "Search the knowledge graph for relevant facts (edges between entities).\n\n    Facts in Graphiti represent relationships between entities, extracted from episodes.\n    Each fact has temporal metadata (valid_at, invalid_at) for point-in-time queries.\n\n    Uses hybrid search combining:\n    - Semantic similarity (vector embeddings)\n    - Keyword matching (BM25)\n    - Graph traversal (relationship paths)\n\n    Args:\n        query: Natural language search query (e.g., \"What partnerships does Acme have?\")\n        group_ids: Filter to specific graph partitions. Defaults to configured group_id.\n        max_facts: Maximum number of facts to return (default: 10)\n        center_node_uuid: Optional - focus search around a specific entity node\n\n    Returns:\n        Facts as triplets: source_entity -> relationship -> target_entity\n        Each fact includes: uuid, validity period, and the originating episode\n    ",
         "parameters": {
           "properties": {
             "query": {
@@ -1274,7 +978,7 @@
             "query",
             "request_heartbeat"
           ],
-          "title": "search_memory_factsArguments",
+          "title": "search_factsArguments",
           "type": "object",
           "additionalProperties": false
         },
@@ -1294,14 +998,14 @@
           "server_name": "graphiti",
           "server_id": "mcp_server-adfa9729-2262-4f98-9feb-a021c8cc2bc0"
         },
-        "tool_hash": "66a67593dc8e"
+        "tool_hash": "c0870a501519"
       },
       "project_id": null
     },
     {
-      "id": "tool-7",
+      "id": "tool-13",
       "tool_type": "external_mcp",
-      "description": "Search for nodes in the graph memory.\n\n    Args:\n        query: The search query\n        group_ids: Optional list of group IDs to filter results\n        max_nodes: Maximum number of nodes to return (default: 10)\n        entity_types: Optional list of entity type names to filter by\n    ",
+      "description": "Search for entity nodes in the knowledge graph.\n\n    Nodes represent entities (people, organizations, concepts, etc.) extracted from episodes.\n    Each node has a summary synthesized from all episodes that mention the entity.\n\n    Uses hybrid search combining semantic similarity and keyword matching.\n\n    Args:\n        query: Natural language search query (e.g., \"software engineers\", \"Acme Corp\")\n        group_ids: Filter to specific graph partitions. Defaults to configured group_id.\n        max_nodes: Maximum number of nodes to return (default: 10)\n        entity_types: Filter by entity type labels (e.g., [\"Person\", \"Organization\"])\n\n    Returns:\n        Nodes with: uuid, name, labels, summary, attributes, and creation timestamp\n    ",
       "source_type": "python",
       "name": "search_nodes",
       "tags": [
@@ -1310,7 +1014,7 @@
       "source_code": "def search_nodes(**kwargs):\n    raise RuntimeError(\"Something went wrong - we should never be using the persisted source code for MCP. Please reach out to Letta team\")",
       "json_schema": {
         "name": "search_nodes",
-        "description": "Search for nodes in the graph memory.\n\n    Args:\n        query: The search query\n        group_ids: Optional list of group IDs to filter results\n        max_nodes: Maximum number of nodes to return (default: 10)\n        entity_types: Optional list of entity type names to filter by\n    ",
+        "description": "Search for entity nodes in the knowledge graph.\n\n    Nodes represent entities (people, organizations, concepts, etc.) extracted from episodes.\n    Each node has a summary synthesized from all episodes that mention the entity.\n\n    Uses hybrid search combining semantic similarity and keyword matching.\n\n    Args:\n        query: Natural language search query (e.g., \"software engineers\", \"Acme Corp\")\n        group_ids: Filter to specific graph partitions. Defaults to configured group_id.\n        max_nodes: Maximum number of nodes to return (default: 10)\n        entity_types: Filter by entity type labels (e.g., [\"Person\", \"Organization\"])\n\n    Returns:\n        Nodes with: uuid, name, labels, summary, attributes, and creation timestamp\n    ",
         "parameters": {
           "properties": {
             "query": {
@@ -1386,7 +1090,7 @@
       "project_id": null
     },
     {
-      "id": "tool-18",
+      "id": "tool-9",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1536,5 +1240,5 @@
   "metadata": {
     "revision_id": "27de0f58e076"
   },
-  "created_at": "2026-01-30T11:51:49.424958+00:00"
+  "created_at": "2026-01-30T16:19:52.245865+00:00"
 }

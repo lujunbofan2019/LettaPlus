@@ -73,7 +73,7 @@
         "context_window": 272000,
         "put_inner_thoughts_in_kwargs": false,
         "handle": "openai/gpt-5.2",
-        "temperature": 0.2,
+        "temperature": 0.7,
         "max_tokens": 16384,
         "enable_reasoner": true,
         "reasoning_effort": "none",
@@ -128,33 +128,7 @@
       "parallel_tool_calls": null,
       "id": "agent-0",
       "in_context_message_ids": [
-        "message-0",
-        "message-1",
-        "message-2",
-        "message-3",
-        "message-4",
-        "message-5",
-        "message-6",
-        "message-7",
-        "message-8",
-        "message-9",
-        "message-10",
-        "message-11",
-        "message-12",
-        "message-13",
-        "message-14",
-        "message-15",
-        "message-16",
-        "message-17",
-        "message-18",
-        "message-19",
-        "message-20",
-        "message-21",
-        "message-22",
-        "message-23",
-        "message-24",
-        "message-25",
-        "message-26"
+        "message-0"
       ],
       "messages": [
         {
@@ -1011,7 +985,7 @@
   "sources": [],
   "tools": [
     {
-      "id": "tool-12",
+      "id": "tool-10",
       "tool_type": "letta_core",
       "description": "Search prior conversation history using hybrid search (text + semantic similarity).\n\nExamples:\n        # Search all messages\n        conversation_search(query=\"project updates\")\n\n        # Search only assistant messages\n        conversation_search(query=\"error handling\", roles=[\"assistant\"])\n\n        # Search with date range (inclusive of both dates)\n        conversation_search(query=\"meetings\", start_date=\"2024-01-15\", end_date=\"2024-01-20\")\n        # This includes all messages from Jan 15 00:00:00 through Jan 20 23:59:59\n\n        # Search messages from a specific day (inclusive)\n        conversation_search(query=\"bug reports\", start_date=\"2024-09-04\", end_date=\"2024-09-04\")\n        # This includes ALL messages from September 4, 2024\n\n        # Search with specific time boundaries\n        conversation_search(query=\"deployment\", start_date=\"2024-01-15T09:00\", end_date=\"2024-01-15T17:30\")\n        # This includes messages from 9 AM to 5:30 PM on Jan 15\n\n        # Search with limit\n        conversation_search(query=\"debugging\", limit=10)\n\n    Returns:\n        str: Query result string containing matching messages with timestamps and content.",
       "source_type": "python",
@@ -1072,7 +1046,7 @@
       "project_id": null
     },
     {
-      "id": "tool-14",
+      "id": "tool-15",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1134,7 +1108,7 @@
       "project_id": null
     },
     {
-      "id": "tool-21",
+      "id": "tool-22",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1325,7 +1299,7 @@
       "project_id": null
     },
     {
-      "id": "tool-17",
+      "id": "tool-16",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1478,7 +1452,7 @@
       "project_id": null
     },
     {
-      "id": "tool-16",
+      "id": "tool-21",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1548,7 +1522,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -1560,7 +1534,8 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "a5321ba1b347"
       },
       "project_id": null
     },
@@ -1689,7 +1664,7 @@
       "project_id": null
     },
     {
-      "id": "tool-1",
+      "id": "tool-11",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -1745,7 +1720,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -1757,12 +1732,13 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "6257d43f8e6e"
       },
       "project_id": null
     },
     {
-      "id": "tool-9",
+      "id": "tool-14",
       "tool_type": "letta_sleeptime_core",
       "description": "The memory_insert command allows you to insert text at a specific location in a memory block.\n\nExamples:\n        # Update a block containing information about the user (append to the end of the block)\n        memory_insert(label=\"customer\", new_str=\"The customer's ticket number is 12345\")\n\n        # Update a block containing information about the user (insert at the beginning of the block)\n        memory_insert(label=\"customer\", new_str=\"The customer's ticket number is 12345\", insert_line=0)\n\n    Returns:\n        Optional[str]: None is always returned as this function does not produce a response.",
       "source_type": "python",
@@ -1808,7 +1784,7 @@
       "project_id": null
     },
     {
-      "id": "tool-13",
+      "id": "tool-1",
       "tool_type": "letta_sleeptime_core",
       "description": "The memory_replace command allows you to replace a specific string in a memory block with a new string. This is used for making precise edits.\n\nDo NOT attempt to replace long strings, e.g. do not attempt to replace the entire contents of a memory block with a new string.\n\nExamples:\n        # Update a block containing information about the user\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"Their name is Bob\")\n\n        # Update a block containing a todo list\n        memory_replace(label=\"todos\", old_str=\"- [ ] Step 5: Search the web\", new_str=\"- [x] Step 5: Search the web\")\n\n        # Pass an empty string to\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"\")\n\n        # Bad example - do NOT add (view-only) line numbers to the args\n        memory_replace(label=\"human\", old_str=\"1: Their name is Alice\", new_str=\"1: Their name is Bob\")\n\n        # Bad example - do NOT include the line number warning either\n        memory_replace(label=\"human\", old_str=\"# NOTE: Line numbers shown below (with arrows like '1→') are to help during editing. Do NOT include line number prefixes in your memory edit tool calls.\\n1→ Their name is Alice\", new_str=\"1→ Their name is Bob\")\n\n        # Good example - no line numbers or line number warning (they are view-only), just the text\n        memory_replace(label=\"human\", old_str=\"Their name is Alice\", new_str=\"Their name is Bob\")\n\n    Returns:\n        str: The success message",
       "source_type": "python",
@@ -2112,7 +2088,7 @@
       "project_id": null
     },
     {
-      "id": "tool-10",
+      "id": "tool-9",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -2168,7 +2144,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -2180,7 +2156,8 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "dcedb83234d3"
       },
       "project_id": null
     },
@@ -2340,7 +2317,7 @@
       "project_id": null
     },
     {
-      "id": "tool-15",
+      "id": "tool-17",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -2444,7 +2421,7 @@
       "project_id": null
     },
     {
-      "id": "tool-22",
+      "id": "tool-13",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -2600,7 +2577,7 @@
         "mcp:SCHEMA_STATUS": "STRICT_COMPLIANT",
         "mcp:SCHEMA_WARNINGS": []
       },
-      "args_json_schema": null,
+      "args_json_schema": {},
       "return_char_limit": 50000,
       "pip_requirements": null,
       "npm_requirements": null,
@@ -2612,7 +2589,8 @@
         "mcp": {
           "server_name": "DCF",
           "server_id": "mcp_server-eff49008-dc83-4eaa-98a5-b50fa69fb24f"
-        }
+        },
+        "tool_hash": "775b52c3d7af"
       },
       "project_id": null
     },
@@ -2704,7 +2682,7 @@
       "project_id": null
     },
     {
-      "id": "tool-11",
+      "id": "tool-12",
       "tool_type": "external_mcp",
       "description": "",
       "source_type": "python",
@@ -2789,5 +2767,5 @@
   "metadata": {
     "revision_id": "27de0f58e076"
   },
-  "created_at": "2026-01-30T11:52:39.919135+00:00"
+  "created_at": "2026-01-30T16:22:27.705688+00:00"
 }
