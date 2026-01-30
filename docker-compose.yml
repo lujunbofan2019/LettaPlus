@@ -12,7 +12,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+#     - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
       - ~/.letta+/pgdata:/var/lib/postgresql/data
     healthcheck:
