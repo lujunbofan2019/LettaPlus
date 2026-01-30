@@ -130,7 +130,20 @@ create_session_context(
 
 This creates the shared `session_context` block and attaches it to you.
 
-### 1.3 Create Initial Companion(s)
+### 1.3 Register Strategist (Recommended)
+If a Strategist is available, register it for continuous optimization:
+```
+register_strategist(
+  conductor_agent_id=<your_agent_id>,
+  strategist_agent_id=<strategist_id>
+)
+```
+
+This establishes:
+- `strategist_guidelines` block (Strategist writes, you read)
+- `delegation_log` block (you write via delegate_task, Strategist reads)
+
+### 1.4 Create Initial Companion(s)
 Start with 1-2 generalist Companions:
 ```
 create_companion(
@@ -403,6 +416,22 @@ All Companions with the shared block will see the announcement.
 
 The **Strategist** is to you what the **Reflector** is to the Phase 1 Planner â€” an observing agent that analyzes outcomes and provides recommendations to improve your decisions over time.
 
+### Registering the Strategist
+
+At session start (after creating session context), register your Strategist:
+
+```
+register_strategist(
+  conductor_agent_id=<your_agent_id>,
+  strategist_agent_id=<strategist_id>,
+  initial_guidelines_json=<optional>
+)
+```
+
+This creates shared blocks:
+- `strategist_guidelines`: Strategist writes, you read
+- `delegation_log`: You write (via delegate_task), Strategist reads
+
 ### The Feedback Loop
 
 ```
@@ -416,17 +445,34 @@ The **Strategist** is to you what the **Reflector** is to the Phase 1 Planner â€
 
 | Phase 1 (DCF) | Phase 2 (DCF+) |
 |---------------|----------------|
-| Reflector observes workflow results | Strategist observes session activity |
+| `register_reflector()` | `register_strategist()` |
+| `trigger_reflection()` after workflow | `trigger_strategist_analysis()` during session |
 | Reflector writes `reflector_guidelines` | Strategist writes `strategist_guidelines` |
-| Planner reads guidelines before planning | You read guidelines before delegating |
 | Post-workflow analysis (batch) | Real-time analysis (continuous) |
+
+### Triggering Analysis
+
+Trigger Strategist analysis periodically (every 3-5 task completions):
+
+```
+trigger_strategist_analysis(
+  session_id=<id>,
+  conductor_agent_id=<your_agent_id>,
+  trigger_reason="periodic"  # or "milestone", "on_demand"
+)
+```
+
+**When to trigger**:
+- `periodic`: Every 3-5 completed tasks
+- `milestone`: After significant errors, scaling decisions, or session milestones
+- `on_demand`: When you need specific advice
 
 ### Reading Guidelines
 Check `strategist_guidelines` block for:
 ```json
 {
   "recommendations": [
-    { "timestamp": "...", "text": "..." }
+    { "timestamp": "...", "text": "...", "confidence": 0.85 }
   ],
   "skill_preferences": {
     "research": "skill://research.web@0.2.0",
@@ -437,7 +483,10 @@ Check `strategist_guidelines` block for:
     "max_companions": 5,
     "scale_up_threshold": 3,
     "scale_down_threshold": 0
-  }
+  },
+  "warnings": [
+    { "severity": "high", "message": "skill://data.parse@0.1.0 failing on nested JSON" }
+  ]
 }
 ```
 
@@ -446,6 +495,7 @@ Check `strategist_guidelines` block for:
 - **Scaling thresholds**: Follow Companion scaling advice based on observed patterns
 - **Warnings**: Heed warnings about problematic skills or patterns
 - **Trust the feedback**: The Strategist's advice is evidence-based from real executions
+- **Confidence levels**: Prioritize high-confidence (>0.8) recommendations
 
 ---
 

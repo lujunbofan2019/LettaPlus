@@ -42,7 +42,7 @@ In both Phase 1 and Phase 2, **the orchestrating agent is the skill authority**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      SKILL MANAGEMENT FLOW                       │
+│                      SKILL MANAGEMENT FLOW                      │
 └─────────────────────────────────────────────────────────────────┘
 
   Strategist                    Conductor                  Companion
@@ -486,20 +486,30 @@ Cleans up a session: dismisses all Companions, detaches shared blocks.
 
 ### Task Delegation Tools
 
-Tools for delegating and tracking tasks.
+Tools for delegating and tracking tasks. These tools implement the complete delegation lifecycle with proper logging for Strategist analysis.
 
 #### `delegate_task`
 
-Delegates a task to a specific Companion.
+Delegates a task to a specific Companion with full tracking and messaging.
+
+**Complete Delegation Flow**:
+1. Validates Companion exists and is not already busy
+2. Updates Companion status to "busy" with task tag
+3. Updates Companion's `task_context` with task details
+4. Writes delegation record to Conductor's `delegation_log` (for Strategist analysis)
+5. Sends `task_delegation` message to Companion via Letta messaging
+6. Returns delegation status with run_id for tracking
 
 **Parameters**:
+- `conductor_id`: Conductor agent ID (to find delegation_log block)
 - `companion_id`: Target Companion agent ID
+- `session_id`: Session identifier
 - `task_id`: Unique task identifier
 - `description`: Task description
-- `skills_required_json`: JSON array of skill URIs needed
-- `context_json`: Optional context/inputs for the task
+- `required_skills_json`: JSON array of skill URIs needed (e.g., `["skill://research.web@0.2.0"]`)
+- `input_json`: Optional JSON object with task inputs
 - `priority`: Task priority ("low" | "normal" | "high")
-- `update_session_context`: Whether to track in session context (default: true)
+- `timeout_seconds`: Optional task timeout
 
 **Returns**:
 ```python
@@ -509,14 +519,106 @@ Delegates a task to a specific Companion.
     "task_id": str,
     "companion_id": str,
     "message_sent": bool,
-    "delegation_payload": dict
+    "delegation_logged": bool,  # Whether delegation_log was updated
+    "run_id": str | None        # Letta message run ID
 }
 ```
 
-**Implementation Notes**:
-- Uses `send_message_to_agent_async` internally
-- Updates Companion status to "busy"
-- Logs delegation in session context
+**Delegation Log Record** (written to Conductor's `delegation_log` block):
+```json
+{
+    "task_id": "uuid",
+    "companion_id": "uuid",
+    "skills_assigned": ["skill://research.web@0.2.0"],
+    "status": "pending",
+    "delegated_at": "ISO-8601",
+    "completed_at": null,
+    "duration_s": null,
+    "result_status": null
+}
+```
+
+**Error Conditions**:
+- Companion not found → returns error
+- Companion already busy → returns error with current task info
+- Delegation log update fails → continues (non-fatal)
+- Message send fails → returns error
+
+#### `report_task_result`
+
+**Used by**: Companion agents
+
+Reports task completion from Companion back to Conductor. This is the Companion's counterpart to `delegate_task`.
+
+**Complete Reporting Flow**:
+1. Updates Companion's `task_context` with structured result
+2. Updates Companion status to "idle" (or "error" on failure)
+3. Updates `delegation_log` on Conductor with completion status and metrics
+4. Sends structured `task_result` message to Conductor
+
+**Parameters**:
+- `companion_id`: This Companion's agent ID
+- `task_id`: The task ID from the delegation message
+- `conductor_id`: The Conductor's agent ID (from `task_delegation.from_conductor`)
+- `status`: Result status ("succeeded" | "failed" | "partial")
+- `summary`: Human-readable 1-2 sentence summary of results
+- `output_data_json`: Optional JSON object with structured output data
+- `artifacts_json`: Optional JSON array of artifacts `[{type, value, note}]`
+- `error_code`: Error code if status is "failed" (e.g., "skill_load_error")
+- `error_message`: Error message if status is "failed"
+- `metrics_json`: Optional JSON object with execution metrics `{duration_s, tool_calls, etc.}`
+
+**Returns**:
+```python
+{
+    "status": str | None,
+    "error": str | None,
+    "task_id": str,
+    "companion_id": str,
+    "conductor_id": str,
+    "message_sent": bool,
+    "delegation_log_updated": bool,
+    "run_id": str | None
+}
+```
+
+**Result Message** (sent to Conductor):
+```json
+{
+    "type": "task_result",
+    "task_id": "uuid",
+    "status": "succeeded",
+    "output": {
+        "summary": "Found 5 recent articles on quantum computing...",
+        "data": { ... },
+        "artifacts": [{ "type": "path", "value": "/app/sessions/.../report.md" }]
+    },
+    "metrics": {
+        "duration_s": 45.2,
+        "tool_calls": 7,
+        "skills_used": ["skill://research.web@0.2.0"]
+    },
+    "companion_id": "uuid",
+    "completed_at": "ISO-8601"
+}
+```
+
+**On Failure**:
+```json
+{
+    "type": "task_result",
+    "task_id": "uuid",
+    "status": "failed",
+    "output": { "summary": "Web search failed - no results found" },
+    "error": {
+        "code": "skill_execution_error",
+        "message": "Web search returned no results for the given query"
+    },
+    "metrics": { "duration_s": 5.2, "tool_calls": 2 },
+    "companion_id": "uuid",
+    "completed_at": "ISO-8601"
+}
+```
 
 #### `broadcast_task`
 
@@ -541,19 +643,103 @@ Broadcasts a task to all available Companions matching criteria.
 }
 ```
 
-### Strategist Tools
+### Strategist Integration Tools
 
-Tools for the Strategist agent to observe and advise.
+Tools that establish and manage the Conductor-Strategist relationship (parallel to Phase 1's Planner-Reflector integration).
+
+#### `register_strategist`
+
+Establishes a bidirectional memory sharing relationship between a Conductor and Strategist agent. This is the Phase 2 equivalent of `register_reflector`.
+
+**Actions**:
+1. Creates `strategist_registration` block on Conductor (stores Strategist ID)
+2. Creates `strategist_guidelines` block on Conductor (shared, writable by Strategist)
+3. Creates `delegation_log` block on Conductor (shared, readable by Strategist)
+4. Records Conductor reference in Strategist's memory (`conductor_reference` block)
+5. Attaches shared blocks to both agents for bidirectional access
+
+**Parameters**:
+- `conductor_agent_id`: The Conductor agent's UUID
+- `strategist_agent_id`: The Strategist agent's UUID
+- `initial_guidelines_json`: Optional initial guidelines structure
+
+**Returns**:
+```python
+{
+    "status": str | None,
+    "error": str | None,
+    "registration_block_id": str,
+    "guidelines_block_id": str,
+    "delegation_log_block_id": str,
+    "warnings": List[str]
+}
+```
+
+#### `trigger_strategist_analysis`
+
+Triggers the Strategist agent to analyze recent session activity. This is the Phase 2 equivalent of `trigger_reflection`, but can be called during an active session (not just after completion).
+
+**Analysis Event Payload**:
+```json
+{
+  "type": "analysis_event",
+  "session_id": "...",
+  "conductor_id": "...",
+  "trigger_reason": "periodic|milestone|on_demand|task_completed",
+  "context": {
+    "tasks_since_last_analysis": N,
+    "time_since_last_analysis_s": N,
+    "recent_failures": N
+  },
+  "triggered_at": "ISO-8601"
+}
+```
+
+**Parameters**:
+- `session_id`: Session UUID
+- `conductor_agent_id`: Conductor's UUID (to find registered Strategist)
+- `trigger_reason`: Why analysis was triggered ("periodic" | "milestone" | "on_demand" | "task_completed")
+- `include_full_history`: Include complete session history (default: false)
+- `async_message`: Send asynchronously (default: true)
+
+**Returns**:
+```python
+{
+    "status": str | None,
+    "error": str | None,
+    "strategist_agent_id": str,
+    "message_sent": bool,
+    "run_id": str | None  # If async
+}
+```
+
+**Usage Notes**:
+- Call periodically (e.g., every 3-5 task completions) for continuous optimization
+- Call on milestones (significant errors, scaling events) for immediate analysis
+- The Strategist will read `delegation_log` and `session_context` to perform analysis
+
+---
+
+### Strategist Observation Tools
+
+Tools for the Strategist agent to observe session activity and publish recommendations.
 
 #### `read_session_activity`
 
-Reads recent session activity for analysis.
+Reads comprehensive session activity for Strategist analysis. Primary data source is the Conductor's `delegation_log` block, combined with Companion states and calculated skill metrics.
+
+**Data Sources**:
+1. **`delegation_log`** (from Conductor) — Primary source of truth for task outcomes
+2. **`session_context`** (shared block) — Session state and goals
+3. **Companion agents** (queried by tags) — Current status and task history
 
 **Parameters**:
 - `session_id`: Session identifier
-- `include_delegation_log`: Include task delegations (default: true)
-- `include_companion_states`: Include Companion status history (default: true)
-- `time_window_minutes`: How far back to look (default: 60)
+- `conductor_id`: Optional Conductor ID (enables direct delegation_log access)
+- `session_context_block_id`: Optional block ID (if known, avoids lookup)
+- `include_companion_details`: Include detailed Companion information (default: true)
+- `include_task_history`: Include task history from Companions (default: true)
+- `include_skill_metrics`: Calculate skill success rates and metrics (default: true)
 
 **Returns**:
 ```python
@@ -561,24 +747,76 @@ Reads recent session activity for analysis.
     "status": str | None,
     "error": str | None,
     "session_id": str,
-    "activity": {
-        "delegations": [...],
-        "companion_states": [...],
-        "task_completions": [...],
-        "errors": [...]
+    "session_state": str,  # "active" | "paused" | "completed" | "unknown"
+    "session_context": dict,  # Full session context if found
+    "delegations": [  # From delegation_log (last 50)
+        {
+            "task_id": str,
+            "companion_id": str,
+            "skills_assigned": List[str],
+            "status": str,  # "pending" | "completed"
+            "delegated_at": str,
+            "completed_at": str | None,
+            "duration_s": float | None,
+            "result_status": str | None,  # "succeeded" | "failed" | "partial"
+            "error_code": str | None
+        }
+    ],
+    "companions": [
+        {
+            "companion_id": str,
+            "companion_name": str,
+            "specialization": str,
+            "status": str,  # "idle" | "busy" | "error"
+            "current_task": str | None,
+            "tasks_completed": int,
+            "tasks_failed": int,
+            "skills_used": List[str],
+            "loaded_skills": List[str],  # Currently loaded
+            "task_history": List[dict]  # If include_task_history=true
+        }
+    ],
+    "skill_metrics": {  # Calculated from delegation_log
+        "<skill_uri>": {
+            "usage_count": int,
+            "success_count": int,
+            "failure_count": int,
+            "pending_count": int,
+            "avg_duration_s": float | None,
+            "success_rate": float | None,  # Percentage (0-100)
+            "failure_modes": [
+                { "mode": str, "count": int }
+            ]
+        }
+    },
+    "metrics": {
+        "companion_count": int,
+        "idle_companions": int,
+        "busy_companions": int,
+        "error_companions": int,
+        "total_delegations": int,
+        "completed_tasks": int,
+        "failed_tasks": int,
+        "pending_tasks": int,
+        "success_rate": float,  # Percentage (0-100)
+        "avg_task_duration_s": float | None,
+        "unique_skills_used": int,
+        "top_skills": List[Tuple[str, int, float]]  # (skill, usage_count, success_rate)
     }
 }
 ```
 
 #### `update_conductor_guidelines`
 
-Publishes strategic recommendations to the Conductor.
+Publishes strategic recommendations to the Conductor's `strategist_guidelines` block.
 
 **Parameters**:
 - `conductor_id`: Conductor agent ID
-- `add_recommendation_json`: Recommendation to add
-- `add_warning_json`: Warning to add
-- `update_companion_strategy_json`: Companion management advice
+- `recommendation_json`: General recommendation to add
+- `skill_preferences_json`: Skill preferences by task type (e.g., `{"research": "skill://..."}`)
+- `companion_scaling_json`: Scaling thresholds (e.g., `{"min": 1, "max": 5}`)
+- `warning_json`: Warning to add (with severity)
+- `clear_recommendations`: Clear existing recommendations before adding (default: false)
 
 **Returns**:
 ```python
@@ -587,8 +825,152 @@ Publishes strategic recommendations to the Conductor.
     "error": str | None,
     "conductor_id": str,
     "guidelines_block_id": str,
-    "revision": int
+    "revision": int,
+    "updated_fields": List[str]
 }
+```
+
+**Guidelines Block Structure**:
+```json
+{
+  "last_updated": "ISO-8601",
+  "revision": N,
+  "recommendations": [
+    { "timestamp": "...", "text": "...", "confidence": 0.85 }
+  ],
+  "skill_preferences": {
+    "<task_type>": "<preferred_skill_uri>"
+  },
+  "companion_scaling": {
+    "min_companions": 1,
+    "max_companions": 5,
+    "scale_up_threshold": 3,
+    "scale_down_threshold": 0
+  },
+  "warnings": [
+    { "severity": "high", "message": "...", "timestamp": "..." }
+  ]
+}
+```
+
+---
+
+## Agent Tool Assignment
+
+Each agent type requires a specific set of tools. Use this table when configuring agents in Letta.
+
+### Conductor Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Session & Companion Management** | | |
+| `create_session_context` | ✅ | Initialize session shared blocks |
+| `update_session_context` | ✅ | Update session state and announcements |
+| `finalize_session` | ✅ | Close session and cleanup |
+| `create_companion` | ✅ | Spawn new Companions |
+| `dismiss_companion` | ✅ | Remove Companions |
+| `list_session_companions` | ✅ | Query Companion pool and status |
+| `update_companion_status` | ⚪ | Update Companion tags |
+| **Task Delegation** | | |
+| `delegate_task` | ✅ | Assign tasks to specific Companion |
+| `broadcast_task` | ⚪ | Broadcast to multiple Companions |
+| **Skill Management (Authority)** | | |
+| `get_skillset` | ✅ | Discover available skills |
+| `get_skillset_from_catalog` | ⚪ | Alternative skill discovery |
+| `load_skill` | ✅ | Load skills to Companions |
+| `unload_skill` | ✅ | Unload skills from Companions |
+| **Strategist Integration** | | |
+| `register_strategist` | ✅ | Establish Strategist relationship |
+| `trigger_strategist_analysis` | ⚪ | Request Strategist analysis |
+| **Letta Native** | | |
+| `send_message_to_agent_async` | ✅ | Communicate with Companions/Strategist |
+| `send_message_to_agents_matching_all_tags` | ⚪ | Broadcast to agent groups |
+| **File Operations** | | |
+| `write_file` | ⚪ | Persist session artifacts |
+| `create_directory` | ⚪ | Create session directories |
+
+### Companion Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Skill Execution** | | |
+| `load_skill` | ✅ | Load assigned skills |
+| `unload_skill` | ✅ | Unload skills after task |
+| **Status Management** | | |
+| `update_companion_status` | ⚪ | Update own status (handled by report_task_result) |
+| **Task Reporting** | | |
+| `report_task_result` | ✅ | Report task completion to Conductor (updates status, delegation_log, sends message) |
+| **Communication** | | |
+| `send_message_to_agent_async` | ⚪ | Direct messaging (use report_task_result for task results) |
+| **File Operations** | | |
+| `read_file` | ⚪ | Read input files |
+| `write_file` | ⚪ | Write output artifacts |
+| **Dynamic Tools** | | |
+| *(skill-specific tools)* | ✅ | Loaded dynamically via `load_skill` |
+
+### Strategist Agent Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| **Session Observation** | | |
+| `read_session_activity` | ✅ | Analyze session patterns |
+| `read_shared_memory_blocks` | ✅ | Access Conductor's memory blocks |
+| **Guidelines Publishing** | | |
+| `update_conductor_guidelines` | ✅ | Publish recommendations |
+| **Communication** | | |
+| `send_message_to_agent_async` | ✅ | Send proactive advice to Conductor |
+| **Knowledge Graph (Graphiti MCP)** | | |
+| `add_episode_to_graph_memory` | ✅ | Persist patterns and insights |
+| `search_graph_memory_nodes` | ✅ | Find similar patterns |
+| `search_graph_memory_facts` | ✅ | Query skill performance |
+
+**Legend**: ✅ = Required, ⚪ = Optional/Situational
+
+### Tool Assignment Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                          DCF+ Tool Distribution                                │
+├────────────────────────────────────────────────────────────────────────────────┤
+│  CONDUCTOR (18 tools)       │  COMPANION (8 tools)      │  STRATEGIST (7 tools)│
+├─────────────────────────────┼───────────────────────────┼──────────────────────┤
+│  Session:                   │  Skills:                  │  Observation:        │
+│    create_session_context   │    load_skill             │    read_session_     │
+│    update_session_context   │    unload_skill           │      activity        │
+│    finalize_session         │                           │    read_shared_      │
+│                             │  Task Reporting:          │      memory_blocks   │
+│  Companions:                │    report_task_result     │                      │
+│    create_companion         │                           │  Guidelines:         │
+│    dismiss_companion        │  Status (optional):       │    update_conductor_ │
+│    list_session_companions  │    update_companion_      │      guidelines      │
+│    update_companion_status  │      status               │                      │
+│                             │                           │  Communication:      │
+│  Delegation:                │  Communication:           │    send_message_to_  │
+│    delegate_task            │    send_message_to_       │      agent_async     │
+│    broadcast_task           │      agent_async          │                      │
+│                             │                           │  Graphiti MCP:       │
+│  Skills (Authority):        │  Files:                   │    add_episode_to_   │
+│    get_skillset             │    read_file              │      graph_memory    │
+│    get_skillset_from_       │    write_file             │    search_graph_     │
+│      catalog                │                           │      memory_nodes    │
+│    load_skill               │  + Skill-specific tools   │    search_graph_     │
+│    unload_skill             │    (loaded dynamically)   │      memory_facts    │
+│                             │                           │                      │
+│  Strategist:                │                           │                      │
+│    register_strategist      │                           │                      │
+│    trigger_strategist_      │                           │                      │
+│      analysis               │                           │                      │
+│                             │                           │                      │
+│  Letta Native:              │                           │                      │
+│    send_message_to_         │                           │                      │
+│      agent_async            │                           │                      │
+│    send_message_to_agents_  │                           │                      │
+│      matching_all_tags      │                           │                      │
+│                             │                           │                      │
+│  Files:                     │                           │                      │
+│    write_file               │                           │                      │
+│    create_directory         │                           │                      │
+└─────────────────────────────┴───────────────────────────┴──────────────────────┘
 ```
 
 ---
@@ -597,72 +979,40 @@ Publishes strategic recommendations to the Conductor.
 
 ### Conductor Agent
 
-#### Required Tools
-
-| Tool | Source | Purpose |
-|------|--------|---------|
-| `send_message_to_agent_async` | Letta built-in | Delegate tasks, receive results |
-| `send_message_to_agents_matching_all_tags` | Letta built-in | Broadcast to Companions |
-| `create_companion` | DCF+ | Spawn new Companions |
-| `dismiss_companion` | DCF+ | Remove Companions |
-| `list_session_companions` | DCF+ | Query Companion pool |
-| `delegate_task` | DCF+ | Assign tasks |
-| `update_session_context` | DCF+ | Manage shared state |
-| `finalize_session` | DCF+ | Clean up session |
-| `load_skill` | DCF (reused) | Load skills to Companions |
-| `unload_skill` | DCF (reused) | Unload skills from Companions |
-
 #### Memory Blocks
 
 | Label | Shared | Purpose |
 |-------|--------|---------|
 | `persona` | No | Conductor identity and behavior |
-| `session_context` | Yes | Shared session state |
-| `companion_registry` | No | Local tracking of Companions |
-| `strategist_guidelines` | Yes | Recommendations from Strategist |
-| `delegation_log` | Yes | Task delegation history (for Strategist) |
+| `session_context` | Yes | Shared session state (attached to all Companions) |
+| `strategist_guidelines` | Yes | Recommendations from Strategist (read-only for Conductor) |
+| `strategist_registration` | No | Registered Strategist ID |
+| `companion_registry` | No | Local tracking of active Companions |
+| `delegation_log` | Yes | Task delegation history (for Strategist analysis) |
 
 ### Companion Agent
-
-#### Required Tools
-
-| Tool | Source | Purpose |
-|------|--------|---------|
-| `send_message_to_agent_async` | Letta built-in | Report results to Conductor |
-| `load_skill` | DCF (reused) | Load assigned skills |
-| `unload_skill` | DCF (reused) | Unload skills after task |
-| *(skill-specific tools)* | Dynamic | Loaded via skills |
 
 #### Memory Blocks
 
 | Label | Shared | Purpose |
 |-------|--------|---------|
-| `persona` | No | Companion identity |
-| `task_context` | No | Current task details |
-| `session_context` | Yes (read-mostly) | Shared session state |
+| `persona` | No | Companion identity and specialization |
+| `task_context` | No | Current task details and history |
+| `session_context` | Yes (read-mostly) | Shared session state from Conductor |
 | `dcf_active_skills` | No | Skill loading tracker |
 
 ### Strategist Agent
 
-#### Required Tools
-
-| Tool | Source | Purpose |
-|------|--------|---------|
-| `send_message_to_agent_async` | Letta built-in | Advise Conductor |
-| `read_session_activity` | DCF+ | Observe patterns |
-| `update_conductor_guidelines` | DCF+ | Publish recommendations |
-| `read_shared_memory_blocks` | DCF (reused) | Access Conductor memory |
-| *(Graphiti tools)* | Graphiti MCP | Pattern persistence |
-
 #### Memory Blocks
 
 | Label | Shared | Purpose |
 |-------|--------|---------|
-| `persona` | No | Strategist identity |
+| `persona` | No | Strategist identity and analysis approach |
 | `session_context` | Yes (read-only) | Observe session state |
-| `strategist_guidelines` | Yes | Publish recommendations |
+| `strategist_guidelines` | Yes | Publish recommendations to Conductor |
+| `conductor_reference` | No | Reference to registered Conductor |
 | `observation_buffer` | No | Temporary analysis workspace |
-| `pattern_library` | No | Recognized patterns |
+| `pattern_library` | No | Recognized patterns from analysis |
 
 ---
 
@@ -750,6 +1100,190 @@ Sent from Strategist to Conductor:
 
 ---
 
+## Graphiti Entity Types
+
+The Strategist persists patterns and metrics to Graphiti for institutional learning. These entity types parallel Phase 1's `WorkflowExecution`, `LearningInsight`, and `SkillMetric`.
+
+### Entity Type Definitions
+
+| Entity | Group ID | Purpose | Parallel in Phase 1 |
+|--------|----------|---------|---------------------|
+| `SessionPattern:<session_id>` | `dcf_plus_patterns` | Behavioral patterns from a session | `WorkflowExecution` |
+| `SkillMetric:<skill_id>:<date>` | `dcf_plus_metrics` | Aggregated skill performance | `SkillMetric` |
+| `Insight:<insight_id>` | `dcf_plus_insights` | Strategic insights with evidence | `LearningInsight` |
+| `CompanionPattern:<companion_id>` | `dcf_plus_companions` | Companion specialization patterns | N/A (new) |
+
+### SessionPattern Schema
+
+```json
+{
+  "entity": "SessionPattern",
+  "session_id": "uuid",
+  "conductor_id": "uuid",
+  "duration_s": 3600,
+  "task_count": 15,
+  "success_rate": 0.87,
+  "companion_count_avg": 2.5,
+  "skill_usage": {
+    "skill://research.web@0.2.0": { "count": 8, "success_rate": 0.95 },
+    "skill://analysis.data@0.1.0": { "count": 5, "success_rate": 0.80 }
+  },
+  "patterns_observed": [
+    "High parallelism with 3+ Companions improved throughput",
+    "Research tasks succeeded more with specialized Companions"
+  ],
+  "recorded_at": "ISO-8601"
+}
+```
+
+### SkillMetric Schema
+
+```json
+{
+  "entity": "SkillMetric",
+  "skill_id": "skill://research.web@0.2.0",
+  "date": "2026-01-30",
+  "usage_count": 25,
+  "success_count": 23,
+  "failure_count": 2,
+  "success_rate": 0.92,
+  "avg_duration_s": 45.2,
+  "failure_modes": [
+    { "mode": "timeout", "count": 1 },
+    { "mode": "no_results", "count": 1 }
+  ],
+  "companions_used": ["uuid1", "uuid2"],
+  "recorded_at": "ISO-8601"
+}
+```
+
+### Insight Schema
+
+```json
+{
+  "entity": "Insight",
+  "insight_id": "uuid",
+  "category": "skill_preference|companion_scaling|specialization|warning",
+  "confidence": 0.85,
+  "evidence_count": 5,
+  "summary": "skill://research.web@0.2.0 outperforms v0.1.0 by 23%",
+  "recommendation": "Prefer v0.2.0 for all research tasks",
+  "applies_to": ["skill://research.web", "task_type:research"],
+  "derived_from": ["session_id_1", "session_id_2"],
+  "supersedes": "previous_insight_id",
+  "created_at": "ISO-8601"
+}
+```
+
+### CompanionPattern Schema
+
+```json
+{
+  "entity": "CompanionPattern",
+  "companion_id": "uuid",
+  "session_id": "uuid",
+  "specialization": "research",
+  "tasks_completed": 8,
+  "tasks_failed": 0,
+  "success_rate": 1.0,
+  "avg_task_duration_s": 32.5,
+  "skills_used": ["skill://research.web@0.2.0"],
+  "specialization_fit": 0.95,
+  "recorded_at": "ISO-8601"
+}
+```
+
+---
+
+## Tool Usage Flows
+
+### Conductor Tool Usage Flow
+
+```
+1. create_session_context()           → Initialize session shared blocks
+2. register_strategist()              → Establish Strategist relationship (optional)
+3. create_companion()                 → Spawn initial Companions
+4. (Conversation with user)
+5. get_skillset()                     → Discover available skills
+6. (Check strategist_guidelines)      → Read Strategist recommendations
+7. delegate_task()                    → Delegate to Companion with required_skills
+8. (Receive task_result message)      → Process Companion results
+9. update_session_context()           → Track task completion
+10. trigger_strategist_analysis()     → Request optimization (every 3-5 tasks)
+11. (Loop 4-10 for ongoing conversation)
+12. finalize_session()                → Close session, dismiss Companions
+
+Companion management during session:
+• create_companion()                  → Scale up when needed
+• dismiss_companion()                 → Scale down idle Companions
+• list_session_companions()           → Monitor pool status
+• update_companion_status()           → Update specializations
+```
+
+### Companion Tool Usage Flow
+
+```
+1. (Receive task_delegation message from Conductor)
+   ├── Validate message type == "task_delegation"
+   └── Extract task_id, from_conductor, required_skills, input
+2. load_skill()                       → Load each skill in task.required_skills
+   └── On failure: report_task_result(status="failed") immediately
+3. (Execute task using skill tools)
+   ├── Follow loaded skill's directive
+   ├── Reference task.input for context
+   └── Write large artifacts to disk
+4. report_task_result()               → Complete reporting flow
+   ├── Updates task_context with result
+   ├── Updates status to "idle" (or "error" on failure)
+   ├── Updates delegation_log for Strategist
+   └── Sends task_result message to Conductor
+5. unload_skill()                     → Cleanup all loaded skills
+6. (Wait for next delegation)
+```
+
+**Note**: The `report_task_result` tool handles status updates automatically. Do not call `update_companion_status` separately when reporting results.
+
+### Strategist Tool Usage Flow
+
+```
+1. (Receive analysis_event message from trigger_strategist_analysis)
+   ├── session_id, conductor_id, trigger_reason
+
+2. read_shared_memory_blocks()        → Access Conductor's memory
+   ├── delegation_log, session_context
+   └── strategist_guidelines (current state)
+
+3. read_session_activity()            → Get detailed activity data
+   ├── Task delegations with outcomes
+   ├── Companion states and performance
+   └── Skill usage metrics
+
+4. (Query Graphiti for historical context)
+   ├── search_graph_memory_nodes()    → Find similar sessions
+   ├── search_graph_memory_facts()    → Get skill performance history
+   └── search_graph_memory_nodes()    → Retrieve past insights
+
+5. (Analyze patterns and derive insights)
+   ├── Compare with historical data
+   ├── Identify skill effectiveness
+   ├── Evaluate Companion performance
+   └── Generate recommendations
+
+6. (Persist to Graphiti)
+   ├── add_episode_to_graph_memory()  → SessionPattern record
+   ├── add_episode_to_graph_memory()  → SkillMetric records
+   ├── add_episode_to_graph_memory()  → Insight records
+   └── add_episode_to_graph_memory()  → CompanionPattern records
+
+7. update_conductor_guidelines()      → Publish to Conductor
+   ├── skill_preferences              → Recommended skills by task type
+   ├── companion_scaling              → Scaling thresholds
+   ├── recommendations                → General advice
+   └── warnings                       → Issues to avoid
+```
+
+---
+
 ## Implementation Roadmap
 
 ### Phase 2.1: Foundation
@@ -768,16 +1302,22 @@ Sent from Strategist to Conductor:
 2. [x] Create `broadcast_task` tool
 3. [x] Create `update_companion_status` tool
 4. [x] Create `update_session_context` tool
-5. [ ] Test Conductor → Companion delegation flow
-6. [ ] Test Companion → Conductor result reporting
+5. [x] **Enhance `delegate_task`** — Now sends messages, writes to delegation_log
+6. [x] **Create `report_task_result` tool** — Companion result reporting with full tracking
+7. [x] **Enhance `read_session_activity`** — Reads delegation_log, calculates skill metrics
+8. [ ] Test Conductor → Companion delegation flow
+9. [ ] Test Companion → Conductor result reporting
 
-### Phase 2.3: Strategist
+### Phase 2.3: Strategist Integration
 
 1. [x] Create `read_session_activity` tool
 2. [x] Create `update_conductor_guidelines` tool
-3. [x] Write Strategist system prompt (`prompts/dcf_plus/Strategist.md`)
-4. [ ] Integrate with Graphiti for pattern persistence
-5. [ ] Test end-to-end Conductor ↔ Companion ↔ Strategist flow
+3. [x] **Create `register_strategist` tool** (parallel to `register_reflector`)
+4. [x] **Create `trigger_strategist_analysis` tool** (parallel to `trigger_reflection`)
+5. [x] Write Strategist system prompt (`prompts/dcf_plus/Strategist.md`)
+6. [x] Add `read_shared_memory_blocks` to Strategist tool set (reuse from Phase 1)
+7. [ ] Integrate with Graphiti for pattern persistence
+8. [ ] Test end-to-end Conductor ↔ Companion ↔ Strategist flow
 
 ### Phase 2.4: Integration
 

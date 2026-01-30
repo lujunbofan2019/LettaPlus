@@ -20,11 +20,16 @@ Tool Categories:
    - update_session_context: Update shared session state
    - finalize_session: Clean up session resources
 
-3. Task Delegation:
-   - delegate_task: Delegate task to specific Companion
-   - broadcast_task: Delegate to Companions matching criteria
+3. Task Delegation & Reporting:
+   - delegate_task: Delegate task to specific Companion (Conductor)
+   - broadcast_task: Delegate to Companions matching criteria (Conductor)
+   - report_task_result: Report task completion back to Conductor (Companion)
 
-4. Strategist Tools:
+4. Strategist Integration:
+   - register_strategist: Register Strategist as Conductor's companion
+   - trigger_strategist_analysis: Trigger Strategist to analyze session
+
+5. Strategist Observation:
    - read_session_activity: Get session activity for analysis
    - update_conductor_guidelines: Publish recommendations to Conductor
 """
@@ -38,6 +43,9 @@ from .update_session_context import update_session_context
 from .finalize_session import finalize_session
 from .delegate_task import delegate_task
 from .broadcast_task import broadcast_task
+from .report_task_result import report_task_result
+from .register_strategist import register_strategist
+from .trigger_strategist_analysis import trigger_strategist_analysis
 from .read_session_activity import read_session_activity
 from .update_conductor_guidelines import update_conductor_guidelines
 
@@ -51,10 +59,14 @@ __all__ = [
     "create_session_context",
     "update_session_context",
     "finalize_session",
-    # Task Delegation
+    # Task Delegation & Reporting
     "delegate_task",
     "broadcast_task",
-    # Strategist Tools
+    "report_task_result",
+    # Strategist Integration
+    "register_strategist",
+    "trigger_strategist_analysis",
+    # Strategist Observation
     "read_session_activity",
     "update_conductor_guidelines",
 ]

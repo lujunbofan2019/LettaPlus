@@ -42,6 +42,9 @@ from tools.dcf_plus.update_session_context import update_session_context as _upd
 from tools.dcf_plus.finalize_session import finalize_session as _finalize_session
 from tools.dcf_plus.delegate_task import delegate_task as _delegate_task
 from tools.dcf_plus.broadcast_task import broadcast_task as _broadcast_task
+from tools.dcf_plus.report_task_result import report_task_result as _report_task_result
+from tools.dcf_plus.register_strategist import register_strategist as _register_strategist
+from tools.dcf_plus.trigger_strategist_analysis import trigger_strategist_analysis as _trigger_strategist_analysis
 from tools.dcf_plus.read_session_activity import read_session_activity as _read_session_activity
 from tools.dcf_plus.update_conductor_guidelines import update_conductor_guidelines as _update_conductor_guidelines
 
@@ -724,7 +727,8 @@ def delegate_task(conductor_id: str,
                   required_skills_json: str | None = None,
                   input_data_json: str | None = None,
                   priority: str = "normal",
-                  timeout_seconds: int = 300) -> Dict[str, Any]:
+                  timeout_seconds: int = 300,
+                  session_id: str | None = None) -> Dict[str, Any]:
     return _delegate_task(
         conductor_id=conductor_id,
         companion_id=companion_id,
@@ -733,6 +737,7 @@ def delegate_task(conductor_id: str,
         input_data_json=input_data_json,
         priority=priority,
         timeout_seconds=timeout_seconds,
+        session_id=session_id,
     )
 
 
@@ -764,15 +769,89 @@ broadcast_task.__doc__ = _broadcast_task.__doc__
 
 
 @mcp.tool()
+def report_task_result(companion_id: str,
+                       task_id: str,
+                       conductor_id: str,
+                       status: str,
+                       summary: str,
+                       output_data_json: str | None = None,
+                       artifacts_json: str | None = None,
+                       error_code: str | None = None,
+                       error_message: str | None = None,
+                       metrics_json: str | None = None) -> Dict[str, Any]:
+    return _report_task_result(
+        companion_id=companion_id,
+        task_id=task_id,
+        conductor_id=conductor_id,
+        status=status,
+        summary=summary,
+        output_data_json=output_data_json,
+        artifacts_json=artifacts_json,
+        error_code=error_code,
+        error_message=error_message,
+        metrics_json=metrics_json,
+    )
+
+
+report_task_result.__doc__ = _report_task_result.__doc__
+
+
+# --- DCF+ Strategist Integration Tools ---
+
+@mcp.tool()
+def register_strategist(conductor_agent_id: str,
+                        strategist_agent_id: str,
+                        initial_guidelines_json: str | None = None) -> Dict[str, Any]:
+    return _register_strategist(
+        conductor_agent_id=conductor_agent_id,
+        strategist_agent_id=strategist_agent_id,
+        initial_guidelines_json=initial_guidelines_json,
+    )
+
+
+register_strategist.__doc__ = _register_strategist.__doc__
+
+
+@mcp.tool()
+def trigger_strategist_analysis(session_id: str,
+                                conductor_agent_id: str,
+                                trigger_reason: str = "periodic",
+                                tasks_since_last_analysis: int | None = None,
+                                recent_failures: int | None = None,
+                                include_full_history: bool = False,
+                                async_message: bool = True,
+                                max_steps: int | None = None) -> Dict[str, Any]:
+    return _trigger_strategist_analysis(
+        session_id=session_id,
+        conductor_agent_id=conductor_agent_id,
+        trigger_reason=trigger_reason,
+        tasks_since_last_analysis=tasks_since_last_analysis,
+        recent_failures=recent_failures,
+        include_full_history=include_full_history,
+        async_message=async_message,
+        max_steps=max_steps,
+    )
+
+
+trigger_strategist_analysis.__doc__ = _trigger_strategist_analysis.__doc__
+
+
+# --- DCF+ Strategist Observation Tools ---
+
+@mcp.tool()
 def read_session_activity(session_id: str,
+                          conductor_id: str | None = None,
                           session_context_block_id: str | None = None,
                           include_companion_details: bool = True,
-                          include_task_history: bool = True) -> Dict[str, Any]:
+                          include_task_history: bool = True,
+                          include_skill_metrics: bool = True) -> Dict[str, Any]:
     return _read_session_activity(
         session_id=session_id,
+        conductor_id=conductor_id,
         session_context_block_id=session_context_block_id,
         include_companion_details=include_companion_details,
         include_task_history=include_task_history,
+        include_skill_metrics=include_skill_metrics,
     )
 
 

@@ -163,83 +163,53 @@ Follow the loaded skill's directives:
 
 ---
 
-### Step 4: Prepare Result
+### Step 4: Report Result to Conductor
 
-Construct the result payload:
+Use the `report_task_result` tool to report back. This tool handles everything:
+- Updates your `task_context` with the result
+- Updates your status to "idle" (or "error" on failure)
+- Updates the `delegation_log` for Strategist analysis
+- Sends the result message to the Conductor
 
 #### On Success
-```json
-{
-  "type": "task_result",
-  "task_id": "<from_delegation>",
-  "status": "succeeded",
-  "output": {
-    "summary": "Found 5 recent articles on quantum computing advances...",
-    "data": {
-      "sources": [...],
-      "key_findings": [...]
-    },
-    "artifacts": [
-      { "type": "path", "value": "/app/sessions/.../report.md" }
-    ]
-  },
-  "metrics": {
-    "duration_s": 45,
-    "tool_calls": 7,
-    "skills_used": ["skill://research.web@0.2.0"]
-  },
-  "companion_id": "<your_agent_id>",
-  "completed_at": "ISO-8601"
-}
+```
+report_task_result(
+  companion_id=<your_agent_id>,
+  task_id=<from_delegation>,
+  conductor_id=<task_delegation.from_conductor>,
+  status="succeeded",
+  summary="Found 5 recent articles on quantum computing advances...",
+  output_data_json='{"sources": [...], "key_findings": [...]}',
+  artifacts_json='[{"type": "path", "value": "/app/sessions/.../report.md"}]',
+  metrics_json='{"tool_calls": 7}'
+)
 ```
 
 #### On Failure
-```json
-{
-  "type": "task_result",
-  "task_id": "<from_delegation>",
-  "status": "failed",
-  "error": {
-    "code": "skill_execution_error",
-    "message": "Web search returned no results",
-    "details": { ... }
-  },
-  "partial_output": { ... },
-  "metrics": {
-    "duration_s": 12,
-    "tool_calls": 2,
-    "skills_used": ["skill://research.web@0.2.0"]
-  },
-  "companion_id": "<your_agent_id>",
-  "completed_at": "ISO-8601"
-}
 ```
-
----
-
-### Step 5: Report Result to Conductor
-
-Send the result back:
-```
-send_message_to_agent_async(
-  message=<result_json_string>,
-  other_agent_id=<conductor_id>
+report_task_result(
+  companion_id=<your_agent_id>,
+  task_id=<from_delegation>,
+  conductor_id=<task_delegation.from_conductor>,
+  status="failed",
+  summary="Web search failed - no results found",
+  error_code="skill_execution_error",
+  error_message="Web search returned no results for the given query",
+  metrics_json='{"tool_calls": 2}'
 )
 ```
 
 The `conductor_id` is available from:
-- `task_delegation.from_conductor`
+- `task_delegation.from_conductor` (in the delegation message)
 - Your `persona` block (set at creation)
 - `session_context.conductor_id`
 
 ---
 
-### Step 6: Cleanup
+### Step 5: Cleanup
 
-**Always perform cleanup**, regardless of success or failure:
+**Unload skills** after reporting results (regardless of success or failure):
 
-#### 6.1 Unload Skills
-For each skill loaded:
 ```
 unload_skill(
   manifest_id=<skill_manifest_id>,
@@ -247,17 +217,12 @@ unload_skill(
 )
 ```
 
-#### 6.2 Update Status
-```
-update_companion_status(
-  companion_id=<your_agent_id>,
-  status="idle",
-  current_task_id=""  # Clear task
-)
-```
+**Note**: The `report_task_result` tool automatically:
+- Updates your status to "idle" (or "error" on failure)
+- Updates your `task_context` with the completed task
+- Records the completion in `delegation_log`
 
-#### 6.3 Update Task History
-Move completed task to history in your `task_context` block.
+You only need to manually unload skills.
 
 ---
 

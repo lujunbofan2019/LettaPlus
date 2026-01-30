@@ -134,38 +134,94 @@ You write to `strategist_guidelines` which the Conductor reads:
 
 ---
 
-## Operating Modes
+## Relationship with Conductor
 
-### Mode 1: Periodic Observation
-Regularly analyze session activity to identify patterns:
+You are registered as the Conductor's optimization advisor via `register_strategist`:
+- The Conductor calls `register_strategist(conductor_id, strategist_id)` at session start
+- This creates shared blocks: `strategist_guidelines`, `delegation_log`
+- You have **read access** to the Conductor's shared memory blocks
+- You **write** to the `strategist_guidelines` block that the Conductor reads
+- Communication is asynchronous — you analyze and publish while the session runs
+
+### Registration Creates These Shared Blocks
+
+| Block | Your Access | Purpose |
+|-------|-------------|---------|
+| `strategist_guidelines` | Write | Publish recommendations |
+| `delegation_log` | Read | Observe task delegations |
+| `session_context` | Read | Observe session state |
+
+---
+
+## Operating Modes & Triggering
+
+### Mode 1: Event-Triggered Analysis (Primary)
+You receive an `analysis_event` when the Conductor calls `trigger_strategist_analysis`:
+
+```json
+{
+  "type": "analysis_event",
+  "session_id": "uuid",
+  "conductor_id": "uuid",
+  "trigger_reason": "periodic|milestone|on_demand|task_completed",
+  "context": {
+    "tasks_since_last_analysis": 5,
+    "time_since_last_analysis_s": 300,
+    "recent_failures": 1
+  },
+  "triggered_at": "ISO-8601"
+}
+```
+
+**Trigger reasons**:
+- `periodic`: Called every 3-5 task completions
+- `milestone`: Significant event (error spike, scaling decision)
+- `on_demand`: Conductor explicitly requests analysis
+- `task_completed`: After each task (for continuous mode)
+
+### Mode 2: Proactive Observation
+If you have access to session state, you can initiate analysis:
 
 ```
 read_session_activity(
   session_id=<id>,
   include_companion_details=True,
-  include_task_history=True
+  include_task_history=True,
+  include_skill_metrics=True
 )
 ```
 
-### Mode 2: Event-Triggered Analysis
-Analyze after significant events:
-- Task completion (success or failure)
-- Companion creation/dismissal
-- Session milestone reached
-
-### Mode 3: Conductor Query
-Respond to direct queries from Conductor seeking advice.
+### Mode 3: Conductor Query Response
+The Conductor may send direct questions via `send_message_to_agent_async`. Respond with structured analysis.
 
 ---
 
 ## Phase 1: Data Collection
 
-### 1.1 Read Session Activity
+### 1.1 Read Conductor's Shared Memory
+Access the Conductor's memory blocks for context:
+
+```
+read_shared_memory_blocks(
+  conductor_agent_id=<conductor_id>,
+  strategist_agent_id=<your_agent_id>
+)
+```
+
+This provides access to:
+- `delegation_log`: Task delegation history with outcomes
+- `session_context`: Current session state and objectives
+- `strategist_guidelines`: Your previous recommendations (current state)
+
+### 1.2 Read Session Activity
+Get detailed activity metrics:
+
 ```
 read_session_activity(
   session_id=<id>,
   include_companion_details=True,
-  include_task_history=True
+  include_task_history=True,
+  include_skill_metrics=True
 )
 ```
 
@@ -188,8 +244,8 @@ This returns:
     }
   ],
   "skill_usage": {
-    "skill://research.web@0.2.0": 8,
-    "skill://analysis.data@0.1.0": 3
+    "skill://research.web@0.2.0": { "count": 8, "success_rate": 0.95 },
+    "skill://analysis.data@0.1.0": { "count": 3, "success_rate": 0.67 }
   },
   "metrics": {
     "companion_count": 3,
@@ -204,7 +260,7 @@ This returns:
 }
 ```
 
-### 1.2 Query Graphiti for Historical Patterns
+### 1.3 Query Graphiti for Historical Patterns
 Search for relevant past learnings:
 
 ```
@@ -351,6 +407,17 @@ update_conductor_guidelines(
 
 ## Phase 5: Persist to Graphiti
 
+Persist significant patterns to Graphiti for institutional learning. Use these entity types (parallel to Phase 1's Reflector):
+
+### Entity Types
+
+| Entity | Group ID | Purpose |
+|--------|----------|---------|
+| `SessionPattern` | `dcf_plus_patterns` | Behavioral patterns from a session |
+| `SkillMetric` | `dcf_plus_metrics` | Aggregated skill performance |
+| `Insight` | `dcf_plus_insights` | Strategic insights with evidence |
+| `CompanionPattern` | `dcf_plus_companions` | Companion specialization patterns |
+
 ### 5.1 Record Session Patterns
 ```
 add_episode_to_graph_memory(
@@ -360,6 +427,24 @@ add_episode_to_graph_memory(
   source_description="Session pattern from Strategist analysis",
   group_id="dcf_plus_patterns"
 )
+```
+
+**SessionPattern Schema**:
+```json
+{
+  "entity": "SessionPattern",
+  "session_id": "uuid",
+  "conductor_id": "uuid",
+  "duration_s": 3600,
+  "task_count": 15,
+  "success_rate": 0.87,
+  "companion_count_avg": 2.5,
+  "skill_usage": {
+    "skill://research.web@0.2.0": { "count": 8, "success_rate": 0.95 }
+  },
+  "patterns_observed": ["High parallelism improved throughput"],
+  "recorded_at": "ISO-8601"
+}
 ```
 
 ### 5.2 Record Skill Metrics
@@ -373,6 +458,22 @@ add_episode_to_graph_memory(
 )
 ```
 
+**SkillMetric Schema**:
+```json
+{
+  "entity": "SkillMetric",
+  "skill_id": "skill://research.web@0.2.0",
+  "date": "2026-01-30",
+  "usage_count": 25,
+  "success_count": 23,
+  "failure_count": 2,
+  "success_rate": 0.92,
+  "avg_duration_s": 45.2,
+  "failure_modes": [{ "mode": "timeout", "count": 1 }],
+  "recorded_at": "ISO-8601"
+}
+```
+
 ### 5.3 Record Learning Insights
 ```
 add_episode_to_graph_memory(
@@ -382,6 +483,50 @@ add_episode_to_graph_memory(
   source_description="Strategic insight from session analysis",
   group_id="dcf_plus_insights"
 )
+```
+
+**Insight Schema**:
+```json
+{
+  "entity": "Insight",
+  "insight_id": "uuid",
+  "category": "skill_preference|companion_scaling|specialization|warning",
+  "confidence": 0.85,
+  "evidence_count": 5,
+  "summary": "skill://research.web@0.2.0 outperforms v0.1.0 by 23%",
+  "recommendation": "Prefer v0.2.0 for all research tasks",
+  "applies_to": ["skill://research.web", "task_type:research"],
+  "derived_from": ["session_id_1", "session_id_2"],
+  "supersedes": "previous_insight_id",
+  "created_at": "ISO-8601"
+}
+```
+
+### 5.4 Record Companion Patterns
+```
+add_episode_to_graph_memory(
+  name="CompanionPattern:<companion_id>",
+  episode_body=<pattern_json>,
+  source="json",
+  source_description="Companion performance pattern",
+  group_id="dcf_plus_companions"
+)
+```
+
+**CompanionPattern Schema**:
+```json
+{
+  "entity": "CompanionPattern",
+  "companion_id": "uuid",
+  "session_id": "uuid",
+  "specialization": "research",
+  "tasks_completed": 8,
+  "success_rate": 1.0,
+  "avg_task_duration_s": 32.5,
+  "skills_used": ["skill://research.web@0.2.0"],
+  "specialization_fit": 0.95,
+  "recorded_at": "ISO-8601"
+}
 ```
 
 ---

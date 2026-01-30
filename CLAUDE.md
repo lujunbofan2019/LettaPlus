@@ -13,15 +13,44 @@ LettaPlus solves these by unifying three core innovations:
 
 - **Dynamic Capabilities Framework (DCF)**: Shifts modularity from specialized agents to transferable, version-controlled "skills" that can be loaded/unloaded at runtime
 - **Hybrid Memory System**: Combines a knowledge graph, hierarchical memory blocks, and vector stores for comprehensive context and structured reasoning
-- **Workflow Execution Engine**: Uses AWS Step Functions (ASL) semantics to orchestrate complex tasks via ephemeral, choreography-driven worker agents
+- **Dual Execution Patterns**: Supports both predetermined workflows (Phase 1) and dynamic task delegation (Phase 2)
+
+### Execution Patterns
+
+LettaPlus supports two complementary execution patterns:
+
+| Pattern | Phase | Use Case |
+|---------|-------|----------|
+| **Workflow Execution** | Phase 1 (DCF) | Predetermined DAG workflows with ephemeral Workers |
+| **Delegated Execution** | Phase 2 (DCF+) | Dynamic task delegation with session-scoped Companions |
 
 ### Key Concepts
 
+#### Phase 1 (Workflow Execution)
+
 - **Planner Agent**: User-facing agent that converses to understand intent, discovers skills, compiles SOPs into ASL state machines, and orchestrates execution
 - **Ephemeral Workers**: Short-lived Letta agents instantiated from `.af v2` templates; load skills, execute tasks, write outputs, then optionally get deleted
-- **Skills**: Self-contained, version-controlled JSON manifests defining capabilities (directives, tools, data sources, permissions, tests)
+- **Reflector Agent**: Post-workflow advisor that analyzes execution outcomes and publishes optimization recommendations
 - **Workflows**: JSON-defined Standard Operating Procedures (SOPs) using ASL semantics with Letta-specific `AgentBinding` extensions
 - **Choreography**: Workers self-coordinate via a RedisJSON control plane using leases, status updates, and notifications—no central orchestrator loop
+
+#### Phase 2 (Delegated Execution)
+
+- **Conductor Agent**: Continuously engaged orchestrator that dynamically delegates tasks to Companions during ongoing user conversations (skill authority)
+- **Companion Agents**: Session-scoped executors that load skills assigned by the Conductor, execute tasks, and report results (simple executor pattern—never discover skills themselves)
+- **Strategist Agent**: Real-time advisor providing continuous optimization recommendations during sessions; observes activity and publishes guidelines to the Conductor
+
+#### Shared Concepts
+
+- **Skills**: Self-contained, version-controlled JSON manifests defining capabilities (directives, tools, data sources, permissions, tests)
+
+### Agent Role Comparison
+
+| Role | Phase 1 (Workflow) | Phase 2 (Delegated) |
+|------|-------------------|---------------------|
+| Orchestrator | Planner | Conductor |
+| Executor | Worker (ephemeral) | Companion (session-scoped) |
+| Advisor | Reflector (post-workflow) | Strategist (real-time) |
 
 ### Vision
 
@@ -34,7 +63,8 @@ The system treats every engagement as an opportunity to refine institutional kno
 | Directory | Purpose |
 |-----------|---------|
 | `dcf_mcp/` | Core MCP server exposing 40+ workflow/skill tools |
-| `dcf_mcp/tools/dcf/` | Workflow execution tools (validate, generate, leases, notify, finalize) |
+| `dcf_mcp/tools/dcf/` | Phase 1 workflow execution tools (validate, generate, leases, notify, finalize) |
+| `dcf_mcp/tools/dcf_plus/` | Phase 2 delegated execution tools (Companion lifecycle, session management, task delegation, Strategist) |
 | `dcf_mcp/tools/redis_json/` | RedisJSON operations for control plane |
 | `dcf_mcp/tools/file_system/` | File operations |
 | `dcf_mcp/agents/` | Letta agent templates (`.af` format) |
@@ -46,7 +76,7 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `workflows/` | Example workflow JSON files |
 | `workflows/generated/` | Persisted workflow definitions |
 | `workflows/runs/` | Execution audit trails (per workflow_id) |
-| `prompts/` | Agent system prompts (Planner/Worker variants) |
+| `prompts/` | Agent system prompts (Phase 1: Planner/Worker/Reflector; Phase 2: Conductor/Companion/Strategist) |
 | `docs/` | Design documents and whitepapers |
 
 ### Hybrid Memory System
@@ -73,6 +103,8 @@ Workers coordinate via Redis without a central orchestrator:
 
 ### Tool Categories
 
+#### Phase 1 (Workflow Execution) Tools
+
 **Planning Tools:**
 - `validate_workflow` — JSON Schema validation + import resolution + ASL graph checks
 - `validate_skill_manifest` — Schema validation + static checks
@@ -91,6 +123,31 @@ Workers coordinate via Redis without a central orchestrator:
 - `generate_all` — Generate skill manifests and stub config from YAML
 - `yaml_to_manifests` — Generate skill manifests from YAML sources
 - `yaml_to_stub_config` — Generate stub MCP server configuration
+
+#### Phase 2 (Delegated Execution) Tools
+
+**Companion Lifecycle:**
+- `create_companion` — Create session-scoped Companion agent with standard configuration
+- `dismiss_companion` — Remove Companion and cleanup resources (unload skills, detach blocks)
+- `list_session_companions` — List Companions in session with current state (status, loaded skills)
+- `update_companion_status` — Update Companion status tags ("idle" | "busy" | "error")
+
+**Session Management:**
+- `create_session_context` — Create shared memory blocks for a new session
+- `update_session_context` — Update shared session state (goals, preferences, task tracking)
+- `finalize_session` — Close session, dismiss Companions, archive session data
+
+**Task Delegation:**
+- `delegate_task` — Delegate task to specific Companion with required skills
+- `broadcast_task` — Broadcast task to multiple Companions matching criteria
+
+**Strategist Integration:**
+- `register_strategist` — Establish Conductor-Strategist relationship (parallel to `register_reflector`)
+- `trigger_strategist_analysis` — Trigger Strategist to analyze session activity (parallel to `trigger_reflection`)
+
+**Strategist Observation:**
+- `read_session_activity` — Analyze session activity for patterns (delegations, completions, errors)
+- `update_conductor_guidelines` — Publish Strategist recommendations to Conductor's guidelines block
 
 ## Commands
 
@@ -157,9 +214,11 @@ Skills and tools are authored via YAML for clarity and maintainability:
 
 See `skills_src/SKILLS.md` for detailed authoring documentation.
 
-## Workflow Execution Flow
+## Execution Flows
 
-### Planner Flow
+### Phase 1: Workflow Execution Flow
+
+#### Planner Flow
 
 **Planning Phase:**
 1. **Conversation**: Collect objective, inputs, outputs, guardrails
@@ -185,7 +244,7 @@ See `skills_src/SKILLS.md` for detailed authoring documentation.
 13. **Present results**: Communicate final status, key outputs, and audit trail path to user
 14. **Trigger reflection** (optional): `trigger_reflection(...)` for self-improvement analysis
 
-### Worker Flow (per state)
+#### Worker Flow (per state)
 
 1. **Check readiness**: Verify upstream states are `done`
 2. **Acquire lease**: `acquire_state_lease(...)` → get exclusive access
@@ -197,12 +256,63 @@ See `skills_src/SKILLS.md` for detailed authoring documentation.
 8. **Release lease**: `release_state_lease(...)`
 9. **Notify downstream**: `notify_next_worker_agent(...)`
 
-### Leases
+#### Leases
 
 Soft leases (token + TTL) prevent race conditions when multiple workers are available:
 - Use `renew_state_lease()` for long-running tasks
 - Expired leases can be stolen by other workers
 - Lease tokens are validated on state updates
+
+### Phase 2: Delegated Execution Flow
+
+#### Conductor Flow
+
+1. **Session initialization**: Create session context via `create_session_context`
+2. **Register Strategist** (optional): Call `register_strategist` to establish optimization relationship
+3. **Spawn initial Companions**: Call `create_companion` with shared session context
+4. **Continuous conversation**: Engage with user to understand evolving goals and requirements
+5. **Task identification**: Identify discrete tasks from user requests
+6. **Skill discovery**: Call `get_skillset(...)` to find available capabilities for each task
+7. **Read Strategist guidelines**: Check `strategist_guidelines` block for optimization advice before delegation
+8. **Delegate tasks**: Use `delegate_task` with `skills_required` to assign work to Companions
+9. **Receive results**: Process task results reported by Companions via `send_message_to_agent_async`
+10. **Trigger analysis**: Call `trigger_strategist_analysis` every 3-5 tasks for continuous optimization
+11. **Synthesize and respond**: Combine Companion outputs into coherent user responses
+12. **Companion management**: Scale pool (create/dismiss), adjust specializations based on workload
+13. **Session finalization**: Call `finalize_session` to cleanup when user session ends
+
+#### Companion Flow (per task)
+
+1. **Receive delegation**: Receive task delegation message from Conductor
+2. **Update status**: Set status to "busy" via tag update
+3. **Load skills**: Call `load_skill(...)` for each skill in `skills_required` (trust Conductor's selection)
+4. **Execute task**: Run tools following skill directives
+5. **Report result**: Send structured result to Conductor via `send_message_to_agent_async`
+6. **Unload skills**: Return to clean baseline via `unload_skill(...)`
+7. **Update status**: Set status back to "idle"
+
+#### Strategist Flow
+
+1. **Receive trigger**: Receive `analysis_event` from `trigger_strategist_analysis` (called by Conductor)
+2. **Read Conductor memory**: Access shared blocks via `read_shared_memory_blocks` (delegation_log, session_context)
+3. **Read session activity**: Get detailed metrics via `read_session_activity`
+4. **Query historical context**: Search Graphiti for similar patterns and past insights
+5. **Analyze patterns**: Identify skill effectiveness, Companion performance, and delegation patterns
+6. **Generate recommendations**: Formulate optimization advice (skill preferences, Companion specializations)
+7. **Persist to Graphiti**: Write significant patterns via `add_episode_to_graph_memory` (SessionPattern, SkillMetric, Insight)
+8. **Publish guidelines**: Write recommendations to `strategist_guidelines` block via `update_conductor_guidelines`
+
+### Architecture Comparison
+
+| Aspect | Phase 1 (Workflow) | Phase 2 (Delegated) |
+|--------|-------------------|---------------------|
+| Planning | Predetermined DAG upfront | Dynamic during conversation |
+| Executors | Ephemeral Workers (per-workflow) | Session-scoped Companions |
+| User Engagement | Paused during execution | Continuous |
+| Coordination | Redis control plane + leases | Shared memory blocks + async messaging |
+| Optimization | Post-workflow Reflector | Real-time Strategist |
+| Skill Authority | Planner at workflow creation | Conductor at each delegation |
+| Executor Autonomy | Workers follow workflow state | Companions follow Conductor instructions |
 
 ## Important Notes
 
@@ -215,8 +325,16 @@ The Streamable HTTP endpoint (`/mcp`) returns an `mcp-session` header; clients m
 ### Generated Artifacts
 After editing `skills_src/` YAML files, regenerate `generated/` and commit outputs so workflows remain reproducible.
 
-### Workers are Ephemeral
+### Workers are Ephemeral (Phase 1)
 Created per workflow, optionally deleted after finalization via `finalize_workflow(..., delete_worker_agents=True)`.
+
+### Companions are Session-Scoped (Phase 2)
+Unlike ephemeral Workers, Companions persist across multiple tasks within a session. They are created at session start and dismissed at session end (or dynamically scaled by the Conductor).
+
+### Skill Authority
+In both phases, the orchestrating agent is the skill authority:
+- **Phase 1**: Planner discovers and assigns skills at workflow creation time
+- **Phase 2**: Conductor discovers and assigns skills at each delegation—Companions never discover skills themselves
 
 ### Tool Response Format
 All tools return `{status, error, ...}` where `error` is `None` on success, enabling reliable chaining in agent conversations.
