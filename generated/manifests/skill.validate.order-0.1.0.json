@@ -54,7 +54,22 @@
           "properties": {
             "items": {
               "type": "array",
-              "description": "Array of items with sku and quantity"
+              "description": "Array of items with sku and quantity",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "quantity"
+                ]
+              }
             }
           },
           "required": [
@@ -80,7 +95,27 @@
           "properties": {
             "address": {
               "type": "object",
-              "description": "Shipping address object"
+              "description": "Shipping address object",
+              "properties": {
+                "street": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "zip": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "street",
+                "city",
+                "state",
+                "zip"
+              ]
             }
           },
           "required": [

@@ -28,7 +28,26 @@
           "properties": {
             "items": {
               "type": "array",
-              "description": "Order items with quantity and unit_price"
+              "description": "Order items with quantity and unit_price",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit_price": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "quantity",
+                  "unit_price"
+                ]
+              }
             }
           },
           "required": [

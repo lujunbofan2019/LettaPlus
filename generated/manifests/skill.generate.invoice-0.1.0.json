@@ -31,13 +31,73 @@
               "type": "string"
             },
             "customer_info": {
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "customer_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "customer_id",
+                "name"
+              ]
             },
             "line_items": {
-              "type": "array"
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "item_description": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit_price": {
+                    "type": "number"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "quantity",
+                  "unit_price"
+                ]
+              }
             },
             "totals": {
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "subtotal": {
+                  "type": "number"
+                },
+                "discount": {
+                  "type": "number"
+                },
+                "tax": {
+                  "type": "number"
+                },
+                "shipping": {
+                  "type": "number"
+                },
+                "total": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "total"
+              ]
             }
           },
           "required": [

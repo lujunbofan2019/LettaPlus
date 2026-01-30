@@ -36,6 +36,28 @@ servers:
     endpoint: http://stub-mcp:8765
     path: /mcp
 
+  # Phase 1 Testing - Order Processing
+  orders:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  pricing:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  documents:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
+  # Phase 2 Testing - Customer Support
+  support:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765
+    path: /mcp
+
 # Environment-specific overrides
 # Uncomment and configure for staging/production
 # overrides:
