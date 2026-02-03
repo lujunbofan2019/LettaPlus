@@ -1,6 +1,6 @@
 # AMSP-DCF Integration Playbook
 
-**Version:** 1.0.1
+**Version:** 1.1.0
 **Status:** Planning
 **Created:** 2026-02-03
 **Last Updated:** 2026-02-03
@@ -81,23 +81,29 @@ AMSP provides a systematic framework for matching task complexity to model tiers
 | 2 | 26-50 | Complex reasoning, multi-tool, synthesis |
 | 3 | 51+ | Novel domains, research-grade, maximum capability |
 
-### Model-Tier Mapping with Pricing (as of February 2026)
+### Model-Tier Mapping with Reasoning Overhead (as of February 2026, via [OpenRouter](https://openrouter.ai/models))
 
-| Tier | Example Models | Input ($/1M) | Output ($/1M) | Notes |
-|------|----------------|--------------|---------------|-------|
-| **0** | GPT-4o-mini | $0.15 | $0.60 | Best value for simple tasks |
-| **0** | DeepSeek-V3 | $0.27 | $0.42 | Cache hits: $0.07 input |
-| **0** | Gemini 3 Flash | $0.50 | $3.00 | 1M context, fast |
-| **0-1** | Claude Haiku 4.5 | $1.00 | $5.00 | Good balance |
-| **1** | Claude Sonnet 4 | $3.00 | $15.00 | Strong reasoning |
-| **1-2** | GPT-4o | $2.50 | $10.00 | 128K context |
-| **1-2** | Gemini 3 Pro | $2.00 | $12.00 | 2M context; $4/$18 >200K |
-| **2** | Claude Sonnet 4.5 | $3.00 | $15.00 | Extended reasoning |
-| **3** | GPT-5 | $1.25 | $10.00 | 400K context, best value frontier |
-| **3** | Claude Opus 4.5 | $5.00 | $25.00 | Strongest reasoning |
-| **3** | Gemini 3 Deep Think | $2.00 | $12.00 | Extended reasoning mode |
+**Critical insight**: Frontier and Strong models are typically used with reasoning modes enabled (extended thinking, xhigh effort, Deep Think), which generates 5-10x more output tokens than visible responses.
 
-*Note: The 10-50× cost difference between tiers makes AMSP model selection economically critical. A task processed 10,000 times monthly could cost $15 with GPT-4o-mini or $500 with Claude Opus 4.5.*
+| Tier | Model | Base In/Out (per 1M) | Adjusted Out* | Reasoning Mode |
+|------|-------|---------------------|---------------|----------------|
+| **0** | GPT-5 Nano | `$0.05` / `$0.40` | `$0.40` | None (speed-first) |
+| **0** | Grok 4.1 Fast | `$0.20` / `$0.50` | `$0.50` | None (fast inference) |
+| **0** | DeepSeek V3.2 | `$0.25` / `$0.38` | `$0.38-2` | Optional thinking |
+| **0** | GPT-5 Mini | `$0.25` / `$2.00` | `$2.00` | None |
+| **0-1** | Gemini 3 Flash | `$0.50` / `$3.00` | `$3.00` | None |
+| **1** | Claude Haiku 4.5 | `$1.00` / `$5.00` | `$5.00` | None |
+| **1** | Llama 4 Maverick | `$0.35` / `$1.15` | `$1.15` | None |
+| **2** | GPT-5 | `$1.25` / `$10.00` | `$20-40` | Medium effort (2-4x) |
+| **2** | Grok 4 | `$0.50` / `$2.00` | `$4-8` | Thinking mode (2-4x) |
+| **2** | Claude Sonnet 4.5 | `$3.00` / `$15.00` | `$30-60` | Extended thinking (2-4x) |
+| **2-3** | Gemini 3 Pro | `$2.00` / `$12.00` | `$24-48` | Deep Think (2-4x) |
+| **3** | GPT-5.2 Pro | `$1.75` / `$14.00` | `$70-140` | xhigh effort (5-10x) |
+| **3** | Claude Opus 4.5 | `$5.00` / `$25.00` | `$125-250` | Extended Thinking (5-10x) |
+
+*\*Adjusted Output reflects typical reasoning token overhead. Example: 500 visible tokens → 3,500 billed tokens with extended thinking.*
+
+**Key Finding**: The 300-600× real-world cost difference between Frontier (with extended thinking) and Efficient tiers makes AMSP model selection economically critical. A task processed 10,000 times monthly could cost `$4.50` with GPT-5 Nano or `$2,800` with Claude Opus 4.5 + extended thinking.
 
 ## 1.2 DCF Current Architecture
 
@@ -1915,5 +1921,6 @@ CREATE (e)-[:USED_PROFILE]->(p)
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-02-03 | Updated pricing table with adjusted costs for reasoning overhead (5-10x for Frontier, 2-4x for Strong); updated models (GPT-5 series, Grok 4.x); revised cost narrative to 300-600x difference; added OpenRouter source attribution |
 | 1.0.1 | 2026-02-03 | Added model-tier pricing reference table with February 2026 data |
 | 1.0.0 | 2026-02-03 | Initial playbook created from blast radius analysis |

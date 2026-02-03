@@ -14,28 +14,31 @@ Agentic AI systems require careful foundation model selection to balance perform
 
 ### 1.1 The Model Selection Challenge
 
-The proliferation of foundation models has created both opportunity and complexity for developers building agentic AI systems. Today's landscape (as of February 2026) includes flagship frontier models (Claude Opus 4.5, GPT-5, Gemini 3 Deep Think), strong generalist models (Claude Sonnet 4.5, GPT-4o, Gemini 3 Pro), efficient alternatives (GPT-4o-mini, Gemini 3 Flash, Claude Haiku 4.5), and increasingly capable open-source options (Llama 4, Qwen 3, DeepSeek-V3). Each model presents distinct tradeoffs in capability, cost, latency, and context limits.
+The proliferation of foundation models has created both opportunity and complexity for developers building agentic AI systems. Today's landscape (as of February 2026) includes flagship frontier models (Claude Opus 4.5, GPT-5.2 Pro, Gemini 3 Pro), strong generalist models (Claude Sonnet 4.5, GPT-5, Grok 4), efficient alternatives (Claude Haiku 4.5, GPT-5 Mini/Nano, Gemini 3 Flash, Grok 4.1 Fast), and increasingly capable open-source options (Llama 4, Qwen 3, DeepSeek V3.2). Each model presents distinct tradeoffs in capability, cost, latency, and context limits.
 
-**Representative Model Pricing (as of February 2026)**:
+**Representative Model Pricing with Reasoning Overhead (as of February 2026, via [OpenRouter](https://openrouter.ai/models))**:
 
-| Model Class | Example | Input ($/1M tokens) | Output ($/1M tokens) | Context |
-|-------------|---------|---------------------|----------------------|---------|
-| **Frontier** | Claude Opus 4.5 | $5.00 | $25.00 | 200K |
-| **Frontier** | GPT-5 | $1.25 | $10.00 | 400K |
-| **Frontier** | Gemini 3 Deep Think | $2.00 | $12.00 | 1M |
-| **Strong** | Claude Sonnet 4.5 | $3.00 | $15.00 | 200K |
-| **Strong** | GPT-4o | $2.50 | $10.00 | 128K |
-| **Strong** | Gemini 3 Pro | $2.00 | $12.00 | 2M |
-| **Efficient** | Claude Haiku 4.5 | $1.00 | $5.00 | 200K |
-| **Efficient** | GPT-4o-mini | $0.15 | $0.60 | 128K |
-| **Efficient** | Gemini 3 Flash | $0.50 | $3.00 | 1M |
-| **Open Source** | DeepSeek-V3 | $0.27 | $0.42 | 128K |
-| **Open Source** | Llama 4 Maverick | $0.19 | $0.30 | 1M |
-| **Open Source** | Qwen 3-235B | $0.20 | $1.00 | 256K |
+| Tier | Model | Base In/Out (per 1M) | Adjusted Out* | Context | Reasoning Mode |
+|------|-------|---------------------|---------------|---------|----------------|
+| **Frontier** | Claude Opus 4.5 | `$5` / `$25` | `$125-250` | 200K | Extended Thinking (5-10x) |
+| **Frontier** | GPT-5.2 Pro | `$1.75` / `$14` | `$70-140` | 400K | xhigh effort (5-10x) |
+| **Frontier** | Gemini 3 Pro | `$2` / `$12` | `$24-48` | 1M | Deep Think (2-4x) |
+| **Strong** | Claude Sonnet 4.5 | `$3` / `$15` | `$30-60` | 1M | Moderate thinking (2-4x) |
+| **Strong** | GPT-5 | `$1.25` / `$10` | `$20-40` | 400K | Medium effort (2-4x) |
+| **Strong** | Grok 4 | `$0.50` / `$2` | `$4-8` | 2M | Thinking mode (2-4x) |
+| **Efficient** | Claude Haiku 4.5 | `$1` / `$5` | `$5` | 200K | None |
+| **Efficient** | GPT-5 Mini | `$0.25` / `$2` | `$2` | 400K | None |
+| **Efficient** | GPT-5 Nano | `$0.05` / `$0.40` | `$0.40` | 400K | None |
+| **Efficient** | Gemini 3 Flash | `$0.50` / `$3` | `$3` | 1M | None |
+| **Efficient** | Grok 4.1 Fast | `$0.20` / `$0.50` | `$0.50` | 2M | None |
+| **Open Source** | DeepSeek V3.2 | `$0.25` / `$0.38` | `$0.38-2` | 164K | Optional thinking |
+| **Open Source** | Llama 4 Maverick | `$0.35` / `$1.15` | `$1.15` | 1M | None |
+| **Open Source** | Llama 4 Scout | `$0.25` / `$0.70` | `$0.70` | 10M | None |
+| **Open Source** | Qwen3 Max | `$1.20` / `$6` | `$6` | 256K | None |
 
-*Note: Pricing reflects API costs and varies by provider. DeepSeek offers cache-hit discounts (~75% off input). Open-source costs assume hosted inference via API providers; self-hosting can reduce costs further.*
+*\*Adjusted Output reflects typical reasoning token overhead when using extended thinking/reasoning modes. Frontier models with deep reasoning enabled generate 5-10x more output tokens than visible responses (e.g., 500 visible tokens → 3,500 billed). Strong models typically see 2-4x overhead with moderate reasoning. Efficient models prioritize speed with no reasoning overhead.*
 
-The 10-50× cost difference between frontier and efficient models makes selection critical: a task processed 10,000 times monthly could cost $60 with Gemini 3 Flash or $2,500 with Claude Opus 4.5.
+**Critical insight**: Base pricing is misleading. The 300-600× real-world cost difference between Frontier (with extended thinking) and Efficient tiers makes model selection economically critical. A task processed 10,000 times monthly could cost `$4.50` with GPT-5 Nano or `$2,800` with Claude Opus 4.5 + extended thinking.
 
 Agentic systems — where autonomous agents perform multi-step reasoning with tools, data, and external knowledge — place unique demands on foundation models. Unlike simple prompt-completion tasks, agents must:
 
@@ -343,41 +346,41 @@ For tasks scoring 3 on three or more dimensions, apply an additional **compound 
 
 #### Capability Profiles (Detailed)
 
-**Tier 0: Efficient Models**
+**Tier 0: Efficient Models** — Speed-first, no reasoning overhead
 - Single-step or short linear chains (≤4 steps)
 - Minimal persistent context; stateless or near-stateless
 - Text-only inputs; standard patterns
 - 0-1 independent tools
-- Example models (as of Feb 2026): Gemini 3 Flash ($0.50/1M in), Claude Haiku 4.5 ($1/1M in), GPT-4o-mini ($0.15/1M in), DeepSeek-V3 ($0.27/1M in)
-- Typical cost: $0.15-1.00 per 1M input tokens
+- Example models (as of Feb 2026, via [OpenRouter](https://openrouter.ai/models)): GPT-5 Nano (`$0.05`/`$0.40`), Grok 4.1 Fast (`$0.20`/`$0.50`), GPT-5 Mini (`$0.25`/`$2`), Gemini 3 Flash (`$0.50`/`$3`), DeepSeek V3.2 (`$0.25`/`$0.38`)
+- Typical cost: `$0.40-5.00` per 1M output tokens (no reasoning overhead)
 
-**Tier 1: Capable Generalist Models**
+**Tier 1: Capable Generalist Models** — Moderate tasks, no extended thinking
 - Moderate workflows (5-8 steps with occasional branching)
 - Context window <32K tokens actively used
 - 2-4 tools with loose dependencies
 - Basic structured outputs (JSON, simple schemas)
 - Some adaptability to input variations
-- Example models (as of Feb 2026): Claude Sonnet 4.5 ($3/1M in), GPT-4o ($2.50/1M in), Gemini 3 Pro ($2/1M in), Llama 4 Maverick ($0.19/1M in)
-- Typical cost: $0.20-3.00 per 1M input tokens
+- Example models (as of Feb 2026): Claude Haiku 4.5 (`$1`/`$5`), GPT-5 Mini (`$0.25`/`$2`), Gemini 3 Flash (`$0.50`/`$3`), Llama 4 Maverick (`$0.35`/`$1.15`)
+- Typical cost: `$2-5` per 1M output tokens (no reasoning overhead)
 
-**Tier 2: Strong Generalist Models**
+**Tier 2: Strong Generalist Models** — Moderate reasoning enabled (2-4x overhead)
 - Long-horizon planning (8-12 steps with branching)
 - Large context utilization (32K-128K tokens)
 - Complex tool orchestration (4-6 tools with dependencies)
 - Strict schema validation; precise calculations
 - Moderate edge case handling
-- Example models (as of Feb 2026): Claude Sonnet 4.5 ($3/1M in), GPT-4o ($2.50/1M in), Gemini 3 Pro long-context ($4/1M in), Qwen 3-Max ($1.20/1M in)
-- Typical cost: $1.00-4.00 per 1M input tokens
+- Example models (as of Feb 2026): Claude Sonnet 4.5 (`$3`/`$15` base → `$30-60` adjusted), GPT-5 (`$1.25`/`$10` base → `$20-40` adjusted), Grok 4 (`$0.50`/`$2` base → `$4-8` adjusted), Qwen3 Max (`$1.20`/`$6`)
+- Typical cost: `$20-60` per 1M output tokens (with moderate reasoning)
 
-**Tier 3: Frontier Models**
+**Tier 3: Frontier Models** — Deep reasoning enabled (5-10x overhead)
 - Extended reasoning chains (10+ steps, dynamic)
 - Very large context (100K+ tokens with cross-reference)
 - Complex multimodal reasoning
 - Partial observability handling
 - Compliance-critical accuracy
 - High adaptability to edge cases
-- Example models (as of Feb 2026): Claude Opus 4.5 ($5/1M in), GPT-5 ($1.25/1M in), Gemini 3 Deep Think ($2/1M in)
-- Typical cost: $1.25-5.00 per 1M input tokens
+- Example models (as of Feb 2026): Claude Opus 4.5 + Extended Thinking (`$5`/`$25` base → `$125-250` adjusted), GPT-5.2 Pro + xhigh (`$1.75`/`$14` base → `$70-140` adjusted), Gemini 3 Pro + Deep Think (`$2`/`$12` base → `$24-48` adjusted)
+- Typical cost: `$70-250` per 1M output tokens (with deep reasoning)
 
 #### Soft Boundaries (Overlap Zones)
 
@@ -391,14 +394,16 @@ Tier boundaries are not hard cutoffs. Tasks with FCS within ±3 points of a boun
 
 #### Cost Guidance (Separate Concern)
 
-*Note: Costs are indicative as of February 2026 and will change. Update your organization's pricing tables quarterly.*
+*Note: Costs are indicative as of February 2026 (via [OpenRouter](https://openrouter.ai/models)) and will change. Update your organization's pricing tables quarterly. Adjusted costs reflect typical reasoning token overhead for each tier.*
 
-| Tier | Typical Cost Range | Cost Optimization Signal |
-|------|-------------------|-------------------------|
-| Tier 0 | $0.01-0.05/task | Downgrade from Tier 1 if success >95% |
-| Tier 1 | $0.05-0.20/task | Sweet spot for most production tasks |
-| Tier 2 | $0.20-1.00/task | Consider decomposition if cost >$0.50 |
-| Tier 3 | $1.00-10.00/task | Reserve for genuinely complex tasks |
+| Tier | Base Cost Range | Adjusted Cost Range | Cost Optimization Signal |
+|------|-----------------|---------------------|-------------------------|
+| Tier 0 | `$0.40-5`/1M out | `$0.40-5`/1M out | No reasoning; speed-first |
+| Tier 1 | `$2-5`/1M out | `$2-5`/1M out | No extended thinking needed |
+| Tier 2 | `$10-15`/1M out | `$20-60`/1M out | Moderate reasoning (2-4x) |
+| Tier 3 | `$14-25`/1M out | `$70-250`/1M out | Deep reasoning (5-10x) |
+
+**Key insight**: The 300-600× cost difference between Frontier (with reasoning) and Efficient tiers makes model selection economically critical.
 
 **Note**: Tier boundaries represent 70% success probability thresholds based on aggregated benchmark data. Tasks at tier boundaries may warrant testing models from both adjacent tiers.
 
@@ -1715,7 +1720,7 @@ Question 3: Multimodal OR partial obs OR strict schema OR >5 tools?
 - Entire workflow scored as single task
 - FCS = 69.2 (from Case Study 5.2)
 - Tier 3 required
-- **Cost: $4.20 per analysis**
+- **Cost**: `$4.20` per analysis
 
 **Heterogeneous Decomposition**:
 
@@ -1729,7 +1734,7 @@ Question 3: Multimodal OR partial obs OR strict schema OR >5 tools?
 - Precision: 1 (correct filing identification)
 - Adaptability: 1 (handles missing years)
 - **WCS** = (1×3.0) + (0×2.5) + (1×2.0) + (0×2.0) + (0×2.0) + (1×1.5) + (1×1.5) = 9.5
-- **FCS** = 9.5 → **Tier 0** → **Cost: $0.15**
+- **FCS** = 9.5 → **Tier 0** → **Cost**: `$0.15`
 
 **Subtask 2: Extract Tables from PDFs**
 
@@ -1742,7 +1747,7 @@ Question 3: Multimodal OR partial obs OR strict schema OR >5 tools?
 - Adaptability: 2 (varied table formats)
 - **WCS** = (2×3.0) + (3×2.5) + (2×2.0) + (1×2.0) + (2×2.0) + (3×1.5) + (2×1.5) = 30.0
 - Multipliers: Context (3) + Modality (2) = 1.25×
-- **FCS** = 30.0 × 1.25 = 37.5 → **Tier 2** → **Cost: $0.80**
+- **FCS** = 30.0 × 1.25 = 37.5 → **Tier 2** → **Cost**: `$0.80`
 
 **Subtask 3: Compute Financial Metrics**
 
@@ -1754,7 +1759,7 @@ Question 3: Multimodal OR partial obs OR strict schema OR >5 tools?
 - Precision: 3 (exact calculations)
 - Adaptability: 1 (standard formulas)
 - **WCS** = (2×3.0) + (1×2.5) + (1×2.0) + (0×2.0) + (1×2.0) + (3×1.5) + (1×1.5) = 18.5
-- **FCS** = 18.5 → **Tier 1** → **Cost: $0.20**
+- **FCS** = 18.5 → **Tier 1** → **Cost**: `$0.20`
 
 **Subtask 4: Synthesize Investment Thesis**
 
@@ -1766,11 +1771,11 @@ Question 3: Multimodal OR partial obs OR strict schema OR >5 tools?
 - Precision: 2 (coherent reasoning required)
 - Adaptability: 2 (must adapt to varied financial situations)
 - **WCS** = (3×3.0) + (2×2.5) + (1×2.0) + (0×2.0) + (1×2.0) + (2×1.5) + (2×1.5) = 23.0
-- **FCS** = 23.0 → **Tier 1** → **Cost: $0.60**
+- **FCS** = 23.0 → **Tier 1** → **Cost**: `$0.60`
 
-**Total Heterogeneous Cost**: $0.15 + $0.80 + $0.20 + $0.60 = **$1.75**
+**Total Heterogeneous Cost**: `$0.15` + `$0.80` + `$0.20` + `$0.60` = `$1.75`
 
-**Savings**: ($4.20 - $1.75) / $4.20 = **58% reduction**
+**Savings**: (`$4.20` - `$1.75`) / `$4.20` = **58% reduction**
 
 **Trade-offs**:
 

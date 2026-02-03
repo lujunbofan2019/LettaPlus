@@ -28,11 +28,11 @@ Enterprise agentic AI systems face two fundamental architectural challenges:
 
 **Challenge 1: The Complexity-Cost Dilemma**
 
-When faced with a complex task like “Analyze a company’s financial health from SEC filings and generate an investment thesis,” practitioners confront a stark choice:
-- **Monolithic Frontier Model**: Use Claude Opus 4.5 for the entire workflow (87% success, $4.20/task, 180s latency)
-- **Efficient Model**: Use GPT-4o-mini for everything (23% success, $0.40/task, 45s latency)
+When faced with a complex task like "Analyze a company's financial health from SEC filings and generate an investment thesis," practitioners confront a stark choice:
+- **Monolithic Frontier Model**: Use Claude Opus 4.5 + Extended Thinking for the entire workflow (87% success, `$4.20`/task, 180s latency)
+- **Efficient Model**: Use GPT-5 Nano for everything (23% success, `$0.01`/task, 45s latency)
 
-*Note: As of February 2026, Claude Opus 4.5 costs ~$5/$25 per 1M input/output tokens, while GPT-4o-mini costs ~$0.15/$0.60—a 30× difference that makes model selection economically critical.*
+*Note: As of February 2026 (via [OpenRouter](https://openrouter.ai/models)), Claude Opus 4.5 with extended thinking generates 5-10x more output tokens than visible responses, resulting in adjusted output costs of `$125-250`/1M tokens vs GPT-5 Nano's `$0.40`/1M—a 300-600× difference that makes model selection economically critical.*
 
 Neither option satisfies. Option A delivers results but at unsustainable cost. Option B fails so frequently that effective cost (including remediation) often exceeds Option A.
 
@@ -169,32 +169,38 @@ AMSP quantifies task complexity across **seven dimensions** with explicit scorin
 
 ### 2.1.2 Refined Tier Mapping
 
-FCS scores map to four capability tiers:
+FCS scores map to four capability tiers. **Critical insight**: Frontier and Strong models are typically used with reasoning modes enabled, which dramatically increases real-world costs.
 
-| **Tier** | **FCS Range** | **Typical Capabilities** | **Example Models** | **Cost/Task** |
+| **Tier** | **FCS Range** | **Typical Capabilities** | **Example Models** | **Adjusted Cost/Task*** |
 | --- | --- | --- | --- | --- |
-| **Tier 0: Efficient** | 0-12 | Single-step or short linear chains; minimal context; text-only | Gemini 3 Flash, Claude Haiku 4.5, GPT-4o-mini, DeepSeek-V3 | <$0.10 |
-| **Tier 1: Capable** | 13-25 | Moderate workflows; <32K context; 2-4 tools; basic structured outputs | Gemini 3 Pro, Llama 4 Maverick, Claude Sonnet 4.5 | $0.10-0.50 |
-| **Tier 2: Strong** | 26-50 | Long-horizon planning; large context; complex tool orchestration | GPT-4o, Claude Sonnet 4.5, Gemini 3 Pro (long-context) | $0.50-1.50 |
-| **Tier 3: Frontier** | 51+ | Multimodal reasoning; partial observability; 10+ step workflows | GPT-5, Claude Opus 4.5, Gemini 3 Deep Think | >$1.50 |
+| **Tier 0: Efficient** | 0-12 | Single-step or short linear chains; minimal context; text-only; no reasoning | GPT-5 Nano, Grok 4.1 Fast, Gemini 3 Flash, DeepSeek V3.2 | `<$0.01` |
+| **Tier 1: Capable** | 13-25 | Moderate workflows; <32K context; 2-4 tools; basic structured outputs | Claude Haiku 4.5, GPT-5 Mini, Gemini 3 Flash, Llama 4 Maverick | `$0.01-0.02` |
+| **Tier 2: Strong** | 26-50 | Long-horizon planning; large context; complex tool orchestration; moderate reasoning (2-4x) | Claude Sonnet 4.5, GPT-5, Grok 4, Qwen3 Max | `$0.04-0.10` |
+| **Tier 3: Frontier** | 51+ | Multimodal reasoning; partial observability; 10+ step workflows; deep reasoning (5-10x) | Claude Opus 4.5, GPT-5.2 Pro, Gemini 3 Pro | `$0.15-0.30` |
 
-**Model Pricing Reference (as of February 2026)**:
+*\*Adjusted Cost/Task assumes 1K input + 1K output tokens with typical reasoning overhead for each tier.*
 
-| Model | Input ($/1M) | Output ($/1M) | Tier | Notes |
-|-------|--------------|---------------|------|-------|
-| GPT-4o-mini | $0.15 | $0.60 | 0 | Best value for simple tasks |
-| Llama 4 Maverick | $0.19 | $0.30 | 0-1 | Open-weights, 1M context |
-| DeepSeek-V3 | $0.27 | $0.42 | 0-1 | Cache hits: $0.07 input |
-| Gemini 3 Flash | $0.50 | $3.00 | 0-1 | 1M context, fast |
-| Claude Haiku 4.5 | $1.00 | $5.00 | 0-1 | Good balance |
-| Gemini 3 Pro | $2.00 | $12.00 | 1-2 | 2M context; $4/$18 >200K |
-| GPT-4o | $2.50 | $10.00 | 1-2 | 128K context |
-| Claude Sonnet 4.5 | $3.00 | $15.00 | 1-2 | Strong reasoning |
-| GPT-5 | $1.25 | $10.00 | 3 | 400K context, best value frontier |
-| Claude Opus 4.5 | $5.00 | $25.00 | 3 | Strongest reasoning |
-| Gemini 3 Deep Think | $2.00 | $12.00 | 3 | Extended reasoning mode |
+**Model Pricing Reference with Reasoning Overhead (as of February 2026, via [OpenRouter](https://openrouter.ai/models))**:
 
-*Pricing subject to change. Batch APIs typically offer 50% discounts. Check provider documentation for current rates.*
+| Model | Base In/Out (per 1M) | Adjusted Out* | Tier | Notes |
+|-------|---------------------|---------------|------|-------|
+| GPT-5 Nano | `$0.05` / `$0.40` | `$0.40` | 0 | Ultra-low latency, no reasoning |
+| Grok 4.1 Fast | `$0.20` / `$0.50` | `$0.50` | 0 | 2M context, fast inference |
+| DeepSeek V3.2 | `$0.25` / `$0.38` | `$0.38-2` | 0-1 | GPT-5 class, optional thinking |
+| GPT-5 Mini | `$0.25` / `$2.00` | `$2.00` | 0-1 | Lightweight GPT-5 |
+| Llama 4 Maverick | `$0.35` / `$1.15` | `$1.15` | 0-1 | Open-weights, 1M context |
+| Gemini 3 Flash | `$0.50` / `$3.00` | `$3.00` | 0-1 | 1M context, speed-optimized |
+| Claude Haiku 4.5 | `$1.00` / `$5.00` | `$5.00` | 1 | Good balance, no extended thinking |
+| GPT-5 | `$1.25` / `$10.00` | `$20-40` | 2 | Medium reasoning effort (2-4x) |
+| Grok 4 | `$0.50` / `$2.00` | `$4-8` | 2 | Thinking mode (2-4x) |
+| Gemini 3 Pro | `$2.00` / `$12.00` | `$24-48` | 2-3 | Deep Think + long ctx (2-4x) |
+| Claude Sonnet 4.5 | `$3.00` / `$15.00` | `$30-60` | 2 | Extended thinking (2-4x) |
+| GPT-5.2 Pro | `$1.75` / `$14.00` | `$70-140` | 3 | xhigh effort (5-10x) |
+| Claude Opus 4.5 | `$5.00` / `$25.00` | `$125-250` | 3 | Extended Thinking (5-10x) |
+
+*\*Adjusted Output reflects typical reasoning token overhead. Frontier models with deep reasoning generate 5-10x more tokens than visible output. Strong models see 2-4x overhead. Efficient models have no reasoning overhead.*
+
+**Key Finding**: The 300-600× real-world cost difference between Frontier (with extended thinking) and Efficient tiers makes complexity-aware model selection economically critical.
 
 ### 2.1.3 Lightweight Validation Probe (LVP)
 
@@ -455,10 +461,10 @@ WCM Scores:
 - **FCS**: 17.0 → **Tier 1**
 
 **Cost Comparison**:
-- **Monolithic (Tier 2 for all)**: $0.85 × 4 steps = $3.40
-- **Decomposed (Tier 0, 2, 1, 1)**: $0.10 + $0.82 + $0.18 + $0.35 = **$1.45** (57% savings)
+- **Monolithic (Tier 2 for all)**: `$0.85` × 4 steps = `$3.40`
+- **Decomposed (Tier 0, 2, 1, 1)**: `$0.10` + `$0.82` + `$0.18` + `$0.35` = `$1.45` (57% savings)
 
-**Decision**: Decomposition saves $1.95 per task with minimal coordination overhead → **Generate workflow**.
+**Decision**: Decomposition saves `$1.95` per task with minimal coordination overhead → **Generate workflow**.
 
 ### 3.3 Workflow Generation with Complexity Annotations
 
@@ -555,10 +561,10 @@ The system maintains a library of worker agent templates, each preconfigured for
 
 ```
 templates/
-├── worker_tier0_efficient.af2       # GPT-4o-mini, Claude Haiku 4.5, Gemini 3 Flash, DeepSeek-V3
-├── worker_tier1_capable.af2         # Claude Sonnet 4, GPT-4o, Gemini 3 Pro, Llama 4 70B
-├── worker_tier2_strong.af2          # Claude Sonnet 4.5, GPT-4.5, Gemini 3 Pro (long-context)
-└── worker_tier3_frontier.af2        # Claude Opus 4.5, GPT-5, Gemini 3 Deep Think
+├── worker_tier0_efficient.af2       # GPT-5 Nano, Grok 4.1 Fast, Gemini 3 Flash, DeepSeek V3.2
+├── worker_tier1_capable.af2         # Claude Haiku 4.5, GPT-5 Mini, Gemini 3 Flash, Llama 4 Maverick
+├── worker_tier2_strong.af2          # Claude Sonnet 4.5, GPT-5, Grok 4, Gemini 3 Pro
+└── worker_tier3_frontier.af2        # Claude Opus 4.5, GPT-5.2 Pro, Gemini 3 Pro (Deep Think)
 ```
 
 **Example Tier 1 Template**:
@@ -683,19 +689,19 @@ The choreography-based execution model ensures safe parallelism:
 
 | **Step** | **Skill** | **FCS** | **Tier** | **Model** | **Cost** |
 | --- | --- | --- | --- | --- | --- |
-| 1. Retrieve Filings | sec_filing_retrieval@1.0.0 | 8.5 | 0 | Gemini 3 Flash | $0.08 |
-| 2. Extract Tables | financial_table_extraction@2.1.0 | 29.4 | 2 | Claude Sonnet 4.5 | $0.72 |
-| 3. Calculate Metrics | financial_calculator@1.0.0 | 14.5 | 1 | Claude Sonnet 4 | $0.15 |
-| 4. Generate Thesis | investment_thesis_writer@1.0.0 | 17.0 | 1 | Claude Sonnet 4 | $0.30 |
+| 1. Retrieve Filings | sec_filing_retrieval@1.0.0 | 8.5 | 0 | Gemini 3 Flash | `$0.08` |
+| 2. Extract Tables | financial_table_extraction@2.1.0 | 29.4 | 2 | Claude Sonnet 4.5 | `$0.72` |
+| 3. Calculate Metrics | financial_calculator@1.0.0 | 14.5 | 1 | Claude Sonnet 4 | `$0.15` |
+| 4. Generate Thesis | investment_thesis_writer@1.0.0 | 17.0 | 1 | Claude Sonnet 4 | `$0.30` |
 
 **Decomposed Performance**:
-- Total Cost per Task: **$1.45** (57% reduction)
+- Total Cost per Task: `$1.45` (57% reduction)
 - Success Rate: **89%** (+2% improvement!)
 - Latency: **95 seconds** (47% faster due to parallelization)
 
 **Monthly Volume**: 500 analyses
-**Monthly Cost**: $725 (savings: $975/month)
-**Annual Savings**: $11,700
+**Monthly Cost**: `$725` (savings: `$975`/month)
+**Annual Savings**: `$11,700`
 
 ### Performance Analysis: Why Decomposition Improved Success Rate
 

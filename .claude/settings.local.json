@@ -47,7 +47,9 @@
       "Bash(wc:*)",
       "Skill(keybindings-help)",
       "Bash(cat:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "WebFetch(domain:openrouter.ai)",
+      "Bash(git diff:*)"
     ]
   }
 }
