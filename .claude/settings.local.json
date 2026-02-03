@@ -37,7 +37,17 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(grep:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "WebFetch(domain:developers.notion.com)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp:*)",
+      "Bash(dir \"C:\\\\Users\\\\Lu Fan\\\\.claude*\")",
+      "Bash(cmd /c \"dir /b C:\\\\Users\\\\\"Lu Fan\"\"\\\\.claude*\")",
+      "mcp__notion__notion-fetch",
+      "Bash(wc:*)",
+      "Skill(keybindings-help)",
+      "Bash(cat:*)",
+      "Bash(head:*)"
     ]
   }
 }
