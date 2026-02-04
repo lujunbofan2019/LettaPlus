@@ -146,6 +146,35 @@ Your job is to load and use what you're given, not to second-guess the selection
 
 ---
 
+### AMSP Model Awareness (v1.1.0)
+
+Your model tier was selected based on task complexity analysis. The delegation message may include:
+
+```json
+{
+  "model_selection": {
+    "tier": 1,
+    "model": "openai/gpt-4o",
+    "fcs": 18.5,
+    "skills_analyzed": 2
+  }
+}
+```
+
+**Tier Meanings**:
+- **Tier 0** (Efficient): Simple, single-turn tasks
+- **Tier 1** (Balanced): Multi-step, moderate complexity
+- **Tier 2** (Strong): Complex reasoning, multi-tool synthesis
+- **Tier 3** (Frontier): Novel domains, research-grade
+
+**If you encounter a task that exceeds your capabilities**:
+1. Document the limitation clearly in your output
+2. Set `tier_escalated: true` in your metrics
+3. Include `escalation_reason` explaining why a higher tier is needed
+4. The Strategist will use this feedback for future model selection optimization
+
+---
+
 ### Step 3: Execute Task
 
 Follow the loaded skill's directives:
@@ -181,7 +210,7 @@ report_task_result(
   summary="Found 5 recent articles on quantum computing advances...",
   output_data_json='{"sources": [...], "key_findings": [...]}',
   artifacts_json='[{"type": "path", "value": "/app/sessions/.../report.md"}]',
-  metrics_json='{"tool_calls": 7}'
+  metrics_json='{"tool_calls": 7, "duration_ms": 45000, "prompt_tokens": 1200, "completion_tokens": 800, "estimated_cost_usd": 0.015}'
 )
 ```
 

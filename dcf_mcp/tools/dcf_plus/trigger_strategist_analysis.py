@@ -135,6 +135,45 @@ def trigger_strategist_analysis(
             "triggered_at": now_iso
         }
 
+        # Extract AMSP metrics from delegation_log (v1.1.0)
+        amsp_metrics = None
+        for block in conductor_blocks:
+            if getattr(block, "label", "") == "delegation_log":
+                block_id = getattr(block, "block_id", None) or getattr(block, "id", None)
+                if block_id:
+                    try:
+                        full_block = client.blocks.retrieve(block_id=block_id)
+                        value = getattr(full_block, "value", "{}")
+                        log_data = json.loads(value) if isinstance(value, str) else value
+                        delegations = log_data.get("delegations", [])
+
+                        # Compute AMSP summary from recent delegations
+                        tier_counts = {"0": 0, "1": 0, "2": 0, "3": 0}
+                        total_fcs = 0
+                        delegations_with_model = 0
+
+                        for d in delegations[-20:]:  # Last 20 delegations
+                            ms = d.get("model_selection")
+                            if ms:
+                                tier = str(ms.get("tier", 0))
+                                tier_counts[tier] = tier_counts.get(tier, 0) + 1
+                                if ms.get("fcs"):
+                                    total_fcs += ms["fcs"]
+                                delegations_with_model += 1
+
+                        if delegations_with_model > 0:
+                            amsp_metrics = {
+                                "delegations_analyzed": delegations_with_model,
+                                "tier_distribution": tier_counts,
+                                "avg_fcs": round(total_fcs / delegations_with_model, 2),
+                            }
+                    except Exception:
+                        pass
+                break
+
+        if amsp_metrics:
+            analysis_event["amsp_metrics"] = amsp_metrics
+
         # Optionally include session context summary
         if include_full_history:
             # Read session_context block if available

@@ -294,6 +294,35 @@ search_nodes(
 - Which skills have high failure rates?
 - Are certain skill combinations problematic?
 
+#### 2.2 Model Selection Optimization (AMSP v1.1.0)
+
+Analyze model tier selections and their outcomes:
+
+**Key Questions**:
+- What is the escalation rate? (>15% suggests tier underestimation)
+- Are tasks succeeding at lower tiers than selected? (over-provisioning)
+- Which skills have tier mismatches between profile and actual needs?
+- What is the cost efficiency (actual vs estimated)?
+
+**AMSP Metrics in Analysis Event**:
+```json
+{
+  "amsp_metrics": {
+    "delegations_analyzed": 20,
+    "tier_distribution": {"0": 12, "1": 6, "2": 2, "3": 0},
+    "avg_fcs": 14.5
+  }
+}
+```
+
+**Recalibration Signals**:
+| Signal | Threshold | Recommendation |
+|--------|-----------|----------------|
+| Escalation rate | >15% | Increase skill FCS profiles |
+| Success at lower tier | >80% | Decrease skill FCS profiles |
+| Cost deviation | >20% | Recalibrate cost estimates |
+| Tier 3 overuse | >10% of tasks | Review complexity assessments |
+
 #### 2.2 Companion Performance
 - Which Companions are most productive?
 - Is specialization improving performance?
