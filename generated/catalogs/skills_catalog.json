@@ -1,188 +1,94 @@
 {
-  "generated_at": "2026-02-04T13:57:36Z",
   "skills": [
     {
       "manifestId": "skill.analyze.synthesis@0.1.0",
       "skillName": "analyze.synthesis",
       "skillVersion": "0.1.0",
-      "description": "Synthesizes multi-source research into themes and risks",
-      "tags": [
-        "analysis",
-        "synthesis"
-      ],
-      "file": "skill.analyze.synthesis-0.1.0.json"
+      "path": "../manifests/skill.analyze.synthesis-0.1.0.json"
     },
     {
       "manifestId": "skill.calculate.pricing@0.1.0",
       "skillName": "calculate.pricing",
       "skillVersion": "0.1.0",
-      "description": "Calculates order totals including taxes, discounts, and shipping",
-      "tags": [
-        "calculation",
-        "pricing",
-        "testing",
-        "phase-1"
-      ],
-      "file": "skill.calculate.pricing-0.1.0.json"
+      "path": "../manifests/skill.calculate.pricing-0.1.0.json"
     },
     {
       "manifestId": "skill.compose.response@0.1.0",
       "skillName": "compose.response",
       "skillVersion": "0.1.0",
-      "description": "Generates professional customer support response messages",
-      "tags": [
-        "support",
-        "writing",
-        "response",
-        "testing",
-        "phase-2"
-      ],
-      "file": "skill.compose.response-0.1.0.json"
+      "path": "../manifests/skill.compose.response-0.1.0.json"
     },
     {
       "manifestId": "skill.diagnose.issue@0.1.0",
       "skillName": "diagnose.issue",
       "skillVersion": "0.1.0",
-      "description": "Analyzes customer issue symptoms and identifies root causes",
-      "tags": [
-        "support",
-        "diagnosis",
-        "troubleshooting",
-        "testing",
-        "phase-2"
-      ],
-      "file": "skill.diagnose.issue-0.1.0.json"
+      "path": "../manifests/skill.diagnose.issue-0.1.0.json"
     },
     {
       "manifestId": "skill.generate.invoice@0.1.0",
       "skillName": "generate.invoice",
       "skillVersion": "0.1.0",
-      "description": "Generates formatted invoice documents from validated and priced orders",
-      "tags": [
-        "generation",
-        "invoice",
-        "document",
-        "testing",
-        "phase-1"
-      ],
-      "file": "skill.generate.invoice-0.1.0.json"
+      "path": "../manifests/skill.generate.invoice-0.1.0.json"
     },
     {
       "manifestId": "skill.lookup.customer@0.1.0",
       "skillName": "lookup.customer",
       "skillVersion": "0.1.0",
-      "description": "Retrieves customer account information and interaction history",
-      "tags": [
-        "support",
-        "customer",
-        "lookup",
-        "testing",
-        "phase-2"
-      ],
-      "file": "skill.lookup.customer-0.1.0.json"
+      "path": "../manifests/skill.lookup.customer-0.1.0.json"
     },
     {
       "manifestId": "skill.plan.actions@0.1.0",
       "skillName": "plan.actions",
       "skillVersion": "0.1.0",
-      "description": "Generates prioritized action plans",
-      "tags": [
-        "plan",
-        "actions"
-      ],
-      "file": "skill.plan.actions-0.1.0.json"
+      "path": "../manifests/skill.plan.actions-0.1.0.json"
     },
     {
       "manifestId": "skill.plan.research_scope@0.1.0",
       "skillName": "plan.research_scope",
       "skillVersion": "0.1.0",
-      "description": "Drafts research scopes and clarifies objectives",
-      "tags": [
-        "plan",
-        "research",
-        "outline"
-      ],
-      "file": "skill.plan.research_scope-0.1.0.json"
+      "path": "../manifests/skill.plan.research_scope-0.1.0.json"
     },
     {
       "manifestId": "skill.qa.review@0.1.0",
       "skillName": "qa.review",
       "skillVersion": "0.1.0",
-      "description": "Reviews deliverables for completeness and gaps",
-      "tags": [
-        "qa",
-        "review"
-      ],
-      "file": "skill.qa.review-0.1.0.json"
+      "path": "../manifests/skill.qa.review-0.1.0.json"
     },
     {
       "manifestId": "skill.research.company@0.1.0",
       "skillName": "research.company",
       "skillVersion": "0.1.0",
-      "description": "Retrieves structured company intelligence records",
-      "tags": [
-        "research",
-        "company",
-        "data"
-      ],
-      "file": "skill.research.company-0.1.0.json"
+      "path": "../manifests/skill.research.company-0.1.0.json"
     },
     {
       "manifestId": "skill.research.news@0.1.0",
       "skillName": "research.news",
       "skillVersion": "0.1.0",
-      "description": "Collects topical headlines and supporting web snippets",
-      "tags": [
-        "research",
-        "news"
-      ],
-      "file": "skill.research.news-0.1.0.json"
+      "path": "../manifests/skill.research.news-0.1.0.json"
     },
     {
       "manifestId": "skill.research.web@0.1.0",
       "skillName": "research.web",
       "skillVersion": "0.1.0",
-      "description": "Lightweight web research capability",
-      "tags": [
-        "research",
-        "web"
-      ],
-      "file": "skill.research.web-0.1.0.json"
+      "path": "../manifests/skill.research.web-0.1.0.json"
     },
     {
       "manifestId": "skill.validate.order@0.1.0",
       "skillName": "validate.order",
       "skillVersion": "0.1.0",
-      "description": "Validates order data including customer, inventory, and address verification",
-      "tags": [
-        "validation",
-        "order",
-        "testing",
-        "phase-1"
-      ],
-      "file": "skill.validate.order-0.1.0.json"
+      "path": "../manifests/skill.validate.order-0.1.0.json"
     },
     {
       "manifestId": "skill.write.briefing@0.1.0",
       "skillName": "write.briefing",
       "skillVersion": "0.1.0",
-      "description": "Produces executive-ready strategic briefings",
-      "tags": [
-        "write",
-        "briefing"
-      ],
-      "file": "skill.write.briefing-0.1.0.json"
+      "path": "../manifests/skill.write.briefing-0.1.0.json"
     },
     {
       "manifestId": "skill.write.summary@0.1.0",
       "skillName": "write.summary",
       "skillVersion": "0.1.0",
-      "description": "Short factual summary writer",
-      "tags": [
-        "write",
-        "summary"
-      ],
-      "file": "skill.write.summary-0.1.0.json"
+      "path": "../manifests/skill.write.summary-0.1.0.json"
     }
   ]
 }

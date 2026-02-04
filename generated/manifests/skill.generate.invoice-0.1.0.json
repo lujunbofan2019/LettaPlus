@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.generate.invoice@0.1.0",
+  "skillPackageId": null,
   "skillName": "generate.invoice",
   "skillVersion": "0.1.0",
   "description": "Generates formatted invoice documents from validated and priced orders",
@@ -16,101 +16,109 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "You are an invoice generation specialist. Your task is to create formatted invoices.\n\n## Generation Steps\n1. Use `documents:create_invoice` to generate the invoice document\n2. The tool will return a formatted invoice with all order details\n\n## Output Format\nReturn the generated invoice with:\n- `invoice_id`: unique invoice identifier\n- `invoice_date`: generation timestamp\n- `order_id`: reference to original order\n- `customer_info`: customer details\n- `line_items`: itemized list with prices\n- `totals`: pricing breakdown\n- `payment_terms`: standard NET-30 terms\n- `document_url`: link to PDF version (simulated)\n",
-  "tools": [
+  "skillDirectives": "You are an invoice generation specialist. Your task is to create formatted invoices.\n\n## Generation Steps\n1. Use `documents:create_invoice` to generate the invoice document\n2. The tool will return a formatted invoice with all order details\n\n## Output Format\nReturn the generated invoice with:\n- `invoice_id`: unique invoice identifier\n- `invoice_date`: generation timestamp\n- `order_id`: reference to original order\n- `customer_info`: customer details\n- `line_items`: itemized list with prices\n- `totals`: pricing breakdown\n- `payment_terms`: standard NET-30 terms\n- `document_url`: link to PDF version (simulated)",
+  "requiredTools": [
     {
+      "toolName": "create_invoice",
+      "description": "Creates formatted invoice document from order data",
+      "json_schema": {
+        "name": "create_invoice",
+        "description": "Creates formatted invoice document from order data",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "order_id": {
+              "type": "string"
+            },
+            "customer_info": {
+              "type": "object",
+              "properties": {
+                "customer_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "customer_id",
+                "name"
+              ]
+            },
+            "line_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "item_description": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit_price": {
+                    "type": "number"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "quantity",
+                  "unit_price"
+                ]
+              }
+            },
+            "totals": {
+              "type": "object",
+              "properties": {
+                "subtotal": {
+                  "type": "number"
+                },
+                "discount": {
+                  "type": "number"
+                },
+                "tax": {
+                  "type": "number"
+                },
+                "shipping": {
+                  "type": "number"
+                },
+                "total": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "total"
+              ]
+            }
+          },
+          "required": [
+            "order_id",
+            "totals"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "documents",
         "toolName": "create_invoice"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "order_id": {
-            "type": "string"
-          },
-          "customer_info": {
-            "type": "object",
-            "properties": {
-              "customer_id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "email": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "customer_id",
-              "name"
-            ]
-          },
-          "line_items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "sku": {
-                  "type": "string"
-                },
-                "item_description": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "integer"
-                },
-                "unit_price": {
-                  "type": "number"
-                },
-                "amount": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "sku",
-                "quantity",
-                "unit_price"
-              ]
-            }
-          },
-          "totals": {
-            "type": "object",
-            "properties": {
-              "subtotal": {
-                "type": "number"
-              },
-              "discount": {
-                "type": "number"
-              },
-              "tax": {
-                "type": "number"
-              },
-              "shipping": {
-                "type": "number"
-              },
-              "total": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "total"
-            ]
-          }
-        },
-        "required": [
-          "order_id",
-          "totals"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": [
+  "requiredDataSources": [
     {
-      "id": "documents",
+      "dataSourceId": "documents",
       "description": "Context about document generation capabilities",
+      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "Document generation tools create formatted business documents\nincluding invoices with standard payment terms and PDF output.\n"

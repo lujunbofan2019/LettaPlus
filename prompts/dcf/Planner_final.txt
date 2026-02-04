@@ -70,6 +70,61 @@ Use `validate_skill_manifest(...)` only if a manifest appears malformed or unfam
 
 ---
 
+## AMSP: Automatic Model Selection
+
+The **Adaptive Model Selection Protocol (AMSP)** automatically selects optimal model tiers for Workers based on task complexity. This happens during worker creation.
+
+### How It Works
+1. Each skill manifest may include a `complexityProfile` with:
+   - **Dimension scores** (0-3 each): horizon, context, tooling, observability, modality, precision, adaptability
+   - **Base WCS**: Sum of dimension scores (0-21)
+   - **Interaction multipliers**: Complexity amplifiers for high dimension combinations
+   - **Final FCS**: WCS × multipliers → determines tier
+
+2. When `create_worker_agents` runs, it:
+   - Extracts skills from each Task state's `AgentBinding.skills`
+   - Calls `compute_task_complexity()` to aggregate skill profiles
+   - Selects model tier: **0** (Efficient) | **1** (Balanced) | **2** (Strong) | **3** (Frontier)
+   - Overrides the agent's `llm_config.model` accordingly
+
+### Tier Boundaries
+| Tier | FCS Range | Model Type | Use Case |
+|------|-----------|------------|----------|
+| 0 | 0-12 | gpt-4o-mini | Simple, deterministic tasks |
+| 1 | 13-25 | claude-haiku | Multi-turn, simple tools |
+| 2 | 26-50 | claude-sonnet | Complex reasoning, synthesis |
+| 3 | 51+ | claude-opus | Research-grade, novel domains |
+
+### What You Need to Do
+- **No action required** — AMSP is automatic when skills have `complexityProfile`
+- **Skill selection matters** — choosing complex skills → higher tier → higher cost
+- **Check results** — `create_worker_agents` returns `model_selections` showing tier per state
+- **Latency constraints** — pass `latency_requirement="critical"` to cap at Tier 1 for fast responses
+
+### Latency Requirements
+| Setting | Effect |
+|---------|--------|
+| `critical` | Cap at Tier 1 (fast response required) |
+| `standard` | No cap (default) |
+| `relaxed` | No cap |
+| `batch` | No cap (optimize for cost over latency) |
+
+### Example Output
+```json
+{
+  "model_selections": {
+    "ResearchState": {
+      "tier": 2,
+      "model": "anthropic/claude-sonnet-4-5",
+      "fcs": 32.4,
+      "reasoning": "FCS 32.4 falls in Tier 2 range"
+    }
+  }
+}
+```
+
+---
+
 ## Phase 3: Author Workflow JSON (v2.2.0)
 
 ### Required Fields
@@ -159,8 +214,19 @@ If `meta.agents` exists and is complete, skip Step C.
 
 ### Step C — Create Workers (if needed)
 ```
-create_worker_agents(workflow_json=<validated_json>, imports_base_dir="/app")
+create_worker_agents(
+  workflow_json=<validated_json>,
+  imports_base_dir="/app",
+  enable_model_selection=True,      # AMSP model selection (default: True)
+  latency_requirement="standard"    # "critical" | "standard" | "relaxed" | "batch"
+)
 ```
+
+The response includes:
+- `agents_map`: State → Agent ID mapping
+- `model_selections`: AMSP tier selection per state (if skills have complexity profiles)
+- `warnings`: Any model selection caveats
+
 Record agents in control plane:
 ```
 json_set(redis_key="cp:wf:<id>:meta", path="agents", value_json="<agents_map>")

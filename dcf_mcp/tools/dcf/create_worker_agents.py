@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import os
 import json
 import uuid
@@ -6,12 +6,17 @@ from pathlib import Path
 
 DEFAULT_AGENTS_DIR = os.getenv("DCF_AGENTS_DIR", "/app/agents")
 
+# AMSP integration: default model override via environment
+AMSP_ENABLED = os.getenv("AMSP_ENABLED", "true").lower() in ("true", "1", "yes")
+
 def create_worker_agents(workflow_json: str,
                          imports_base_dir: str = None,
                          agent_name_prefix: str = None,
                          agent_name_suffix: str = ".af",
                          default_tags_json: str = None,
-                         skip_if_exists: bool = True) -> Dict[str, Any]:
+                         skip_if_exists: bool = True,
+                         enable_model_selection: bool = True,
+                         latency_requirement: str = "standard") -> Dict[str, Any]:
     """Create one worker agent per ASL Task state using Letta .af v2 templates.
 
     Resolution order for agent templates:
@@ -42,6 +47,11 @@ def create_worker_agents(workflow_json: str,
                          Each agent also receives "wf:{workflow_id}" and "state:{StateName}".
       skip_if_exists: If True (default), check for existing workers with matching workflow tag
                       and return them instead of creating duplicates.
+      enable_model_selection: If True (default), use AMSP to compute task complexity from
+                              AgentBinding.skills and select optimal model tier.
+                              Set AMSP_ENABLED=false environment variable to disable globally.
+      latency_requirement: Latency constraint for AMSP model selection:
+                           "critical" (cap at Tier 1), "standard", "relaxed", or "batch".
 
     Returns:
       dict: {
@@ -51,6 +61,7 @@ def create_worker_agents(workflow_json: str,
         "agents_map": dict,                 # { state_name: agent_id }
         "created": list,                    # [{ "state": ..., "agent_id": ..., "agent_name": ... }, ...]
         "existing": list,                   # [{ "state": ..., "agent_id": ..., "agent_name": ... }, ...] (when skip_if_exists)
+        "model_selections": dict,           # { state_name: { tier, model, fcs, reasoning } } (when AMSP enabled)
         "warnings": list                    # non-fatal issues
       }
     """
@@ -65,12 +76,27 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": ["Install/upgrade Letta Python client in the server image."]
         }
+
+    # --- Import AMSP complexity computation (optional) ---
+    compute_complexity_fn = None
+    if AMSP_ENABLED and enable_model_selection:
+        try:
+            from dcf_mcp.tools.dcf.compute_task_complexity import compute_task_complexity
+            compute_complexity_fn = compute_task_complexity
+        except ImportError:
+            try:
+                from tools.dcf.compute_task_complexity import compute_task_complexity
+                compute_complexity_fn = compute_task_complexity
+            except ImportError:
+                pass  # AMSP not available; proceed without model selection
 
     warnings = []
     created = []
     agents_map = {}
+    model_selections = {}  # AMSP: { state_name: { tier, model, fcs, reasoning } }
     agent_name_suffix = agent_name_suffix if agent_name_suffix is not None else ".af"
 
     # --- Load workflow JSON ---
@@ -84,6 +110,7 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": []
         }
 
@@ -96,6 +123,7 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": []
         }
 
@@ -110,6 +138,7 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": []
         }
 
@@ -125,6 +154,7 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": []
         }
 
@@ -164,6 +194,7 @@ def create_worker_agents(workflow_json: str,
                     "agents_map": existing_map,
                     "created": [],
                     "existing": existing_workers,
+                    "model_selections": {},  # N/A for existing workers
                     "warnings": ["skip_if_exists=True: found %d existing worker(s)" % len(existing_workers)]
                 }
         except Exception as e:
@@ -290,6 +321,7 @@ def create_worker_agents(workflow_json: str,
             "agents_map": {},
             "created": [],
             "existing": [],
+            "model_selections": {},
             "warnings": warnings
         }
 
@@ -350,6 +382,7 @@ def create_worker_agents(workflow_json: str,
                     "agents_map": agents_map,
                     "created": created,
                     "existing": [],
+                    "model_selections": model_selections,
                     "warnings": warnings
                 }
         elif isinstance(ref_name, str):
@@ -370,6 +403,7 @@ def create_worker_agents(workflow_json: str,
                     "agents_map": agents_map,
                     "created": created,
                     "existing": [],
+                    "model_selections": model_selections,
                     "warnings": warnings
                 }
         else:
@@ -389,8 +423,38 @@ def create_worker_agents(workflow_json: str,
                     "agents_map": agents_map,
                     "created": created,
                     "existing": [],
+                    "model_selections": model_selections,
                     "warnings": warnings
                 }
+
+        # --- AMSP Model Selection (if enabled) ---
+        selected_model = None
+        binding_skills = agent_binding.get("skills") or []
+        if compute_complexity_fn and binding_skills:
+            try:
+                complexity_result = compute_complexity_fn(
+                    skills_json=json.dumps(binding_skills),
+                    latency_requirement=latency_requirement,
+                )
+                if complexity_result.get("status") and not complexity_result.get("error"):
+                    selected_model = complexity_result.get("latency_adjusted_model") or complexity_result.get("recommended_model")
+                    model_selections[s_name] = {
+                        "tier": complexity_result.get("latency_adjusted_tier", complexity_result.get("recommended_tier")),
+                        "model": selected_model,
+                        "fcs": complexity_result.get("final_fcs"),
+                        "base_wcs": complexity_result.get("base_wcs"),
+                        "reasoning": complexity_result.get("tier_reasoning"),
+                        "skills_analyzed": complexity_result.get("skills_analyzed", len(binding_skills)),
+                        "skills_with_profiles": complexity_result.get("skills_with_profiles", 0),
+                        "warnings": complexity_result.get("warnings", []),
+                    }
+                else:
+                    warnings.append("State '%s': AMSP complexity failed: %s" % (s_name, complexity_result.get("error")))
+            except Exception as e:
+                warnings.append("State '%s': AMSP complexity exception: %s: %s" % (s_name, e.__class__.__name__, e))
+        elif compute_complexity_fn and not binding_skills:
+            # No skills defined - use default model selection (Tier 1)
+            warnings.append("State '%s': No skills in AgentBinding; skipping AMSP model selection" % s_name)
 
         # --- Build creation payload from v2/v1 template, de-duping tools ---
         creation_payload = {}
@@ -404,6 +468,26 @@ def create_worker_agents(workflow_json: str,
                   "include_base_tool_rules"]:
             if k in template_obj:
                 creation_payload[k] = template_obj[k]
+
+        # --- AMSP: Override llm_config.model if model was selected ---
+        if selected_model:
+            llm_config = creation_payload.get("llm_config")
+            if isinstance(llm_config, dict):
+                # Clone to avoid mutating template
+                llm_config = dict(llm_config)
+                original_model = llm_config.get("model")
+                llm_config["model"] = selected_model
+                creation_payload["llm_config"] = llm_config
+                if original_model and original_model != selected_model:
+                    warnings.append("State '%s': AMSP overrode model from '%s' to '%s'" % (s_name, original_model, selected_model))
+            else:
+                # No llm_config in template; create one with the selected model
+                # Use common defaults compatible with litellm router format
+                creation_payload["llm_config"] = {
+                    "model": selected_model,
+                    "model_endpoint_type": "openai",  # litellm compatible
+                }
+                warnings.append("State '%s': AMSP created llm_config with model '%s'" % (s_name, selected_model))
 
         # De-duplicate tools: prefer attaching tool_ids resolved by tool name; avoid creating new ones from source
         resolved_tool_ids = []
@@ -479,6 +563,7 @@ def create_worker_agents(workflow_json: str,
                 "agents_map": agents_map,
                 "created": created,
                 "existing": [],
+                "model_selections": model_selections,
                 "warnings": warnings
             }
 
@@ -492,6 +577,7 @@ def create_worker_agents(workflow_json: str,
                 "agents_map": agents_map,
                 "created": created,
                 "existing": [],
+                "model_selections": model_selections,
                 "warnings": warnings
             }
 
@@ -533,6 +619,8 @@ def create_worker_agents(workflow_json: str,
     status = "Created %d worker agents for workflow '%s'." % (len(created), workflow_id)
     if control_plane_updated:
         status += " agents_map persisted to control plane."
+    if model_selections:
+        status += " AMSP model selection applied to %d agent(s)." % len(model_selections)
     return {
         "status": status,
         "error": None,
@@ -540,5 +628,6 @@ def create_worker_agents(workflow_json: str,
         "agents_map": agents_map,
         "created": created,
         "existing": [],
+        "model_selections": model_selections,
         "warnings": warnings
     }

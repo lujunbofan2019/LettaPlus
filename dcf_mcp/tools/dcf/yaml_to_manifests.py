@@ -19,6 +19,7 @@ except ImportError:
     yaml = None  # type: ignore
 
 DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
+MANIFEST_API_VERSION_WITH_AMSP = "v2.1.0"
 DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
 
 _VALID_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -316,9 +317,85 @@ def yaml_to_manifests(
 
                 data_sources.append(ds_obj)
 
+            # Process complexity profile (AMSP v3.0)
+            complexity_profile = spec.get("complexityProfile")
+            if complexity_profile and isinstance(complexity_profile, dict):
+                # Validate and normalize complexity profile
+                validated_profile: Dict[str, Any] = {}
+
+                # Required fields
+                base_wcs = complexity_profile.get("baseWCS")
+                if isinstance(base_wcs, (int, float)) and 0 <= base_wcs <= 21:
+                    validated_profile["baseWCS"] = int(base_wcs)
+                else:
+                    out["warnings"].append(
+                        f"Invalid baseWCS in {skill_file.name}; must be 0-21"
+                    )
+                    complexity_profile = None
+
+                dim_scores = complexity_profile.get("dimensionScores") if complexity_profile else None
+                if isinstance(dim_scores, dict):
+                    required_dims = ["horizon", "context", "tooling", "observability",
+                                     "modality", "precision", "adaptability"]
+                    valid_dims = {}
+                    for dim in required_dims:
+                        val = dim_scores.get(dim)
+                        if isinstance(val, (int, float)) and 0 <= val <= 3:
+                            valid_dims[dim] = int(val)
+                        else:
+                            out["warnings"].append(
+                                f"Invalid {dim} in complexityProfile for {skill_file.name}"
+                            )
+                            complexity_profile = None
+                            break
+                    if complexity_profile:
+                        validated_profile["dimensionScores"] = valid_dims
+                elif complexity_profile:
+                    out["warnings"].append(
+                        f"Missing dimensionScores in {skill_file.name}"
+                    )
+                    complexity_profile = None
+
+                # Optional fields
+                if complexity_profile:
+                    multipliers = complexity_profile.get("interactionMultipliers", [])
+                    if isinstance(multipliers, list):
+                        validated_profile["interactionMultipliers"] = multipliers
+
+                    final_fcs = complexity_profile.get("finalFCS")
+                    if isinstance(final_fcs, (int, float)):
+                        validated_profile["finalFCS"] = float(final_fcs)
+
+                    rec_tier = complexity_profile.get("recommendedTier")
+                    if isinstance(rec_tier, int) and rec_tier in (0, 1, 2, 3):
+                        validated_profile["recommendedTier"] = rec_tier
+
+                    maturity = complexity_profile.get("maturityLevel", "provisional")
+                    if maturity in ("provisional", "emerging", "validated", "stable"):
+                        validated_profile["maturityLevel"] = maturity
+                    else:
+                        validated_profile["maturityLevel"] = "provisional"
+
+                    sample_size = complexity_profile.get("sampleSize", 0)
+                    if isinstance(sample_size, int) and sample_size >= 0:
+                        validated_profile["sampleSize"] = sample_size
+
+                    validated_models = complexity_profile.get("validatedModels", [])
+                    if isinstance(validated_models, list):
+                        validated_profile["validatedModels"] = validated_models
+
+                    last_calibrated = complexity_profile.get("lastCalibrated")
+                    if isinstance(last_calibrated, str):
+                        validated_profile["lastCalibrated"] = last_calibrated
+
+                    complexity_profile = validated_profile
+
+            # Determine manifest API version based on presence of complexity profile
+            api_version = MANIFEST_API_VERSION_WITH_AMSP if complexity_profile else DEFAULT_MANIFEST_API_VERSION
+
             # Build manifest
             manifest = {
-                "manifestApiVersion": DEFAULT_MANIFEST_API_VERSION,
+                "manifestApiVersion": api_version,
                 "manifestId": manifest_id,
                 "skillPackageId": None,
                 "skillName": skill_name,
@@ -333,6 +410,10 @@ def yaml_to_manifests(
                 "requiredTools": required_tools,
                 "requiredDataSources": data_sources
             }
+
+            # Add complexity profile if present
+            if complexity_profile:
+                manifest["complexityProfile"] = complexity_profile
 
             # Write manifest
             safe_name = _safe_filename(manifest_id)

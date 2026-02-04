@@ -16,6 +16,24 @@ spec:
     egress: none
     secrets: []
 
+  # AMSP v3.0 Complexity Profile
+  # Simple single-turn text summarization task
+  complexityProfile:
+    baseWCS: 3
+    dimensionScores:
+      horizon: 0       # Single-turn: just write a summary
+      context: 1       # Local: needs input text only
+      tooling: 1       # Simple: one LLM tool
+      observability: 0 # Full: straightforward text output
+      modality: 0      # Text-only
+      precision: 1     # Moderate: accurate but not exact
+      adaptability: 0  # Stable: fixed task type
+    interactionMultipliers: []  # No high dimension pairs
+    finalFCS: 3.0
+    recommendedTier: 0  # Efficient tier sufficient
+    maturityLevel: provisional
+    sampleSize: 0
+
   directives: |
     Write concise, factual summaries under 150 words.
     No speculation or unsupported claims.

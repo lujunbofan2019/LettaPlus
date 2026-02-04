@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selinafinance.co.uk/schemas/amsp-complexity-profile-1.0.0.json",
+  "title": "AMSP Complexity Profile v1.0.0",
+  "description": "Defines the complexity profile for a skill using the Adaptive Model Selection Protocol (AMSP) v3.0. Used to determine optimal model tier for task execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "baseWCS": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 21,
+      "description": "Base Weighted Complexity Score - sum of 7 dimension scores (0-3 each)"
+    },
+    "dimensionScores": {
+      "type": "object",
+      "description": "Individual WCM dimension scores (0-3 each)",
+      "additionalProperties": false,
+      "properties": {
+        "horizon": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Planning horizon: 0=single-turn, 1=multi-turn, 2=session, 3=multi-session"
+        },
+        "context": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Context complexity: 0=self-contained, 1=local, 2=domain-specific, 3=cross-domain synthesis"
+        },
+        "tooling": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Tool requirements: 0=none, 1=simple, 2=multi-tool, 3=complex orchestration"
+        },
+        "observability": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Environment visibility: 0=full, 1=high, 2=partial, 3=opaque"
+        },
+        "modality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Input/output types: 0=text-only, 1=structured data, 2=simple multimodal, 3=complex multimodal"
+        },
+        "precision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Accuracy requirements: 0=approximate, 1=moderate, 2=high, 3=exact correctness"
+        },
+        "adaptability": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Context stability: 0=stable, 1=slow-changing, 2=dynamic, 3=highly volatile"
+        }
+      },
+      "required": ["horizon", "context", "tooling", "observability", "modality", "precision", "adaptability"]
+    },
+    "interactionMultipliers": {
+      "type": "array",
+      "description": "Applicable interaction multipliers between dimension pairs",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pair": {
+            "type": "string",
+            "description": "Dimension pair identifier (e.g., 'horizon+context')"
+          },
+          "multiplier": {
+            "type": "number",
+            "minimum": 1.0,
+            "maximum": 2.0,
+            "description": "Multiplicative factor (1.0-1.5 typical)"
+          },
+          "condition": {
+            "type": "string",
+            "description": "Condition description (e.g., 'High Horizon + High Context')"
+          }
+        },
+        "required": ["pair", "multiplier"]
+      },
+      "default": []
+    },
+    "totalMultiplier": {
+      "type": "number",
+      "minimum": 1.0,
+      "description": "Product of all applicable interaction multipliers",
+      "default": 1.0
+    },
+    "finalFCS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Final Complexity Score = baseWCS × totalMultiplier"
+    },
+    "recommendedTier": {
+      "type": "integer",
+      "enum": [0, 1, 2, 3],
+      "description": "Recommended model tier based on FCS: 0=0-12, 1=13-25, 2=26-50, 3=51+"
+    },
+    "maturityLevel": {
+      "type": "string",
+      "enum": ["provisional", "emerging", "validated", "stable"],
+      "description": "Bootstrap Protocol maturity level based on calibration sample size",
+      "default": "provisional"
+    },
+    "validatedModels": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Models confirmed to work reliably for this skill at the recommended tier",
+      "default": []
+    },
+    "successRateByTier": {
+      "type": "object",
+      "description": "Observed success rates by tier (0.0-1.0)",
+      "additionalProperties": false,
+      "properties": {
+        "tier0": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "tier1": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "tier2": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "tier3": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      },
+      "default": {}
+    },
+    "sampleSize": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of executions used for calibration",
+      "default": 0
+    },
+    "confidenceInterval": {
+      "type": "object",
+      "description": "95% confidence interval for FCS estimate",
+      "additionalProperties": false,
+      "properties": {
+        "lower": { "type": "number" },
+        "upper": { "type": "number" }
+      }
+    },
+    "lastCalibrated": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of last calibration"
+    },
+    "calibrationNotes": {
+      "type": ["string", "null"],
+      "description": "Human-readable notes about calibration methodology or caveats"
+    }
+  },
+  "required": ["baseWCS", "dimensionScores", "maturityLevel"],
+
+  "$defs": {
+    "TierBoundaries": {
+      "description": "Reference: FCS to Tier mapping (capability-based)",
+      "type": "object",
+      "properties": {
+        "tier0": { "const": "FCS 0-12: Single-turn, deterministic, no tools" },
+        "tier1": { "const": "FCS 13-25: Multi-turn, simple tools, moderate context" },
+        "tier2": { "const": "FCS 26-50: Complex reasoning, multi-tool, synthesis" },
+        "tier3": { "const": "FCS 51+: Novel domains, research-grade, maximum capability" }
+      }
+    },
+    "MaturityLevels": {
+      "description": "Reference: Bootstrap Protocol maturity definitions",
+      "type": "object",
+      "properties": {
+        "provisional": { "const": "0-9 samples: Initial estimate, high uncertainty" },
+        "emerging": { "const": "10-29 samples: Patterns forming, moderate confidence" },
+        "validated": { "const": "30-99 samples: Statistically significant, LVP passed" },
+        "stable": { "const": "100+ samples: Production-ready, narrow confidence interval" }
+      }
+    }
+  }
+}
