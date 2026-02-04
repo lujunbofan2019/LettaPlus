@@ -5,6 +5,8 @@ import os
 import json
 from datetime import datetime, timezone
 
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
+
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 DELEGATION_LOG_BLOCK_LABEL = "delegation_log"
 
@@ -265,13 +267,13 @@ def read_session_activity(
         }
 
     for agent in all_agents:
-        tags = getattr(agent, "tags", []) or []
-        if session_tag not in tags or role_tag not in tags:
-            continue
-
         companion_id = getattr(agent, "id", None)
         companion_name = getattr(agent, "name", "unknown")
         if not companion_id:
+            continue
+
+        tags = _get_agent_tags(companion_id)
+        if session_tag not in tags or role_tag not in tags:
             continue
 
         # Extract metadata from tags

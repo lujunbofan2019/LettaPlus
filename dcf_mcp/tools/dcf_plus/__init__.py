@@ -32,6 +32,9 @@ Tool Categories:
 5. Strategist Observation:
    - read_session_activity: Get session activity for analysis
    - update_conductor_guidelines: Publish recommendations to Conductor
+
+6. Utility Tools:
+   - cleanup_orphaned_companions: Clean up Companions left behind by failed tests/sessions
 """
 
 from .create_companion import create_companion
@@ -48,6 +51,7 @@ from .register_strategist import register_strategist
 from .trigger_strategist_analysis import trigger_strategist_analysis
 from .read_session_activity import read_session_activity
 from .update_conductor_guidelines import update_conductor_guidelines
+from .cleanup_orphaned_companions import cleanup_orphaned_companions
 
 __all__ = [
     # Companion Management
@@ -69,4 +73,6 @@ __all__ = [
     # Strategist Observation
     "read_session_activity",
     "update_conductor_guidelines",
+    # Utility Tools
+    "cleanup_orphaned_companions",
 ]

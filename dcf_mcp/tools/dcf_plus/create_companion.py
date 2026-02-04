@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
+DEFAULT_MODEL = os.getenv("DCF_DEFAULT_MODEL", "openai/gpt-4o-mini")
 
 
 def create_companion(
@@ -17,6 +18,7 @@ def create_companion(
     initial_skills_json: Optional[str] = None,
     companion_name: Optional[str] = None,
     persona_override: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a session-scoped Companion agent with standard DCF+ configuration.
 
@@ -34,6 +36,7 @@ def create_companion(
         initial_skills_json: Optional JSON array of skill manifest paths/URIs to pre-load.
         companion_name: Optional custom name. If not provided, auto-generated.
         persona_override: Optional custom persona text. If not provided, uses default.
+        model: LLM model to use (e.g., "openai/gpt-4o-mini"). Defaults to DCF_DEFAULT_MODEL env var.
 
     Returns:
         dict: {
@@ -86,9 +89,23 @@ def create_companion(
         except Exception as e:
             warnings.append(f"Failed to parse initial_skills_json: {e}")
 
-    # Generate companion name
+    # Generate companion name with consistent convention:
+    # Format: companion-{specialization}-{session_prefix}-{uuid}
+    # Examples: companion-research-e2e-test-a1b2c3d4
+    #           companion-generalist-prod-sess-f9e8d7c6
     short_uuid = str(uuid.uuid4())[:8]
-    name = companion_name or f"companion-{session_id[:8]}-{short_uuid}"
+    session_prefix = session_id[:8] if len(session_id) >= 8 else session_id
+
+    if companion_name:
+        # If custom name provided, ensure it follows convention
+        # Accept if it starts with "companion-" or normalize it
+        if not companion_name.startswith("companion-"):
+            name = f"companion-{companion_name}"
+        else:
+            name = companion_name
+    else:
+        # Auto-generate with consistent pattern
+        name = f"companion-{specialization}-{session_prefix}-{short_uuid}"
 
     # Build persona
     default_persona = f"""You are a Companion agent in the DCF+ framework.
@@ -172,8 +189,12 @@ When reporting results, use this format:
 
     # Create the agent
     try:
+        # Use provided model or default
+        agent_model = model or DEFAULT_MODEL
+
         create_kwargs = {
             "name": name,
+            "model": agent_model,
             "memory_blocks": memory_blocks,
             "tags": tags,
         }

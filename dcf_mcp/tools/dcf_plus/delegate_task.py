@@ -6,6 +6,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
+
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 DELEGATION_LOG_BLOCK_LABEL = "delegation_log"
 
@@ -155,10 +157,10 @@ def delegate_task(
             "run_id": None,
         }
 
-    # Verify Companion exists and get its tags
+    # Verify Companion exists and get its tags (use HTTP API for accurate tags)
     try:
         companion = client.agents.retrieve(agent_id=companion_id)
-        tags = list(getattr(companion, "tags", []) or [])
+        companion_name = getattr(companion, "name", companion_id)
     except Exception as e:
         return {
             "status": None,
@@ -170,6 +172,9 @@ def delegate_task(
             "delegation_logged": False,
             "run_id": None,
         }
+
+    # Get tags via HTTP API (letta_client doesn't parse tags correctly)
+    tags = _get_agent_tags(companion_id)
 
     # Check if Companion is already busy
     current_status = "idle"
@@ -238,7 +243,7 @@ def delegate_task(
             delegation_record = {
                 "task_id": task_id,
                 "companion_id": companion_id,
-                "companion_name": getattr(companion, "name", "unknown"),
+                "companion_name": companion_name,
                 "skills_assigned": required_skills,
                 "task_description": task_description[:200],  # Truncate for storage
                 "priority": priority,
@@ -342,7 +347,7 @@ def delegate_task(
         }
 
     return {
-        "status": f"Task '{task_id}' delegated to Companion '{getattr(companion, 'name', companion_id)}'",
+        "status": f"Task '{task_id}' delegated to Companion '{companion_name}'",
         "error": None,
         "task_id": task_id,
         "conductor_id": conductor_id,

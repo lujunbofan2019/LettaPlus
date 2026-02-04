@@ -2,6 +2,9 @@
 
 from typing import Any, Dict, List, Optional
 import os
+import json
+
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 
@@ -56,10 +59,9 @@ def update_companion_status(
             "previous_tags": [],
         }
 
-    # Retrieve current agent
+    # Verify Companion exists
     try:
-        agent = client.agents.retrieve(agent_id=companion_id)
-        current_tags = list(getattr(agent, "tags", []) or [])
+        client.agents.retrieve(agent_id=companion_id)
     except Exception as e:
         return {
             "status": None,
@@ -68,6 +70,9 @@ def update_companion_status(
             "updated_tags": [],
             "previous_tags": [],
         }
+
+    # Get tags via HTTP API (letta_client doesn't parse tags correctly)
+    current_tags = _get_agent_tags(companion_id)
 
     previous_tags = list(current_tags)
     new_tags: List[str] = []

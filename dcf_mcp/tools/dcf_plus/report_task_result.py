@@ -5,6 +5,8 @@ import os
 import json
 from datetime import datetime, timezone
 
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
+
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 DELEGATION_LOG_BLOCK_LABEL = "delegation_log"
 
@@ -228,8 +230,7 @@ def report_task_result(
     # Update Companion status
     new_status = "idle" if status != "failed" else "error"
     try:
-        companion = client.agents.retrieve(agent_id=companion_id)
-        tags = list(getattr(companion, "tags", []) or [])
+        tags = _get_agent_tags(companion_id)
         new_tags = [t for t in tags if not t.startswith("status:") and not t.startswith("task:")]
         new_tags.append(f"status:{new_status}")
         try:

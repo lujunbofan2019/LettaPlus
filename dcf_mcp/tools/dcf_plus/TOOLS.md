@@ -2,7 +2,7 @@
 
 > **Phase**: 2 (Delegated Execution)
 > **Status**: Design Specification
-> **Last Updated**: 2026-01-29
+> **Last Updated**: 2026-02-04
 
 This document specifies the tools required for DCF+ (Phase 2: Delegated Execution pattern). For Phase 1 (Workflow Execution) tools, see [`../TOOLS.md`](../TOOLS.md).
 
@@ -308,6 +308,46 @@ companions = [
 
 ---
 
+## Common Utilities
+
+### `get_agent_tags` (Internal Helper)
+
+Located at `tools/common/get_agent_tags.py`, this utility function retrieves agent tags via direct HTTP API calls instead of using the `letta_client` library.
+
+**Why This Exists**:
+
+The `letta_client` Python library has a known bug where agent tags are not parsed correctly from the API response. This affects multiple DCF+ tools that rely on tag-based filtering and status tracking.
+
+**Workaround**:
+```python
+from tools.common.get_agent_tags import get_agent_tags
+
+# Returns List[str] of tags for the agent
+tags = get_agent_tags(agent_id)
+
+# Check for specific tags
+if "role:companion" in tags:
+    # This is a Companion agent
+    pass
+
+if "status:idle" in tags:
+    # Companion is available for work
+    pass
+```
+
+**Files Using This Utility**:
+- `delegate_task.py`
+- `finalize_session.py`
+- `update_companion_status.py`
+- `cleanup_orphaned_companions.py`
+- `broadcast_task.py`
+- `read_session_activity.py`
+- `report_task_result.py`
+
+**Note**: This utility should be replaced with direct `letta_client` calls once the tag parsing bug is fixed upstream.
+
+---
+
 ## DCF+ Tool Categories
 
 ### Companion Lifecycle Tools
@@ -408,9 +448,59 @@ Updates a Companion's status tag and optionally other metadata.
     "status": str | None,
     "error": str | None,
     "companion_id": str,
-    "updated_tags": List[str]
+    "updated_tags": List[str],
+    "previous_tags": List[str]
 }
 ```
+
+#### `cleanup_orphaned_companions`
+
+Utility tool for cleaning up Companion agents that were not properly dismissed. This is useful for:
+- Test failures before cleanup phase
+- Ad-hoc testing without proper `finalize_session` calls
+- Sessions that lost track of their `session_context_block_id`
+
+**Parameters**:
+- `session_id`: Optional session ID to filter by (if None, finds all sessions)
+- `name_pattern`: Optional substring filter for Companion names (e.g., "test", "e2e")
+- `include_tagless`: Whether to include agents that look like Companions by name but lack proper `role:companion` tag (default: false)
+- `dry_run`: If true (default), only report what would be deleted without actually deleting
+
+**Returns**:
+```python
+{
+    "status": str | None,
+    "error": str | None,
+    "dry_run": bool,
+    "companions_found": [
+        {
+            "id": str,
+            "name": str,
+            "session": str | None,
+            "tags": List[str]
+        }
+    ],
+    "companions_deleted": List[str],  # Only populated if dry_run=False
+    "warnings": List[str]
+}
+```
+
+**Usage Examples**:
+```python
+# Preview orphaned companions from a specific session
+result = cleanup_orphaned_companions(session_id="test-session-001", dry_run=True)
+
+# Delete all companions with "test" in the name
+result = cleanup_orphaned_companions(name_pattern="test", dry_run=False)
+
+# Find all companions including those with broken tags
+result = cleanup_orphaned_companions(include_tagless=True, dry_run=True)
+
+# Clean up ALL orphaned companions (use with caution)
+result = cleanup_orphaned_companions(dry_run=False)
+```
+
+**Note**: This tool uses the `dismiss_companion` function internally when available, falling back to direct deletion if not. Always use `dry_run=True` first to preview what would be deleted.
 
 ### Session Management Tools
 
@@ -871,6 +961,7 @@ Each agent type requires a specific set of tools. Use this table when configurin
 | `dismiss_companion` | ✅ | Remove Companions |
 | `list_session_companions` | ✅ | Query Companion pool and status |
 | `update_companion_status` | ⚪ | Update Companion tags |
+| `cleanup_orphaned_companions` | ⚪ | Clean up orphaned Companions (utility) |
 | **Task Delegation** | | |
 | `delegate_task` | ✅ | Assign tasks to specific Companion |
 | `broadcast_task` | ⚪ | Broadcast to multiple Companions |
@@ -1295,6 +1386,8 @@ Companion management during session:
 5. [x] Create `finalize_session` tool
 6. [x] Write Conductor system prompt (`prompts/dcf_plus/Conductor.md`)
 7. [x] Write Companion system prompt (`prompts/dcf_plus/Companion.md`)
+8. [x] Create shared `get_agent_tags` utility (workaround for letta_client tag parsing bug)
+9. [x] Create `cleanup_orphaned_companions` utility tool
 
 ### Phase 2.2: Delegation
 

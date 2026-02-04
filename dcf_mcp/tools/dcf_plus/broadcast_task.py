@@ -6,6 +6,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
+
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 
 
@@ -142,7 +144,10 @@ def broadcast_task(
 
     matching_companions = []
     for agent in all_agents:
-        tags = getattr(agent, "tags", []) or []
+        agent_id = getattr(agent, "id", None)
+        if not agent_id:
+            continue
+        tags = _get_agent_tags(agent_id)
 
         # Must have session and role tags
         if session_tag not in tags or role_tag not in tags:

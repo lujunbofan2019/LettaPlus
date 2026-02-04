@@ -5,6 +5,8 @@ import os
 import json
 from datetime import datetime, timezone
 
+from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
+
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 
 
@@ -93,7 +95,10 @@ def finalize_session(
         all_agents = client.agents.list()
         companions = []
         for agent in all_agents:
-            tags = getattr(agent, "tags", []) or []
+            agent_id = getattr(agent, "id", None)
+            if not agent_id:
+                continue
+            tags = _get_agent_tags(agent_id)
             if session_tag in tags and role_tag in tags:
                 companions.append(agent)
     except Exception as e:
@@ -117,7 +122,7 @@ def finalize_session(
 
             try:
                 # Extract specialization from tags
-                tags = getattr(companion, "tags", []) or []
+                tags = _get_agent_tags(companion_id)
                 specialization = "unknown"
                 for tag in tags:
                     if tag.startswith("specialization:"):

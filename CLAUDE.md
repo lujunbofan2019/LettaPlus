@@ -65,6 +65,7 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `dcf_mcp/` | Core MCP server exposing 40+ workflow/skill tools |
 | `dcf_mcp/tools/dcf/` | Phase 1 workflow execution tools (validate, generate, leases, notify, finalize) |
 | `dcf_mcp/tools/dcf_plus/` | Phase 2 delegated execution tools (Companion lifecycle, session management, task delegation, Strategist) |
+| `dcf_mcp/tools/common/` | Shared utilities (e.g., `get_agent_tags` workaround for letta_client tag parsing bug) |
 | `dcf_mcp/tools/redis_json/` | RedisJSON operations for control plane |
 | `dcf_mcp/tools/file_system/` | File operations |
 | `dcf_mcp/agents/` | Letta agent templates (`.af` format) |
@@ -131,6 +132,7 @@ Workers coordinate via Redis without a central orchestrator:
 - `dismiss_companion` — Remove Companion and cleanup resources (unload skills, detach blocks)
 - `list_session_companions` — List Companions in session with current state (status, loaded skills)
 - `update_companion_status` — Update Companion status tags ("idle" | "busy" | "error")
+- `cleanup_orphaned_companions` — Utility to clean up Companions left behind by failed tests or sessions
 
 **Session Management:**
 - `create_session_context` — Create shared memory blocks for a new session
@@ -140,6 +142,7 @@ Workers coordinate via Redis without a central orchestrator:
 **Task Delegation:**
 - `delegate_task` — Delegate task to specific Companion with required skills
 - `broadcast_task` — Broadcast task to multiple Companions matching criteria
+- `report_task_result` — Report task completion from Companion to Conductor (used by Companions)
 
 **Strategist Integration:**
 - `register_strategist` — Establish Conductor-Strategist relationship (parallel to `register_reflector`)

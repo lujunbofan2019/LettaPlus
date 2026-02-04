@@ -3,6 +3,8 @@
 from typing import Any, Dict, List, Optional
 import os
 import json
+import urllib.request
+import urllib.error
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 SKILL_STATE_BLOCK_LABEL = os.getenv("SKILL_STATE_BLOCK_LABEL", "dcf_active_skills")
@@ -39,33 +41,28 @@ def list_session_companions(
             "count": int
         }
     """
-    # Lazy imports
+    # Lazy imports for skill state block access
     try:
         from letta_client import Letta
-    except Exception as e:
-        return {
-            "status": None,
-            "error": f"Missing dependency: letta_client not importable: {e}",
-            "session_id": session_id,
-            "companions": [],
-            "count": 0,
-        }
-
-    # Initialize Letta client
-    try:
         client = Letta(base_url=LETTA_BASE_URL)
-    except Exception as e:
+        has_client = True
+    except Exception:
+        has_client = False
+        client = None
+
+    # List all agents via HTTP API (letta_client doesn't properly parse tags)
+    try:
+        agents_url = f"{LETTA_BASE_URL}/v1/agents/"
+        with urllib.request.urlopen(agents_url, timeout=30) as resp:
+            all_agents = json.load(resp)
+    except urllib.error.URLError as e:
         return {
             "status": None,
-            "error": f"Failed to initialize Letta client: {e}",
+            "error": f"Failed to connect to Letta API: {e}",
             "session_id": session_id,
             "companions": [],
             "count": 0,
         }
-
-    # List all agents and filter by session tag
-    try:
-        all_agents = client.agents.list()
     except Exception as e:
         return {
             "status": None,
@@ -81,14 +78,19 @@ def list_session_companions(
     companions: List[Dict[str, Any]] = []
 
     for agent in all_agents:
-        tags = getattr(agent, "tags", []) or []
+        # Handle both dict (from HTTP) and object (from letta_client)
+        if isinstance(agent, dict):
+            tags = agent.get("tags", []) or []
+            agent_id = agent.get("id")
+            agent_name = agent.get("name")
+        else:
+            tags = getattr(agent, "tags", []) or []
+            agent_id = getattr(agent, "id", None)
+            agent_name = getattr(agent, "name", None)
 
         # Must have both session and role tags
         if session_tag not in tags or role_tag not in tags:
             continue
-
-        agent_id = getattr(agent, "id", None)
-        agent_name = getattr(agent, "name", None)
 
         if not agent_id:
             continue

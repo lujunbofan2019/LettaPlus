@@ -863,28 +863,101 @@ The stub MCP server validates tool schemas. Common issues:
 
 ## Simulated vs Real Skills
 
+### Key Concept: Skills Are Environment-Agnostic
+
+**Important:** Individual skill `.yaml` files do NOT indicate whether they are simulated or real. The same skill definition works for both testing and production. The **`registry.yaml`** file determines which mode is active by specifying where each server's tools are routed.
+
+### How to Check Current Mode
+
+**Quick Check:** Inspect `skills_src/registry.yaml` to see where servers point:
+
+```bash
+# Check if running in simulation mode (all endpoints point to stub-mcp)
+grep "endpoint:" skills_src/registry.yaml
+```
+
+| If endpoints show... | Mode | Behavior |
+|---------------------|------|----------|
+| `http://stub-mcp:8765` | **Simulated** | Tools return deterministic test case responses |
+| Real URLs (e.g., `https://api.bing.microsoft.com`) | **Real** | Tools call actual external APIs |
+
+**Current Default:** All servers in `registry.yaml` point to `http://stub-mcp:8765`, meaning **all skills are simulated by default**.
+
 ### Simulated Skills (Testing)
 
-1. All servers in `registry.yaml` point to `http://stub-mcp:8765`
-2. `tools.yaml` contains test cases with deterministic responses
-3. Stub server returns matching case responses
-4. Use for: unit tests, integration tests, workflow validation
+When `registry.yaml` routes servers to the stub MCP server:
+
+```yaml
+# registry.yaml - Simulation Mode (current default)
+servers:
+  search:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765   # ← Stub server
+    path: /mcp
+```
+
+**Behavior:**
+1. Tool calls are routed to the stub MCP server
+2. Stub server matches arguments against test cases in `tools.yaml`
+3. Matching test case response is returned (deterministic)
+4. Latency, rate limits, and errors can be simulated
+
+**Use for:** Unit tests, integration tests, workflow validation, CI/CD pipelines
 
 ### Real Skills (Production)
 
-1. Update `registry.yaml` to point to real endpoints:
+When `registry.yaml` routes servers to actual API endpoints:
+
+```yaml
+# registry.yaml - Production Mode (example)
+servers:
+  search:
+    transport: streamable_http
+    endpoint: https://api.bing.microsoft.com   # ← Real API
+    path: /v7.0/search
+    headers:
+      Ocp-Apim-Subscription-Key: ${BING_API_KEY}
+```
+
+**Behavior:**
+1. Tool calls are routed to real external APIs
+2. Test cases in `tools.yaml` are ignored (only used by stub server)
+3. Real API responses are returned (non-deterministic)
+4. Requires valid API credentials and network access
+
+**Use for:** Production deployments, real API integration, live testing
+
+### Switching Between Modes
+
+To switch a skill from simulated to real:
+
+1. **Edit `registry.yaml`** - Change the server endpoint from stub to real:
    ```yaml
-   servers:
-     search:
-       transport: streamable_http
-       endpoint: https://api.bing.microsoft.com
-       path: /v7.0/search
-       headers:
-         Ocp-Apim-Subscription-Key: ${BING_API_KEY}
+   # Before (simulated)
+   search:
+     endpoint: http://stub-mcp:8765
+
+   # After (real)
+   search:
+     endpoint: https://api.bing.microsoft.com
+     headers:
+       Ocp-Apim-Subscription-Key: ${BING_API_KEY}
    ```
-2. Tools are called against actual APIs
-3. Test cases are ignored (only used by stub server)
-4. Use for: production deployments, real API integration
+
+2. **Regenerate artifacts** - Run `generate_all()` to update `generated/registry.json`
+
+3. **Ensure credentials** - Set required environment variables (e.g., `BING_API_KEY`)
+
+**Note:** You can mix modes — some servers simulated, others real — for hybrid testing scenarios.
+
+### Summary Table
+
+| Question | Where to Look | What to Check |
+|----------|---------------|---------------|
+| Is skill X simulated or real? | `registry.yaml` | Check endpoint for servers used by skill's tools |
+| What test cases exist? | `tools.yaml` | Look under `servers.<serverId>.tools.<toolName>.cases` |
+| What servers does skill X use? | `skills_src/skills/X.skill.yaml` | Check `spec.tools[].ref` (format: `serverId:toolName`) |
+| Current environment? | `registry.yaml` | Check `env:` field and server endpoints |
 
 ---
 
