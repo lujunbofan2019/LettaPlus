@@ -1,9 +1,9 @@
 # AMSP-DCF Integration Playbook
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Status:** Planning
 **Created:** 2026-02-03
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-02-04
 **Authors:** Human + Claude Opus 4.5
 
 ---
@@ -141,6 +141,17 @@ DCF provides the execution framework for agentic workflows:
 ```
 
 **Note**: No `complexityProfile` field exists.
+
+### Common Utilities (discovered during E2E testing)
+
+During Phase 1 and Phase 2 E2E testing (2026-02-04), the following shared utilities were identified:
+
+| Utility | Path | Purpose |
+|---------|------|---------|
+| `get_agent_tags` | `dcf_mcp/tools/common/get_agent_tags.py` | HTTP API workaround for letta_client tag parsing bug |
+| `cleanup_orphaned_companions` | `dcf_mcp/tools/dcf_plus/cleanup_orphaned_companions.py` | Clean up Companions from failed tests/sessions |
+
+**Important**: The `letta_client` library has a bug where agent tags are not parsed correctly. All DCF+ tools that use tag-based filtering call `get_agent_tags()` via direct HTTP API. AMSP integration should use this utility for any tag-based operations.
 
 ## 1.3 The Integration Gap
 
@@ -1046,6 +1057,21 @@ def compute_task_complexity(
 
 **Path:** `dcf_mcp/tools/dcf_plus/delegate_task.py`
 
+**Current Signature (as of E2E testing 2026-02-04):**
+
+```python
+def delegate_task(
+    conductor_id: str,
+    companion_id: str,
+    task_description: str,
+    required_skills_json: Optional[str] = None,
+    input_data_json: Optional[str] = None,
+    priority: str = "normal",
+    timeout_seconds: int = 300,
+    session_id: Optional[str] = None,
+) -> Dict[str, Any]:
+```
+
 **Changes Required:**
 
 1. Add `compute_task_complexity()` call before delegation
@@ -1053,16 +1079,19 @@ def compute_task_complexity(
 3. Record selection in session activity log
 4. Support latency requirement override
 
-**New Parameters:**
+**New Parameters to Add:**
 
 ```python
 def delegate_task(
+    conductor_id: str,
     companion_id: str,
     task_description: str,
-    skills_required: list,
-    task_context: str = None,
+    required_skills_json: Optional[str] = None,
+    input_data_json: Optional[str] = None,
     priority: str = "normal",
-    # NEW PARAMETERS
+    timeout_seconds: int = 300,
+    session_id: Optional[str] = None,
+    # NEW PARAMETERS FOR AMSP
     latency_requirement: str = "standard",
     tier_override: int = None,
     cost_ceiling_usd: float = None
@@ -1073,21 +1102,43 @@ def delegate_task(
 
 **Path:** `dcf_mcp/tools/dcf_plus/create_companion.py`
 
-**Changes Required:**
-
-1. Accept default model tier for session
-2. Configure Companion with appropriate model
-3. Record model selection rationale in session context
-
-**New Parameters:**
+**Current Signature (as of E2E testing 2026-02-04):**
 
 ```python
 def create_companion(
     session_id: str,
-    companion_name: str = None,
-    specialization: str = None,
-    # NEW PARAMETERS
-    default_tier: int = None,  # Default tier for this Companion's tasks
+    conductor_id: str,
+    specialization: str = "generalist",
+    shared_block_ids_json: Optional[str] = None,
+    initial_skills_json: Optional[str] = None,
+    companion_name: Optional[str] = None,
+    persona_override: Optional[str] = None,
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+```
+
+**Note:** The `model` parameter already exists and uses `DCF_DEFAULT_MODEL` env var (default: `openai/gpt-4o-mini`).
+
+**Changes Required:**
+
+1. Extend model selection to use AMSP tier-based selection
+2. Configure Companion with appropriate model based on tier
+3. Record model selection rationale in session context
+
+**New Parameters to Add:**
+
+```python
+def create_companion(
+    session_id: str,
+    conductor_id: str,
+    specialization: str = "generalist",
+    shared_block_ids_json: Optional[str] = None,
+    initial_skills_json: Optional[str] = None,
+    companion_name: Optional[str] = None,
+    persona_override: Optional[str] = None,
+    model: Optional[str] = None,
+    # NEW PARAMETERS FOR AMSP
+    default_tier: int = None,  # Default tier for this Companion's tasks (overrides model)
     latency_profile: str = "standard"
 ) -> Dict[str, Any]:
 ```
@@ -1321,7 +1372,7 @@ Add to `reflector_guidelines` block:
 
 ### 3.4.4 `Conductor.md` (Phase 2)
 
-**Path:** `prompts/dcf+/Conductor.md`
+**Path:** `prompts/dcf_plus/Conductor.md`
 
 **New Section: "Dynamic Model Selection"**
 
@@ -1379,7 +1430,7 @@ Track cumulative session cost:
 
 ### 3.4.5 `Companion.md` (Phase 2)
 
-**Path:** `prompts/dcf+/Companion.md`
+**Path:** `prompts/dcf_plus/Companion.md`
 
 **New Section: "Model Awareness"**
 
@@ -1433,7 +1484,7 @@ Conductor will handle re-delegation at higher tier.
 
 ### 3.4.6 `Strategist.md` (Phase 2)
 
-**Path:** `prompts/dcf+/Strategist.md`
+**Path:** `prompts/dcf_plus/Strategist.md`
 
 **New Section: "Model Selection Optimization"**
 
@@ -1776,9 +1827,9 @@ CREATE (e)-[:USED_PROFILE]->(p)
 | `dcf_mcp/tools/dcf_plus/create_companion.py` | MODIFY |
 | `dcf_mcp/tools/dcf_plus/trigger_strategist_analysis.py` | MODIFY |
 | `dcf_mcp/tools/dcf_plus/update_conductor_guidelines.py` | MODIFY |
-| `prompts/dcf+/Conductor.md` | MODIFY |
-| `prompts/dcf+/Companion.md` | MODIFY |
-| `prompts/dcf+/Strategist.md` | MODIFY |
+| `prompts/dcf_plus/Conductor.md` | MODIFY |
+| `prompts/dcf_plus/Companion.md` | MODIFY |
+| `prompts/dcf_plus/Strategist.md` | MODIFY |
 
 ### Verification
 
@@ -1888,11 +1939,13 @@ CREATE (e)-[:USED_PROFILE]->(p)
 
 | Document | Path | Description |
 |----------|------|-------------|
-| AMSP v3.0 | `docs/Practical Foundation Model Selection for Agentic AI - The Adaptive Model Selection Protocol (AMSP).md` | Full AMSP specification |
-| DCF Integration | `docs/Complexity-Aware Workflow Decomposition - Unifying Model Selection with Dynamic Capabilities for Cost-Effective Agentic AI.md` | AMSP-DCF integration design |
+| AMSP v3.0 | `docs/research/Practical Foundation Model Selection for Agentic AI - The Adaptive Model Selection Protocol (AMSP).md` | Full AMSP specification |
+| DCF Integration | `docs/research/Complexity-Aware Workflow Decomposition - Unifying Model Selection with Dynamic Capabilities for Cost-Effective Agentic AI.md` | AMSP-DCF integration design |
 | DCF Architecture | `docs/Architectural_Evolution_Opus.md` | Phase 1 to Phase 2 evolution |
 | Phase 1 Tools | `dcf_mcp/tools/dcf/TOOLS.md` | Planner, Worker, Reflector tools |
 | Phase 2 Tools | `dcf_mcp/tools/dcf_plus/TOOLS.md` | Conductor, Companion, Strategist tools |
+| Phase 1 E2E Testing | `docs/testing/PHASE1_E2E_TESTING_SUMMARY.md` | Phase 1 testing results and fixes |
+| Phase 2 E2E Testing | `docs/testing/PHASE2_E2E_TESTING_SUMMARY.md` | Phase 2 testing results and fixes |
 
 ## Schemas
 
@@ -1911,9 +1964,9 @@ CREATE (e)-[:USED_PROFILE]->(p)
 | Planner | `prompts/dcf/Planner_final.txt` | 1 |
 | Worker | `prompts/dcf/Worker_final.txt` | 1 |
 | Reflector | `prompts/dcf/Reflector_final.txt` | 1 |
-| Conductor | `prompts/dcf+/Conductor.md` | 2 |
-| Companion | `prompts/dcf+/Companion.md` | 2 |
-| Strategist | `prompts/dcf+/Strategist.md` | 2 |
+| Conductor | `prompts/dcf_plus/Conductor.md` | 2 |
+| Companion | `prompts/dcf_plus/Companion.md` | 2 |
+| Strategist | `prompts/dcf_plus/Strategist.md` | 2 |
 
 ---
 
@@ -1921,6 +1974,7 @@ CREATE (e)-[:USED_PROFILE]->(p)
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2026-02-04 | **Post-E2E Testing Update**: Fixed prompt paths (`prompts/dcf+/` → `prompts/dcf_plus/`); Updated `delegate_task.py` signature to match actual implementation (added `conductor_id`, `session_id`, `timeout_seconds`, corrected param names); Updated `create_companion.py` signature to include all current params (`conductor_id`, `shared_block_ids_json`, etc.); Added Common Utilities section documenting `get_agent_tags` workaround and `cleanup_orphaned_companions`; Added references to E2E testing documentation |
 | 1.1.0 | 2026-02-03 | Updated pricing table with adjusted costs for reasoning overhead (5-10x for Frontier, 2-4x for Strong); updated models (GPT-5 series, Grok 4.x); revised cost narrative to 300-600x difference; added OpenRouter source attribution |
 | 1.0.1 | 2026-02-03 | Added model-tier pricing reference table with February 2026 data |
 | 1.0.0 | 2026-02-03 | Initial playbook created from blast radius analysis |
