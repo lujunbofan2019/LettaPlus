@@ -1,7 +1,7 @@
 {
+  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.plan.actions@0.1.0",
-  "skillPackageId": null,
   "skillName": "plan.actions",
   "skillVersion": "0.1.0",
   "description": "Generates prioritized action plans",
@@ -13,36 +13,29 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Output 3-5 actionable next steps.\nRank actions by impact and feasibility.\nAssign clear ownership recommendations where appropriate.\nInclude timeline considerations.",
-  "requiredTools": [
+  "skillDirectives": "Output 3-5 actionable next steps.\nRank actions by impact and feasibility.\nAssign clear ownership recommendations where appropriate.\nInclude timeline considerations.\n",
+  "tools": [
     {
-      "toolName": "llm_action_plan",
-      "description": "Generate prioritized actions from objectives",
-      "json_schema": {
-        "name": "llm_action_plan",
-        "description": "Mock action plan generator",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "objectives": {
-              "type": "string"
-            },
-            "insights": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
         "toolName": "llm_action_plan"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "objectives": {
+            "type": "string"
+          },
+          "insights": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   ],
-  "requiredDataSources": []
+  "dataSources": []
 }

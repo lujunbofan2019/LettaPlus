@@ -4,3 +4,4 @@ jsonschema>=4.22
 letta-client>=1.7.0
 redis>=4.5.1
 rejson>=0.3.0
+pyyaml>=6.0

@@ -1,10 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dcf.letta.ai/schemas/skill.schema.json",
+  "$id": "https://dcf.letta.ai/schemas/skill.authoring.schema.json",
   "title": "DCF Skill Authoring Schema",
   "description": "JSON Schema for validating skill YAML files in the DCF authoring format",
   "type": "object",
-  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
   "additionalProperties": false,
   "properties": {
     "apiVersion": {
@@ -20,26 +25,39 @@
     "metadata": {
       "type": "object",
       "description": "Skill identification and discovery metadata",
-      "required": ["manifestId", "name", "version"],
+      "required": [
+        "manifestId",
+        "name",
+        "version"
+      ],
       "additionalProperties": false,
       "properties": {
         "manifestId": {
           "type": "string",
           "pattern": "^skill\\.[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+@\\d+\\.\\d+\\.\\d+$",
           "description": "Unique identifier in format: skill.<domain>.<name>@<semver>",
-          "examples": ["skill.research.web@0.1.0", "skill.mycompany.analytics@1.0.0"]
+          "examples": [
+            "skill.research.web@0.1.0",
+            "skill.mycompany.analytics@1.0.0"
+          ]
         },
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
           "description": "Dot-separated skill name",
-          "examples": ["research.web", "mycompany.analytics"]
+          "examples": [
+            "research.web",
+            "mycompany.analytics"
+          ]
         },
         "version": {
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "description": "Semantic version (X.Y.Z)",
-          "examples": ["0.1.0", "1.0.0"]
+          "examples": [
+            "0.1.0",
+            "1.0.0"
+          ]
         },
         "description": {
           "type": "string",
@@ -61,7 +79,9 @@
     "spec": {
       "type": "object",
       "description": "Skill specification including directives, tools, and data sources",
-      "required": ["directives"],
+      "required": [
+        "directives"
+      ],
       "additionalProperties": false,
       "properties": {
         "permissions": {
@@ -71,7 +91,11 @@
           "properties": {
             "egress": {
               "type": "string",
-              "enum": ["none", "intranet", "internet"],
+              "enum": [
+                "none",
+                "intranet",
+                "internet"
+              ],
               "default": "none",
               "description": "Network access level required"
             },
@@ -86,7 +110,11 @@
             },
             "riskLevel": {
               "type": "string",
-              "enum": ["low", "medium", "high"],
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ],
               "default": "low",
               "description": "Risk classification for governance"
             }
@@ -126,14 +154,19 @@
   "$defs": {
     "toolRef": {
       "type": "object",
-      "required": ["ref"],
+      "required": [
+        "ref"
+      ],
       "additionalProperties": false,
       "properties": {
         "ref": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$",
           "description": "Tool reference in format: serverId:toolName",
-          "examples": ["search:search_query", "llm:llm_summarize"]
+          "examples": [
+            "search:search_query",
+            "llm:llm_summarize"
+          ]
         },
         "required": {
           "type": "boolean",
@@ -148,7 +181,9 @@
     },
     "dataSource": {
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -162,7 +197,10 @@
         },
         "destination": {
           "type": "string",
-          "enum": ["archival_memory", "working_memory"],
+          "enum": [
+            "archival_memory",
+            "working_memory"
+          ],
           "default": "archival_memory",
           "description": "Where to inject the content in agent memory"
         },
@@ -176,8 +214,16 @@
         }
       },
       "oneOf": [
-        { "required": ["text"] },
-        { "required": ["file"] }
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "file"
+          ]
+        }
       ]
     }
   }

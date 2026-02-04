@@ -117,7 +117,8 @@ def finalize_workflow(
     states = meta.get("states") or []
 
     # --- Gather state statuses ---
-    counts = {"pending": 0, "running": 0, "done": 0, "failed": 0, "cancelled": 0}
+    # Note: "succeeded" is the canonical status used by update_workflow_control_plane, counts as "done"
+    counts = {"pending": 0, "running": 0, "done": 0, "failed": 0, "cancelled": 0, "succeeded": 0}
     state_docs = {}
     for s in states:
         s_key = f"cp:wf:{workflow_id}:state:{s}"
@@ -273,12 +274,14 @@ def finalize_workflow(
         # non-fatal
         pass
 
+    # Combine "done" and "succeeded" counts since "succeeded" is the canonical status
+    done_count = counts["done"] + counts.get("succeeded", 0)
     summary = {
         "states": {
             "total": len(states),
             "pending": counts["pending"],
             "running": counts["running"],
-            "done": counts["done"],
+            "done": done_count,
             "failed": counts["failed"],
             "cancelled": counts["cancelled"]
         },

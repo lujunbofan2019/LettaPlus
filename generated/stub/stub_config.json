@@ -1,11 +1,12 @@
 {
+  "$schema": "stub_config_schema.json",
   "servers": {
     "search": {
+      "description": "Search and discovery tools for web content and news",
       "tools": {
         "search_query": {
-          "version": "0.1.0",
           "description": "Mock web search query tool",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "q": {
@@ -17,53 +18,21 @@
               "q"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "hits": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "url": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "url"
-                  ]
-                }
-              },
-              "total": {
-                "type": "integer"
-              },
-              "generated_at": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "hits": []
             },
-            "required": [
-              "hits"
-            ]
-          },
-          "defaultResponse": {
-            "hits": []
-          },
-          "rateLimit": {
-            "rps": 2
-          },
-          "latencyMs": {
-            "default": 150
+            "latencyMs": 150,
+            "rateLimit": {
+              "rps": 2
+            }
           },
           "cases": [
             {
-              "caseId": "case_python",
+              "id": "case_python",
               "match": {
                 "strategy": "exact",
-                "expr": "$.q",
+                "path": "q",
                 "value": "python"
               },
               "response": {
@@ -82,18 +51,13 @@
                   }
                 ],
                 "total": 3
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_market_scan",
+              "id": "case_market_scan",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*sustainable robotics market.*"
               },
               "response": {
@@ -117,18 +81,13 @@
                 ],
                 "total": 4,
                 "generated_at": "{{ now_iso }}"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_competitor_signal",
+              "id": "case_competitor_signal",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*Acme Robotics competitor.*"
               },
               "response": {
@@ -144,18 +103,13 @@
                 ],
                 "total": 2,
                 "notes": "Sorted by recency"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_agentic_sales",
+              "id": "case_agentic_sales",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*agentic sales enablement.*"
               },
               "response": {
@@ -175,18 +129,13 @@
                 ],
                 "total": 3,
                 "generated_at": "{{ now_iso }}"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ev_infrastructure",
+              "id": "case_ev_infrastructure",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*EV charging network.*"
               },
               "response": {
@@ -205,18 +154,13 @@
                   }
                 ],
                 "total": 3
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_data_privacy",
+              "id": "case_data_privacy",
               "match": {
                 "strategy": "regex",
-                "expr": "$.q",
+                "path": "q",
                 "value": ".*data privacy compliance.*"
               },
               "response": {
@@ -232,22 +176,13 @@
                 ],
                 "total": 2,
                 "notes": "Weighted toward enterprise readiness"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "search_query"
-          }
+          ]
         },
         "news_headlines": {
-          "version": "0.1.0",
           "description": "Mock top headlines search",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "topic": {
@@ -259,53 +194,21 @@
               "topic"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "headlines": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "title": {
-                      "type": "string"
-                    },
-                    "url": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "publishedAt": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "title",
-                    "url"
-                  ]
-                }
-              }
+          "defaults": {
+            "response": {
+              "headlines": []
             },
-            "required": [
-              "headlines"
-            ]
-          },
-          "defaultResponse": {
-            "headlines": []
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 200
+            "latencyMs": 200,
+            "rateLimit": {
+              "rps": 1
+            }
           },
           "cases": [
             {
-              "caseId": "case_market_news",
+              "id": "case_market_news",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*market.*"
               },
               "response": {
@@ -329,18 +232,13 @@
                     "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_robotics_news",
+              "id": "case_robotics_news",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*robotics.*"
               },
               "response": {
@@ -364,18 +262,13 @@
                     "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ai_agents",
+              "id": "case_ai_agents",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*agent.*"
               },
               "response": {
@@ -399,18 +292,13 @@
                     "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ev_market",
+              "id": "case_ev_market",
               "match": {
                 "strategy": "regex",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": ".*EV charging.*"
               },
               "response": {
@@ -434,26 +322,18 @@
                     "publishedAt": "{{ now_iso }}"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "news_headlines"
-          }
+          ]
         }
       }
     },
     "web": {
+      "description": "Web content fetching tools",
       "tools": {
         "web_fetch": {
-          "version": "0.1.0",
           "description": "Mock HTTP fetcher",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "url": {
@@ -465,40 +345,25 @@
               "url"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "integer"
-              },
-              "body": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "status": 200,
+              "body": "stub"
+            },
+            "latencyMs": 200,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "status": 200,
-            "body": "stub"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 200
-          },
-          "cases": [],
-          "meta": {
-            "originalToolName": "web_fetch"
           }
         }
       }
     },
     "datasets": {
+      "description": "Structured dataset access tools",
       "tools": {
         "company_profile": {
-          "version": "0.1.0",
           "description": "Mock company intelligence lookup",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "company": {
@@ -510,102 +375,24 @@
               "company"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
+          "defaults": {
+            "response": {
               "profile": {
-                "type": "object",
-                "properties": {
-                  "overview": {
-                    "type": "string"
-                  },
-                  "metrics": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "label": {
-                          "type": "string"
-                        },
-                        "value": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "label",
-                        "value"
-                      ]
-                    }
-                  },
-                  "customerSegments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "productLines": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "description": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "name"
-                      ]
-                    }
-                  },
-                  "recentMilestones": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "date": {
-                          "type": "string"
-                        },
-                        "detail": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "date",
-                        "detail"
-                      ]
-                    }
-                  }
-                },
-                "required": [
-                  "overview"
-                ]
+                "overview": "stub overview",
+                "metrics": []
               }
             },
-            "required": [
-              "profile"
-            ]
-          },
-          "defaultResponse": {
-            "profile": {
-              "overview": "stub overview",
-              "metrics": []
+            "latencyMs": 120,
+            "rateLimit": {
+              "rps": 1
             }
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 120
           },
           "cases": [
             {
-              "caseId": "case_acme",
+              "id": "case_acme",
               "match": {
                 "strategy": "exact",
-                "expr": "$.company",
+                "path": "company",
                 "value": "Acme Robotics"
               },
               "response": {
@@ -654,18 +441,13 @@
                     }
                   ]
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_swiftlift",
+              "id": "case_swiftlift",
               "match": {
                 "strategy": "regex",
-                "expr": "$.company",
+                "path": "company",
                 "value": ".*SwiftLift.*"
               },
               "response": {
@@ -702,18 +484,13 @@
                     }
                   ]
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ecocharge",
+              "id": "case_ecocharge",
               "match": {
                 "strategy": "exact",
-                "expr": "$.company",
+                "path": "company",
                 "value": "EcoCharge Networks"
               },
               "response": {
@@ -758,18 +535,13 @@
                     }
                   ]
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_northwind",
+              "id": "case_northwind",
               "match": {
                 "strategy": "regex",
-                "expr": "$.company",
+                "path": "company",
                 "value": ".*Northwind Analytics.*"
               },
               "response": {
@@ -811,26 +583,18 @@
                     }
                   ]
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "company_profile"
-          }
+          ]
         }
       }
     },
     "analysis": {
+      "description": "Research synthesis and analysis tools",
       "tools": {
         "insight_compare": {
-          "version": "0.1.0",
           "description": "Mock synthesis tool combining research insights",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "insights": {
@@ -844,47 +608,21 @@
               "insights"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "themes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "risks": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "confidence": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "themes": [],
+              "risks": []
             },
-            "required": [
-              "themes",
-              "risks"
-            ]
-          },
-          "defaultResponse": {
-            "themes": [],
-            "risks": []
-          },
-          "rateLimit": {
-            "rps": 1
-          },
-          "latencyMs": {
-            "default": 180
+            "latencyMs": 180,
+            "rateLimit": {
+              "rps": 1
+            }
           },
           "cases": [
             {
-              "caseId": "case_themes",
+              "id": "case_themes",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "themes": [
@@ -898,18 +636,13 @@
                   "Integration complexity"
                 ],
                 "confidence": "medium"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_supply_chain",
+              "id": "case_supply_chain",
               "match": {
                 "strategy": "contains",
-                "expr": "$.insights",
+                "path": "insights",
                 "value": "supply chain"
               },
               "response": {
@@ -922,18 +655,13 @@
                   "Integration friction across legacy WMS"
                 ],
                 "confidence": "high"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_ai_agent",
+              "id": "case_ai_agent",
               "match": {
                 "strategy": "contains",
-                "expr": "$.insights",
+                "path": "insights",
                 "value": "agentic"
               },
               "response": {
@@ -946,26 +674,18 @@
                   "Model drift without audit"
                 ],
                 "confidence": "medium"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "insight_compare"
-          }
+          ]
         }
       }
     },
     "llm": {
+      "description": "Language model tools for generation and analysis",
       "tools": {
         "llm_outline": {
-          "version": "0.1.0",
           "description": "Mock planning LLM for research outlines",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "topic": {
@@ -976,33 +696,20 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "outline": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "outline": []
+            },
+            "latencyMs": 80,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "outline": []
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 80
           },
           "cases": [
             {
-              "caseId": "case_outline",
+              "id": "case_outline",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "outline": [
@@ -1012,18 +719,13 @@
                   "List required deliverables",
                   "Identify data and tooling needs"
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_outline_ev",
+              "id": "case_outline_ev",
               "match": {
                 "strategy": "contains",
-                "expr": "$.topic",
+                "path": "topic",
                 "value": "EV charging"
               },
               "response": {
@@ -1034,22 +736,13 @@
                   "Identify target partners (utilities, parking operators)",
                   "Define ROI model for municipalities"
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_outline"
-          }
+          ]
         },
         "llm_briefing": {
-          "version": "0.1.0",
           "description": "Mock briefing writer",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "themes": {
@@ -1063,65 +756,41 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "briefing": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "briefing": "stub briefing"
+            },
+            "latencyMs": 100,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "briefing": "stub briefing"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 100
           },
           "cases": [
             {
-              "caseId": "case_briefing",
+              "id": "case_briefing",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "briefing": "Executive Briefing\n===================\nOpportunities:\n- Sustainability positioning resonates with enterprise RFP criteria.\n- AI-enabled optimisation reduces fulfilment cost by 18% in pilots.\nRisks:\n- Capital expenditure remains a barrier for mid-market prospects.\n- Integration complexity demands stronger SI partnerships.\nRecommended watch-outs: monitor interoperability roadmap and quantify carbon savings.\n"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_briefing_agents",
+              "id": "case_briefing_agents",
               "match": {
                 "strategy": "contains",
-                "expr": "$.themes",
+                "path": "themes",
                 "value": "agentic"
               },
               "response": {
                 "briefing": "Executive Briefing\n===================\nOpportunities:\n- Agentic co-pilots automate 25-40% of revenue ops tasks.\n- Early movers show pipeline hygiene uplift and faster renewal cycles.\nRisks:\n- Access control and audit trails must satisfy compliance.\n- Change management is needed to avoid user backlash.\n"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_briefing"
-          }
+          ]
         },
         "llm_action_plan": {
-          "version": "0.1.0",
           "description": "Mock action plan generator",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "objectives": {
@@ -1135,42 +804,20 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "actions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "ownerRecommendations": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "actions": []
             },
-            "required": [
-              "actions"
-            ]
-          },
-          "defaultResponse": {
-            "actions": []
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 90
+            "latencyMs": 90,
+            "rateLimit": {
+              "rps": 0
+            }
           },
           "cases": [
             {
-              "caseId": "case_actions",
+              "id": "case_actions",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "actions": [
@@ -1183,18 +830,13 @@
                   "product": "Own interoperability roadmap update",
                   "marketing": "Publish sustainability proof-points"
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_actions_ev",
+              "id": "case_actions_ev",
               "match": {
                 "strategy": "contains",
-                "expr": "$.objectives",
+                "path": "objectives",
                 "value": "charging"
               },
               "response": {
@@ -1208,22 +850,13 @@
                   "operations": "Own site-readiness checklist",
                   "product": "Finalize V2G pricing"
                 }
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_action_plan"
-          }
+          ]
         },
         "llm_quality_review": {
-          "version": "0.1.0",
           "description": "Mock quality assurance reviewer",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "draft": {
@@ -1240,47 +873,21 @@
               "draft"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "issues": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "status": {
-                "type": "string"
-              },
-              "suggestedFixes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "issues": [],
+              "status": "pass"
             },
-            "required": [
-              "issues",
-              "status"
-            ]
-          },
-          "defaultResponse": {
-            "issues": [],
-            "status": "pass"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 60
+            "latencyMs": 60,
+            "rateLimit": {
+              "rps": 0
+            }
           },
           "cases": [
             {
-              "caseId": "case_review",
+              "id": "case_review",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "issues": [
@@ -1292,18 +899,13 @@
                   "Reference 2025 market TAM estimate from CB Insights",
                   "Assign partner management lead to SI playbook development"
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_review_privacy",
+              "id": "case_review_privacy",
               "match": {
                 "strategy": "contains",
-                "expr": "$.draft",
+                "path": "draft",
                 "value": "privacy"
               },
               "response": {
@@ -1316,22 +918,13 @@
                   "Reference latest enforcement actions",
                   "Name responsible data protection officer"
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_quality_review"
-          }
+          ]
         },
         "llm_summarize": {
-          "version": "0.1.0",
           "description": "Mock summarisation endpoint",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "text": {
@@ -1343,69 +936,46 @@
               "text"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "summary": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "summary": "stub summary"
+            },
+            "latencyMs": 50,
+            "rateLimit": {
+              "rps": 0
             }
-          },
-          "defaultResponse": {
-            "summary": "stub summary"
-          },
-          "rateLimit": {
-            "rps": 0
-          },
-          "latencyMs": {
-            "default": 50
           },
           "cases": [
             {
-              "caseId": "short_text",
+              "id": "short_text",
               "match": {
-                "strategy": "always",
-                "expr": "",
-                "value": ""
+                "strategy": "always"
               },
               "response": {
                 "summary": "Executive digest: Market momentum is accelerating for sustainable modular automation; top opportunities lie in enterprise retail pilots while capital intensity and integration remain key risks. Next steps focus on quantifying ROI and formalising partner enablement."
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "case_summary_finance",
+              "id": "case_summary_finance",
               "match": {
                 "strategy": "contains",
-                "expr": "$.text",
+                "path": "text",
                 "value": "finance"
               },
               "response": {
                 "summary": "Finance-focused digest: strong capital efficiency but dependence on regulatory clarity; continue tracking incentive timelines."
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "llm_summarize"
-          }
+          ]
         }
       }
     },
     "orders": {
+      "description": "Order validation tools for customer, inventory, and address verification",
       "tools": {
         "verify_customer": {
-          "version": "0.1.0",
           "description": "Verifies customer exists and is in good standing",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "customer_id": {
@@ -1417,42 +987,22 @@
               "customer_id"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "valid": {
-                "type": "boolean"
-              },
-              "customer_name": {
-                "type": "string"
-              },
-              "account_status": {
-                "type": "string"
-              },
-              "credit_limit": {
-                "type": "number"
-              },
-              "current_balance": {
-                "type": "number"
-              }
+          "defaults": {
+            "response": {
+              "valid": false,
+              "error": "Customer not found"
+            },
+            "latencyMs": 50,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "valid": false,
-            "error": "Customer not found"
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 50
           },
           "cases": [
             {
-              "caseId": "customer_valid",
+              "id": "customer_valid",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "CUST-1234"
               },
               "response": {
@@ -1461,18 +1011,13 @@
                 "account_status": "active",
                 "credit_limit": 5000.0,
                 "current_balance": 250.0
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "customer_inactive",
+              "id": "customer_inactive",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "CUST-5678"
               },
               "response": {
@@ -1480,22 +1025,13 @@
                 "customer_name": "Bob Jones",
                 "account_status": "suspended",
                 "error": "Account suspended - payment overdue"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "verify_customer"
-          }
+          ]
         },
         "check_inventory": {
-          "version": "0.1.0",
           "description": "Checks inventory availability for order items",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "items": {
@@ -1522,50 +1058,22 @@
               "items"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "all_available": {
-                "type": "boolean"
-              },
-              "items": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "sku": {
-                      "type": "string"
-                    },
-                    "requested": {
-                      "type": "integer"
-                    },
-                    "available": {
-                      "type": "integer"
-                    },
-                    "status": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+          "defaults": {
+            "response": {
+              "all_available": false,
+              "items": []
+            },
+            "latencyMs": 75,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "all_available": false,
-            "items": []
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 75
           },
           "cases": [
             {
-              "caseId": "items_in_stock",
+              "id": "items_in_stock",
               "match": {
                 "strategy": "regex",
-                "expr": "$.items[0].sku",
+                "path": "items[0].sku",
                 "value": "WIDGET.*"
               },
               "response": {
@@ -1584,18 +1092,13 @@
                     "status": "in_stock"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "items_out_of_stock",
+              "id": "items_out_of_stock",
               "match": {
                 "strategy": "exact",
-                "expr": "$.items[0].sku",
+                "path": "items[0].sku",
                 "value": "RARE-ITEM"
               },
               "response": {
@@ -1608,22 +1111,13 @@
                     "status": "out_of_stock"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "check_inventory"
-          }
+          ]
         },
         "validate_address": {
-          "version": "0.1.0",
           "description": "Validates shipping address is deliverable",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "address": {
@@ -1655,53 +1149,22 @@
               "address"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "valid": {
-                "type": "boolean"
-              },
-              "normalized_address": {
-                "type": "object",
-                "properties": {
-                  "street": {
-                    "type": "string"
-                  },
-                  "city": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  },
-                  "zip": {
-                    "type": "string"
-                  }
-                }
-              },
-              "delivery_zone": {
-                "type": "string"
-              },
-              "estimated_delivery_days": {
-                "type": "integer"
-              }
+          "defaults": {
+            "response": {
+              "valid": false,
+              "error": "Invalid address"
+            },
+            "latencyMs": 100,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "valid": false,
-            "error": "Invalid address"
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 100
           },
           "cases": [
             {
-              "caseId": "texas_address",
+              "id": "texas_address",
               "match": {
                 "strategy": "exact",
-                "expr": "$.address.state",
+                "path": "address.state",
                 "value": "TX"
               },
               "response": {
@@ -1714,18 +1177,13 @@
                 },
                 "delivery_zone": "ZONE-A",
                 "estimated_delivery_days": 3
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "california_address",
+              "id": "california_address",
               "match": {
                 "strategy": "exact",
-                "expr": "$.address.state",
+                "path": "address.state",
                 "value": "CA"
               },
               "response": {
@@ -1738,43 +1196,30 @@
                 },
                 "delivery_zone": "ZONE-B",
                 "estimated_delivery_days": 5
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "invalid_zip",
+              "id": "invalid_zip",
               "match": {
                 "strategy": "exact",
-                "expr": "$.address.zip",
+                "path": "address.zip",
                 "value": "00000"
               },
               "response": {
                 "valid": false,
                 "error": "Invalid ZIP code"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "validate_address"
-          }
+          ]
         }
       }
     },
     "pricing": {
+      "description": "Pricing calculation tools for subtotals, discounts, taxes, and shipping",
       "tools": {
         "calculate_subtotal": {
-          "version": "0.1.0",
           "description": "Calculates subtotal from order items",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "items": {
@@ -1805,54 +1250,23 @@
               "items"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "subtotal": {
-                "type": "number"
-              },
-              "item_count": {
-                "type": "integer"
-              },
-              "line_items": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "sku": {
-                      "type": "string"
-                    },
-                    "quantity": {
-                      "type": "integer"
-                    },
-                    "unit_price": {
-                      "type": "number"
-                    },
-                    "line_total": {
-                      "type": "number"
-                    }
-                  }
-                }
-              }
+          "defaults": {
+            "response": {
+              "subtotal": 0,
+              "item_count": 0,
+              "line_items": []
+            },
+            "latencyMs": 25,
+            "rateLimit": {
+              "rps": 10
             }
-          },
-          "defaultResponse": {
-            "subtotal": 0,
-            "item_count": 0,
-            "line_items": []
-          },
-          "rateLimit": {
-            "rps": 10
-          },
-          "latencyMs": {
-            "default": 25
           },
           "cases": [
             {
-              "caseId": "standard_order",
+              "id": "standard_order",
               "match": {
                 "strategy": "regex",
-                "expr": "$.items[0].sku",
+                "path": "items[0].sku",
                 "value": ".*"
               },
               "response": {
@@ -1872,22 +1286,13 @@
                     "line_total": 149.99
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "calculate_subtotal"
-          }
+          ]
         },
         "apply_discount": {
-          "version": "0.1.0",
           "description": "Applies discount code and returns discount amount",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "subtotal": {
@@ -1901,45 +1306,22 @@
               "subtotal"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "discount_applied": {
-                "type": "boolean"
-              },
-              "discount_code": {
-                "type": "string"
-              },
-              "discount_type": {
-                "type": "string"
-              },
-              "discount_percent": {
-                "type": "number"
-              },
-              "discount_amount": {
-                "type": "number"
-              },
-              "subtotal_after_discount": {
-                "type": "number"
-              }
+          "defaults": {
+            "response": {
+              "discount_applied": false,
+              "discount_amount": 0
+            },
+            "latencyMs": 25,
+            "rateLimit": {
+              "rps": 10
             }
-          },
-          "defaultResponse": {
-            "discount_applied": false,
-            "discount_amount": 0
-          },
-          "rateLimit": {
-            "rps": 10
-          },
-          "latencyMs": {
-            "default": 25
           },
           "cases": [
             {
-              "caseId": "save10_discount",
+              "id": "save10_discount",
               "match": {
                 "strategy": "exact",
-                "expr": "$.discount_code",
+                "path": "discount_code",
                 "value": "SAVE10"
               },
               "response": {
@@ -1949,18 +1331,13 @@
                 "discount_percent": 10,
                 "discount_amount": 24.0,
                 "subtotal_after_discount": 215.96
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "save20_discount",
+              "id": "save20_discount",
               "match": {
                 "strategy": "exact",
-                "expr": "$.discount_code",
+                "path": "discount_code",
                 "value": "SAVE20"
               },
               "response": {
@@ -1970,40 +1347,26 @@
                 "discount_percent": 20,
                 "discount_amount": 48.0,
                 "subtotal_after_discount": 191.96
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "no_discount",
+              "id": "no_discount",
               "match": {
                 "strategy": "exact",
-                "expr": "$.discount_code",
+                "path": "discount_code",
                 "value": ""
               },
               "response": {
                 "discount_applied": false,
                 "discount_amount": 0,
                 "subtotal_after_discount": 239.96
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "apply_discount"
-          }
+          ]
         },
         "calculate_tax": {
-          "version": "0.1.0",
           "description": "Calculates tax based on address and subtotal",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "subtotal": {
@@ -2018,95 +1381,62 @@
               "state"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "tax_rate": {
-                "type": "number"
-              },
-              "tax_amount": {
-                "type": "number"
-              },
-              "jurisdiction": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "tax_rate": 0,
+              "tax_amount": 0,
+              "jurisdiction": "Unknown"
+            },
+            "latencyMs": 25,
+            "rateLimit": {
+              "rps": 10
             }
-          },
-          "defaultResponse": {
-            "tax_rate": 0,
-            "tax_amount": 0,
-            "jurisdiction": "Unknown"
-          },
-          "rateLimit": {
-            "rps": 10
-          },
-          "latencyMs": {
-            "default": 25
           },
           "cases": [
             {
-              "caseId": "texas_tax",
+              "id": "texas_tax",
               "match": {
                 "strategy": "exact",
-                "expr": "$.state",
+                "path": "state",
                 "value": "TX"
               },
               "response": {
                 "tax_rate": 0.0825,
                 "tax_amount": 17.82,
                 "jurisdiction": "Texas State + Austin Local"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "california_tax",
+              "id": "california_tax",
               "match": {
                 "strategy": "exact",
-                "expr": "$.state",
+                "path": "state",
                 "value": "CA"
               },
               "response": {
                 "tax_rate": 0.0875,
                 "tax_amount": 18.9,
                 "jurisdiction": "California State + San Francisco Local"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "oregon_no_tax",
+              "id": "oregon_no_tax",
               "match": {
                 "strategy": "exact",
-                "expr": "$.state",
+                "path": "state",
                 "value": "OR"
               },
               "response": {
                 "tax_rate": 0.0,
                 "tax_amount": 0.0,
                 "jurisdiction": "Oregon (No Sales Tax)"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "calculate_tax"
-          }
+          ]
         },
         "calculate_shipping": {
-          "version": "0.1.0",
           "description": "Calculates shipping cost based on items and address",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "item_count": {
@@ -2121,41 +1451,24 @@
               "delivery_zone"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "shipping_method": {
-                "type": "string"
-              },
-              "shipping_amount": {
-                "type": "number"
-              },
-              "estimated_days": {
-                "type": "integer"
-              },
-              "carrier": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "shipping_method": "Standard",
+              "shipping_amount": 9.99,
+              "estimated_days": 7,
+              "carrier": "USPS"
+            },
+            "latencyMs": 25,
+            "rateLimit": {
+              "rps": 10
             }
-          },
-          "defaultResponse": {
-            "shipping_method": "Standard",
-            "shipping_amount": 9.99,
-            "estimated_days": 7,
-            "carrier": "USPS"
-          },
-          "rateLimit": {
-            "rps": 10
-          },
-          "latencyMs": {
-            "default": 25
           },
           "cases": [
             {
-              "caseId": "zone_a_shipping",
+              "id": "zone_a_shipping",
               "match": {
                 "strategy": "exact",
-                "expr": "$.delivery_zone",
+                "path": "delivery_zone",
                 "value": "ZONE-A"
               },
               "response": {
@@ -2163,18 +1476,13 @@
                 "shipping_amount": 8.99,
                 "estimated_days": 3,
                 "carrier": "FastShip"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "zone_b_shipping",
+              "id": "zone_b_shipping",
               "match": {
                 "strategy": "exact",
-                "expr": "$.delivery_zone",
+                "path": "delivery_zone",
                 "value": "ZONE-B"
               },
               "response": {
@@ -2182,26 +1490,18 @@
                 "shipping_amount": 12.99,
                 "estimated_days": 5,
                 "carrier": "FastShip"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "calculate_shipping"
-          }
+          ]
         }
       }
     },
     "documents": {
+      "description": "Document generation tools for invoices and business documents",
       "tools": {
         "create_invoice": {
-          "version": "0.1.0",
           "description": "Creates formatted invoice document from order data",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "order_id": {
@@ -2282,114 +1582,23 @@
               "totals"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "invoice_id": {
-                "type": "string"
-              },
-              "invoice_date": {
-                "type": "string"
-              },
-              "order_id": {
-                "type": "string"
-              },
-              "status": {
-                "type": "string"
-              },
-              "customer_info": {
-                "type": "object",
-                "properties": {
-                  "customer_id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "billing_address": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "customer_id",
-                  "name"
-                ]
-              },
-              "line_items": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "item_description": {
-                      "type": "string"
-                    },
-                    "quantity": {
-                      "type": "integer"
-                    },
-                    "unit_price": {
-                      "type": "number"
-                    },
-                    "amount": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "quantity",
-                    "amount"
-                  ]
-                }
-              },
-              "totals": {
-                "type": "object",
-                "properties": {
-                  "subtotal": {
-                    "type": "number"
-                  },
-                  "discount": {
-                    "type": "number"
-                  },
-                  "tax": {
-                    "type": "number"
-                  },
-                  "shipping": {
-                    "type": "number"
-                  },
-                  "total": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "total"
-                ]
-              },
-              "payment_terms": {
-                "type": "string"
-              },
-              "due_date": {
-                "type": "string"
-              },
-              "document_url": {
-                "type": "string"
-              }
+          "defaults": {
+            "response": {
+              "invoice_id": "INV-DEFAULT",
+              "status": "generated",
+              "payment_terms": "NET-30"
+            },
+            "latencyMs": 150,
+            "rateLimit": {
+              "rps": 3
             }
-          },
-          "defaultResponse": {
-            "invoice_id": "INV-DEFAULT",
-            "status": "generated",
-            "payment_terms": "NET-30"
-          },
-          "rateLimit": {
-            "rps": 3
-          },
-          "latencyMs": {
-            "default": 150
           },
           "cases": [
             {
-              "caseId": "standard_invoice",
+              "id": "standard_invoice",
               "match": {
                 "strategy": "regex",
-                "expr": "$.order_id",
+                "path": "order_id",
                 "value": "ORD-.*"
               },
               "response": {
@@ -2426,26 +1635,18 @@
                 "payment_terms": "NET-30",
                 "due_date": "2025-03-01",
                 "document_url": "https://docs.example.com/invoices/INV-2025-0042.pdf"
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "create_invoice"
-          }
+          ]
         }
       }
     },
     "support": {
+      "description": "Customer support tools for profile lookup, issue diagnosis, and response composition",
       "tools": {
         "get_customer_profile": {
-          "version": "0.1.0",
           "description": "Retrieves customer profile and account details",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "customer_id": {
@@ -2457,60 +1658,22 @@
               "customer_id"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "customer_id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "email": {
-                "type": "string"
-              },
-              "phone": {
-                "type": "string"
-              },
-              "account_type": {
-                "type": "string"
-              },
-              "account_status": {
-                "type": "string"
-              },
-              "created_date": {
-                "type": "string"
-              },
-              "subscription_tier": {
-                "type": "string"
-              },
-              "payment_status": {
-                "type": "string"
-              },
-              "flags": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+          "defaults": {
+            "response": {
+              "error": "Customer not found",
+              "customer_id": null
+            },
+            "latencyMs": 75,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "error": "Customer not found",
-            "customer_id": null
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 75
           },
           "cases": [
             {
-              "caseId": "premium_customer",
+              "id": "premium_customer",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "ACCT-7890"
               },
               "response": {
@@ -2527,18 +1690,13 @@
                   "VIP_CUSTOMER",
                   "BETA_FEATURES_ENABLED"
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "standard_customer",
+              "id": "standard_customer",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "ACCT-1234"
               },
               "response": {
@@ -2552,22 +1710,13 @@
                 "subscription_tier": "Starter",
                 "payment_status": "current",
                 "flags": []
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "get_customer_profile"
-          }
+          ]
         },
         "get_interaction_history": {
-          "version": "0.1.0",
           "description": "Retrieves recent customer interactions",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "customer_id": {
@@ -2582,66 +1731,23 @@
               "customer_id"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "customer_id": {
-                "type": "string"
-              },
-              "interactions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "date": {
-                      "type": "string"
-                    },
-                    "channel": {
-                      "type": "string"
-                    },
-                    "type": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "agent": {
-                      "type": "string"
-                    },
-                    "summary": {
-                      "type": "string"
-                    }
-                  }
-                }
-              },
-              "total_interactions": {
-                "type": "integer"
-              },
-              "avg_resolution_time_hours": {
-                "type": "number"
-              }
+          "defaults": {
+            "response": {
+              "customer_id": null,
+              "interactions": [],
+              "total_interactions": 0
+            },
+            "latencyMs": 100,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "customer_id": null,
-            "interactions": [],
-            "total_interactions": 0
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 100
           },
           "cases": [
             {
-              "caseId": "recent_interactions",
+              "id": "recent_interactions",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "ACCT-7890"
               },
               "response": {
@@ -2677,22 +1783,13 @@
                 ],
                 "total_interactions": 12,
                 "avg_resolution_time_hours": 4.2
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "get_interaction_history"
-          }
+          ]
         },
         "search_known_issues": {
-          "version": "0.1.0",
           "description": "Searches knowledge base for known issues",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "symptoms": {
@@ -2707,65 +1804,22 @@
               "symptoms"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "matches_found": {
-                "type": "integer"
-              },
-              "known_issues": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "title": {
-                      "type": "string"
-                    },
-                    "category": {
-                      "type": "string"
-                    },
-                    "severity": {
-                      "type": "string"
-                    },
-                    "root_cause": {
-                      "type": "string"
-                    },
-                    "resolution": {
-                      "type": "string"
-                    },
-                    "workaround": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "fix_version": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+          "defaults": {
+            "response": {
+              "matches_found": 0,
+              "known_issues": []
+            },
+            "latencyMs": 150,
+            "rateLimit": {
+              "rps": 3
             }
-          },
-          "defaultResponse": {
-            "matches_found": 0,
-            "known_issues": []
-          },
-          "rateLimit": {
-            "rps": 3
-          },
-          "latencyMs": {
-            "default": 150
           },
           "cases": [
             {
-              "caseId": "password_reset_issue",
+              "id": "password_reset_issue",
               "match": {
                 "strategy": "regex",
-                "expr": "$.symptoms",
+                "path": "symptoms",
                 "value": ".*password.*reset.*"
               },
               "response": {
@@ -2792,18 +1846,13 @@
                     "status": "known_limitation"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "login_issue",
+              "id": "login_issue",
               "match": {
                 "strategy": "regex",
-                "expr": "$.symptoms",
+                "path": "symptoms",
                 "value": ".*login.*fail.*"
               },
               "response": {
@@ -2819,22 +1868,13 @@
                     "status": "monitoring"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "search_known_issues"
-          }
+          ]
         },
         "check_system_status": {
-          "version": "0.1.0",
           "description": "Checks current system status and outages",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "service": {
@@ -2843,56 +1883,22 @@
               }
             }
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "overall_status": {
-                "type": "string"
-              },
-              "last_updated": {
-                "type": "string"
-              },
-              "services": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "uptime_30d": {
-                      "type": "string"
-                    }
-                  }
-                }
-              },
-              "recent_incidents": {
-                "type": "array"
-              },
-              "scheduled_maintenance": {
-                "type": "object"
-              }
+          "defaults": {
+            "response": {
+              "overall_status": "operational",
+              "services": []
+            },
+            "latencyMs": 50,
+            "rateLimit": {
+              "rps": 10
             }
-          },
-          "defaultResponse": {
-            "overall_status": "operational",
-            "services": []
-          },
-          "rateLimit": {
-            "rps": 10
-          },
-          "latencyMs": {
-            "default": 50
           },
           "cases": [
             {
-              "caseId": "all_systems_normal",
+              "id": "all_systems_normal",
               "match": {
                 "strategy": "exact",
-                "expr": "$.service",
+                "path": "service",
                 "value": "all"
               },
               "response": {
@@ -2922,18 +1928,13 @@
                 ],
                 "recent_incidents": [],
                 "scheduled_maintenance": null
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "auth_degraded",
+              "id": "auth_degraded",
               "match": {
                 "strategy": "exact",
-                "expr": "$.service",
+                "path": "service",
                 "value": "auth"
               },
               "response": {
@@ -2954,22 +1955,13 @@
                     "status": "investigating"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "check_system_status"
-          }
+          ]
         },
         "analyze_account_logs": {
-          "version": "0.1.0",
           "description": "Analyzes account activity logs for anomalies",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "customer_id": {
@@ -2984,80 +1976,23 @@
               "customer_id"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "customer_id": {
-                "type": "string"
-              },
-              "analysis_period": {
-                "type": "string"
-              },
-              "events": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "timestamp": {
-                      "type": "string"
-                    },
-                    "event": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "ip": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string"
-                    },
-                    "error_code": {
-                      "type": "string"
-                    }
-                  }
-                }
-              },
-              "anomalies": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string"
-                    },
-                    "description": {
-                      "type": "string"
-                    },
-                    "error_code": {
-                      "type": "string"
-                    },
-                    "recommendation": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+          "defaults": {
+            "response": {
+              "customer_id": null,
+              "events": [],
+              "anomalies": []
+            },
+            "latencyMs": 200,
+            "rateLimit": {
+              "rps": 3
             }
-          },
-          "defaultResponse": {
-            "customer_id": null,
-            "events": [],
-            "anomalies": []
-          },
-          "rateLimit": {
-            "rps": 3
-          },
-          "latencyMs": {
-            "default": 200
           },
           "cases": [
             {
-              "caseId": "password_reset_logs",
+              "id": "password_reset_logs",
               "match": {
                 "strategy": "exact",
-                "expr": "$.customer_id",
+                "path": "customer_id",
                 "value": "ACCT-7890"
               },
               "response": {
@@ -3110,22 +2045,13 @@
                     "recommendation": "Clear session cache or use private browsing"
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "analyze_account_logs"
-          }
+          ]
         },
         "get_response_templates": {
-          "version": "0.1.0",
           "description": "Retrieves response templates for issue category",
-          "paramsSchema": {
+          "inputSchema": {
             "type": "object",
             "properties": {
               "category": {
@@ -3140,55 +2066,21 @@
               "category"
             ]
           },
-          "resultSchema": {
-            "type": "object",
-            "properties": {
-              "templates": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "subject_template": {
-                      "type": "string"
-                    },
-                    "body_template": {
-                      "type": "string"
-                    },
-                    "tone": {
-                      "type": "string"
-                    },
-                    "tags": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
+          "defaults": {
+            "response": {
+              "templates": []
+            },
+            "latencyMs": 75,
+            "rateLimit": {
+              "rps": 5
             }
-          },
-          "defaultResponse": {
-            "templates": []
-          },
-          "rateLimit": {
-            "rps": 5
-          },
-          "latencyMs": {
-            "default": 75
           },
           "cases": [
             {
-              "caseId": "auth_templates",
+              "id": "auth_templates",
               "match": {
                 "strategy": "exact",
-                "expr": "$.category",
+                "path": "category",
                 "value": "authentication"
               },
               "response": {
@@ -3206,18 +2098,13 @@
                     ]
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             },
             {
-              "caseId": "billing_templates",
+              "id": "billing_templates",
               "match": {
                 "strategy": "exact",
-                "expr": "$.category",
+                "path": "category",
                 "value": "billing"
               },
               "response": {
@@ -3235,17 +2122,9 @@
                     ]
                   }
                 ]
-              },
-              "responseTemplate": null,
-              "latencyMsOverride": null,
-              "errorMode": null,
-              "flakyRate": null,
-              "weight": null
+              }
             }
-          ],
-          "meta": {
-            "originalToolName": "get_response_templates"
-          }
+          ]
         }
       }
     }

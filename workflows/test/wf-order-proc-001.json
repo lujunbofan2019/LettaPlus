@@ -1,0 +1,55 @@
+{
+  "workflow_schema_version": "2.2.0",
+  "workflow_id": "wf-order-proc-001",
+  "workflow_name": "Order Processing Pipeline",
+  "description": "Validates, prices, and invoices order ORD-2025-0042",
+  "version": "1.0.0",
+  "created_at": "2025-01-30T10:00:00Z",
+  "author": "planner",
+  "tags": ["order-processing", "testing", "phase-1"],
+  "af_imports": [
+    { "uri": "/app/agents/worker.af" }
+  ],
+  "skill_imports": [
+    { "uri": "/app/generated/manifests/skill.validate.order-0.1.0.json" },
+    { "uri": "/app/generated/manifests/skill.calculate.pricing-0.1.0.json" },
+    { "uri": "/app/generated/manifests/skill.generate.invoice-0.1.0.json" }
+  ],
+  "asl": {
+    "Comment": "Order processing pipeline",
+    "StartAt": "ValidateOrder",
+    "Version": "1.0",
+    "States": {
+      "ValidateOrder": {
+        "Type": "Task",
+        "Comment": "Validate customer, inventory, and shipping address",
+        "AgentBinding": {
+          "agent_template_ref": { "name": "worker" },
+          "skills": ["skill.validate.order@0.1.0"]
+        },
+        "ResultPath": "$.validation",
+        "Next": "CalculatePricing"
+      },
+      "CalculatePricing": {
+        "Type": "Task",
+        "Comment": "Calculate pricing",
+        "AgentBinding": {
+          "agent_template_ref": { "name": "worker" },
+          "skills": ["skill.calculate.pricing@0.1.0"]
+        },
+        "ResultPath": "$.pricing",
+        "Next": "GenerateInvoice"
+      },
+      "GenerateInvoice": {
+        "Type": "Task",
+        "Comment": "Generate invoice",
+        "AgentBinding": {
+          "agent_template_ref": { "name": "worker" },
+          "skills": ["skill.generate.invoice@0.1.0"]
+        },
+        "ResultPath": "$.invoice",
+        "End": true
+      }
+    }
+  }
+}

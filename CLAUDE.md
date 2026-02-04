@@ -72,7 +72,7 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `stub_mcp/` | Deterministic stub MCP server for BDD testing |
 | `graphiti/` | Knowledge graph memory layer (FalkorDB backend) |
 | `skills_src/` | YAML skill definitions and tool specifications |
-| `generated/` | Generated artifacts: manifests, catalogs, stub config |
+| `generated/` | Generated artifacts: manifests, catalogs, stub config, registry, schemas |
 | `workflows/` | Example workflow JSON files |
 | `workflows/generated/` | Persisted workflow definitions |
 | `workflows/runs/` | Execution audit trails (per workflow_id) |
@@ -171,12 +171,13 @@ curl -sf http://localhost:8765/healthz      # Stub MCP
 ### Regenerate artifacts from YAML sources
 
 ```bash
-# Generate all artifacts (manifests + stub config)
+# Generate all artifacts (manifests + stub config + registry)
 python -c 'from dcf_mcp.tools.dcf.generate import generate_all; print(generate_all())'
 
 # Or individual generators
 python -c 'from dcf_mcp.tools.dcf.yaml_to_manifests import yaml_to_manifests; yaml_to_manifests()'
 python -c 'from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config; yaml_to_stub_config()'
+python -c 'from dcf_mcp.tools.dcf.yaml_to_registry import yaml_to_registry; yaml_to_registry()'
 ```
 
 ### Graphiti subproject (knowledge graph)
@@ -201,18 +202,37 @@ cd graphiti && pytest              # Run tests
 
 ## YAML Skill Pipeline
 
-Skills and tools are authored via YAML for clarity and maintainability:
+Skills and tools are authored via YAML for clarity and maintainability. **YAML files are the human-editable source of truth; JSON files are machine-generated outputs.**
 
-1. **`skills_src/skills/*.skill.yaml`** — Individual skill definitions (one per file)
-2. **`skills_src/tools.yaml`** — Tool specifications and test cases for simulation
-3. **`skills_src/registry.yaml`** — Resolver map from server ID → endpoint (stub vs real)
+### Source Files (YAML - Human-Editable)
 
-**Pipeline:**
-1. Author YAML skill files in `skills_src/skills/`
-2. Define tools and test cases in `skills_src/tools.yaml`
-3. Run `generate_all()` → generates manifests + stub config
-4. Stub MCP server hot-reloads config automatically
-5. Switch to real backends by updating `registry.yaml`
+| File | Purpose |
+|------|---------|
+| `skills_src/skills/*.skill.yaml` | Individual skill definitions (one per file) |
+| `skills_src/tools.yaml` | Tool specifications and test cases for simulation |
+| `skills_src/registry.yaml` | MCP server resolver map (server ID → endpoint) |
+
+### Generated Files (JSON - Machine-Readable)
+
+| File | Generated From | Purpose |
+|------|----------------|---------|
+| `generated/manifests/skill.*.json` | `skills_src/skills/*.yaml` | Skill manifests for load_skill |
+| `generated/catalogs/skills_catalog.json` | All skill manifests | Fast skill discovery index |
+| `generated/stub/stub_config.json` | `skills_src/tools.yaml` | Stub MCP server configuration |
+| `generated/registry.json` | `skills_src/registry.yaml` | MCP server endpoint resolution |
+| `generated/schemas/*.json` | `skills_src/schemas/*.schema.yaml` | JSON Schemas for validation tools |
+
+### Generation Pipeline
+
+1. Author YAML source files in `skills_src/`
+2. Run `generate_all()` to produce all JSON outputs:
+   - `yaml_to_manifests` → skill manifests + catalog
+   - `yaml_to_stub_config` → stub config
+   - `yaml_to_registry` → registry.json
+3. Stub MCP server hot-reloads config automatically
+4. Switch to real backends by updating `skills_src/registry.yaml` and regenerating
+
+> **Important:** Never edit files in `generated/` directly. Always modify the YAML sources and regenerate.
 
 See `skills_src/SKILLS.md` for detailed authoring documentation.
 

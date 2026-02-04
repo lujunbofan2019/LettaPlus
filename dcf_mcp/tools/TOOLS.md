@@ -254,7 +254,7 @@ Dynamically loads a skill manifest into a Letta agent.
 5. Update skill state block (`dcf_active_skills`) for tracking
 
 **MCP Server Resolution**:
-- **Logical servers**: Resolved via `skills_src/registry.json`
+- **Logical servers**: Resolved via `generated/registry.json` (generated from `skills_src/registry.yaml`)
 - **Physical servers**: Direct endpoint URL in manifest
 - **Supported transports**: `streamable_http`, `stdio`, `ws/sse`
 
@@ -647,7 +647,7 @@ Low-level JSON document operations for advanced control plane manipulation.
 | `DCF_MANIFESTS_DIR` | `/app/generated/manifests` | Skill manifest directory |
 | `DCF_WORKFLOWS_DIR` | `/app/workflows` | Workflow file directory |
 | `DCF_AGENTS_DIR` | `/app/agents` | Agent template directory |
-| `SKILL_REGISTRY_PATH` | `skills_src/registry.json` | MCP server registry |
+| `SKILL_REGISTRY_PATH` | `/app/generated/registry.json` | MCP server registry (generated from skills_src/registry.yaml) |
 | `SKILL_STATE_BLOCK_LABEL` | `dcf_active_skills` | Skill tracking block label |
 | `ALLOW_MCP_SKILLS` | `true` | Enable MCP server skills |
 | `ALLOW_PYTHON_SOURCE_SKILLS` | `false` | Enable python_source skills |

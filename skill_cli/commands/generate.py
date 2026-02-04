@@ -347,13 +347,134 @@ def generate_stub_config(
     return results
 
 
+def generate_registry(
+    skills_dir: Path,
+    generated_dir: Path,
+    verbose: bool = False
+) -> Dict[str, Any]:
+    """Generate MCP server registry from registry.yaml."""
+    results = {
+        "generated": None,
+        "errors": [],
+        "server_count": 0,
+    }
+
+    # Load registry YAML
+    registry_path = skills_dir / "registry.yaml"
+    if not registry_path.exists():
+        return {"error": f"registry.yaml not found at {registry_path}"}
+
+    registry_data, error = load_yaml_file(registry_path)
+    if error:
+        return {"error": f"Failed to load registry.yaml: {error}"}
+
+    if not isinstance(registry_data, dict):
+        return {"error": "registry.yaml is not a valid YAML dictionary"}
+
+    servers = registry_data.get("servers", {})
+    results["server_count"] = len(servers)
+
+    # Write registry.json
+    out_path = generated_dir / "registry.json"
+    generated_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with out_path.open("w", encoding="utf-8") as f:
+            json.dump(registry_data, f, indent=2)
+
+        results["generated"] = str(out_path)
+        if verbose:
+            print_success(f"Generated {out_path}")
+
+    except Exception as e:
+        results["errors"].append({
+            "file": "registry.json",
+            "error": str(e),
+        })
+
+    return results
+
+
+def generate_schemas(
+    skills_dir: Path,
+    generated_dir: Path,
+    verbose: bool = False
+) -> Dict[str, Any]:
+    """Generate JSON Schema files from YAML schema sources."""
+    results = {
+        "generated": [],
+        "skipped": [],
+        "errors": [],
+    }
+
+    # Check for schemas directory
+    schemas_dir = skills_dir / "schemas"
+    if not schemas_dir.exists():
+        return {"error": f"Schemas directory not found: {schemas_dir}"}
+
+    # Ensure output directory exists
+    out_dir = generated_dir / "schemas"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Process each .schema.yaml file
+    for yaml_path in sorted(schemas_dir.glob("*.schema.yaml")):
+        # Load YAML
+        data, error = load_yaml_file(yaml_path)
+        if error:
+            results["errors"].append({
+                "file": yaml_path.name,
+                "error": error,
+            })
+            continue
+
+        if not isinstance(data, dict):
+            results["skipped"].append({
+                "file": yaml_path.name,
+                "reason": "Not a valid dictionary",
+            })
+            continue
+
+        # Check if it looks like a JSON Schema
+        is_json_schema = any(key in data for key in ["$schema", "type", "properties", "$id"])
+        if not is_json_schema:
+            results["skipped"].append({
+                "file": yaml_path.name,
+                "reason": "Not a JSON Schema (missing $schema/type/properties)",
+            })
+            continue
+
+        # Generate output filename: skill.authoring.schema.yaml -> skill.authoring.schema.json
+        json_filename = yaml_path.stem + ".json"  # .stem removes .yaml
+        out_path = out_dir / json_filename
+
+        try:
+            with out_path.open("w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+            results["generated"].append({
+                "source": yaml_path.name,
+                "output": json_filename,
+            })
+
+            if verbose:
+                print_success(f"Generated {out_path}")
+
+        except Exception as e:
+            results["errors"].append({
+                "file": yaml_path.name,
+                "error": str(e),
+            })
+
+    return results
+
+
 def clean_generated(generated_dir: Path, verbose: bool = False) -> int:
     """Clean the generated directory."""
     if not generated_dir.exists():
         return 0
 
     count = 0
-    for subdir in ["manifests", "catalogs", "stub"]:
+    for subdir in ["manifests", "catalogs", "stub", "schemas"]:
         path = generated_dir / subdir
         if path.exists():
             for f in path.glob("*"):
@@ -362,6 +483,14 @@ def clean_generated(generated_dir: Path, verbose: bool = False) -> int:
                     count += 1
                     if verbose:
                         print_info(f"Removed {f}")
+
+    # Also clean registry.json at root level
+    registry_path = generated_dir / "registry.json"
+    if registry_path.exists():
+        registry_path.unlink()
+        count += 1
+        if verbose:
+            print_info(f"Removed {registry_path}")
 
     return count
 
@@ -429,6 +558,45 @@ def run_generate(args) -> int:
 
         if not args.quiet and result.get("generated"):
             print_success(f"Generated {result['generated']}")
+
+    # Generate registry (always, unless stub_only or manifests_only)
+    if not args.stub_only and not args.manifests_only:
+        if not args.quiet:
+            print_header("Generating MCP registry")
+
+        result = generate_registry(skills_dir, generated_dir, args.verbose > 0)
+
+        if "error" in result:
+            print_warning(result["error"])  # Non-fatal - registry.yaml may not exist
+        elif result.get("errors"):
+            for err in result["errors"]:
+                print_error(f"{err['file']}: {err['error']}")
+            total_errors += len(result["errors"])
+        elif not args.quiet and result.get("generated"):
+            print_success(f"Generated {result['generated']} ({result.get('server_count', 0)} servers)")
+
+    # Generate schemas (always, unless stub_only or manifests_only)
+    if not args.stub_only and not args.manifests_only:
+        if not args.quiet:
+            print_header("Generating JSON schemas")
+
+        result = generate_schemas(skills_dir, generated_dir, args.verbose > 0)
+
+        if "error" in result:
+            print_warning(result["error"])  # Non-fatal - schemas may not exist
+        elif result.get("errors"):
+            for err in result["errors"]:
+                print_error(f"{err['file']}: {err['error']}")
+            total_errors += len(result["errors"])
+        else:
+            generated_count = len(result.get("generated", []))
+            skipped_count = len(result.get("skipped", []))
+            if not args.quiet:
+                if generated_count > 0:
+                    print_success(f"Generated {generated_count} schema(s)")
+                if skipped_count > 0 and args.verbose > 0:
+                    for skip in result["skipped"]:
+                        print_info(f"Skipped {skip['file']}: {skip['reason']}")
 
     # Watch mode
     if args.watch:

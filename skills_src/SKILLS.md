@@ -44,10 +44,12 @@ This approach enables:
 ┌─────────────────────────────────────────────────────────────────┐
 │                     GENERATION LAYER                            │
 ├─────────────────────────────────────────────────────────────────┤
-│  dcf_mcp/tools/dcf/                                            │
+│  dcf_mcp/tools/dcf/                                             │
 │  ├── generate.py            # Unified generator                 │
-│  ├── yaml_to_manifests.py   # YAML → JSON manifests            │
-│  └── yaml_to_stub_config.py # YAML → stub config               │
+│  ├── yaml_to_manifests.py   # YAML → JSON manifests             │
+│  ├── yaml_to_stub_config.py # YAML → stub config                │
+│  ├── yaml_to_registry.py    # YAML → MCP registry               │
+│  └── yaml_to_schemas.py     # YAML → JSON Schemas               │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -55,19 +57,21 @@ This approach enables:
 │                     GENERATED ARTIFACTS                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  generated/                                                     │
-│  ├── manifests/*.json       # Skill manifest files             │
-│  ├── catalogs/skills_catalog.json  # Discovery index           │
-│  └── stub/stub_config.json  # Stub MCP server config           │
+│  ├── manifests/*.json       # Skill manifest files              │
+│  ├── catalogs/skills_catalog.json  # Discovery index            │
+│  ├── stub/stub_config.json  # Stub MCP server config            │
+│  ├── registry.json          # MCP server endpoint mapping       │
+│  └── schemas/*.json         # JSON Schemas for validation       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      RUNTIME LAYER                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  stub_mcp/stub_mcp_server.py   # Deterministic test server     │
-│  dcf_mcp/tools/dcf/load_skill.py    # Skill loader             │
-│  dcf_mcp/tools/dcf/unload_skill.py  # Skill unloader           │
-│  dcf_mcp/tools/dcf/get_skillset.py  # Skill discovery          │
+│  stub_mcp/stub_mcp_server.py   # Deterministic test server      │
+│  dcf_mcp/tools/dcf/load_skill.py    # Skill loader              │
+│  dcf_mcp/tools/dcf/unload_skill.py  # Skill unloader            │
+│  dcf_mcp/tools/dcf/get_skillset.py  # Skill discovery           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -77,7 +81,7 @@ The DCF skill system uses **two distinct schemas** optimized for different stage
 
 | Schema | Location | Purpose | Format |
 |--------|----------|---------|--------|
-| **YAML Authoring Schema** | `skills_src/schemas/skill.schema.yaml` | Human-friendly skill authoring | Documentation (not yet enforceable) |
+| **YAML Authoring Schema** | `skills_src/schemas/skill.authoring.schema.yaml` | Human-friendly skill authoring | JSON Schema 2020-12 (enforceable via `skill_cli validate`) |
 | **JSON Runtime Schema** | `dcf_mcp/schemas/skill_manifest_schema_v2.0.0.json` | Runtime validation & loading | JSON Schema 2020-12 (machine-enforceable) |
 
 **Why two schemas?**

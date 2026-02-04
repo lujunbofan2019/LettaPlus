@@ -1,7 +1,7 @@
 {
+  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.research.news@0.1.0",
-  "skillPackageId": null,
   "skillName": "research.news",
   "skillVersion": "0.1.0",
   "description": "Collects topical headlines and supporting web snippets",
@@ -13,60 +13,46 @@
     "egress": "internet",
     "secrets": []
   },
-  "skillDirectives": "Return at least three diverse sources when available.\nInclude source attribution for all headlines.\nPrioritize recent and authoritative sources.\nNote publication dates to establish recency.",
-  "requiredTools": [
+  "skillDirectives": "Return at least three diverse sources when available.\nInclude source attribution for all headlines.\nPrioritize recent and authoritative sources.\nNote publication dates to establish recency.\n",
+  "tools": [
     {
-      "toolName": "news_headlines",
-      "description": "Pull relevant headlines for a topic",
-      "json_schema": {
-        "name": "news_headlines",
-        "description": "Mock top headlines search",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "topic": {
-              "type": "string",
-              "description": "Topic to fetch headlines for"
-            }
-          },
-          "required": [
-            "topic"
-          ]
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "search",
         "toolName": "news_headlines"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic to fetch headlines for"
+          }
+        },
+        "required": [
+          "topic"
+        ]
+      }
     },
     {
-      "toolName": "web_fetch",
-      "description": "Optional deep-dive on selected headlines",
-      "json_schema": {
-        "name": "web_fetch",
-        "description": "Mock HTTP fetcher",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "URL to fetch"
-            }
-          },
-          "required": [
-            "url"
-          ]
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "web",
         "toolName": "web_fetch"
       },
-      "required": false
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to fetch"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
     }
   ],
-  "requiredDataSources": []
+  "dataSources": []
 }

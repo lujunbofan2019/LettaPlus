@@ -24,6 +24,26 @@ from ..utils import (
 )
 
 
+def parse_sse_response(body: str) -> Optional[Dict[str, Any]]:
+    """
+    Parse SSE (Server-Sent Events) response to extract JSON data.
+
+    SSE format:
+        event: message
+        data: {"jsonrpc":"2.0",...}
+
+    Returns the parsed JSON or None if parsing fails.
+    """
+    lines = body.strip().split("\n")
+    for line in lines:
+        if line.startswith("data: "):
+            try:
+                return json.loads(line[6:])
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
 class TestResult:
     """Holds test execution result."""
 
@@ -64,7 +84,7 @@ def get_mcp_session(stub_url: str) -> Tuple[Optional[str], Optional[str]]:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-03-26",
+                "protocolVersion": "2024-11-05",
                 "capabilities": {},
                 "clientInfo": {"name": "skill-cli", "version": "0.1.0"},
             },
@@ -73,12 +93,16 @@ def get_mcp_session(stub_url: str) -> Tuple[Optional[str], Optional[str]]:
         req = Request(
             f"{stub_url}/mcp",
             data=json.dumps(init_request).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
             method="POST",
         )
 
         with urlopen(req, timeout=10) as response:
-            session_id = response.headers.get("mcp-session")
+            # Try both header names for compatibility
+            session_id = response.headers.get("mcp-session-id") or response.headers.get("mcp-session")
             return session_id, None
 
     except HTTPError as e:
@@ -114,9 +138,12 @@ def call_tool(
             },
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
         if session_id:
-            headers["mcp-session"] = session_id
+            headers["mcp-session-id"] = session_id
 
         req = Request(
             f"{stub_url}/mcp",
@@ -128,7 +155,15 @@ def call_tool(
         with urlopen(req, timeout=30) as response:
             latency_ms = (time.time() - start_time) * 1000
             body = response.read().decode("utf-8")
-            result = json.loads(body)
+
+            # Handle SSE (Server-Sent Events) response format
+            content_type = response.headers.get("Content-Type", "")
+            if "text/event-stream" in content_type:
+                result = parse_sse_response(body)
+                if result is None:
+                    return None, "Failed to parse SSE response", latency_ms
+            else:
+                result = json.loads(body)
 
             if "error" in result:
                 return None, result["error"].get("message", "Unknown error"), latency_ms

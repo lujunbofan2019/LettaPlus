@@ -20,7 +20,7 @@ def _env_flag(name: str, default: bool = True) -> bool:
 
 ALLOW_PYTHON_SOURCE = _env_flag("ALLOW_PYTHON_SOURCE_SKILLS", default=False)
 ALLOW_MCP = _env_flag("ALLOW_MCP_SKILLS", default=True)
-REGISTRY_PATH = os.getenv("SKILL_REGISTRY_PATH", "skills_src/registry.json")
+REGISTRY_PATH = os.getenv("SKILL_REGISTRY_PATH", "/app/generated/registry.json")
 
 
 def _init_result() -> Dict[str, Any]:
@@ -149,8 +149,10 @@ def load_skill(skill_manifest: str, agent_id: str) -> Dict[str, Any]:
        enabled via ``ALLOW_PYTHON_SOURCE_SKILLS``), and ``mcp_server`` definitions.
        ``mcp_server`` entries may describe either a physical server (via
        ``endpointUrl``) or a logical server reference. Logical references are
-       resolved through ``skills_src/registry.json`` (override with
+       resolved through ``generated/registry.json`` (override with
        ``SKILL_REGISTRY_PATH``) to determine the actual transport/endpoint.
+       The registry is generated from ``skills_src/registry.yaml`` by the
+       ``yaml_to_registry`` tool.
     4. Attach ``text_content`` data sources chunked according to
        ``SKILL_MAX_TEXT_CHARS``.
     5. Update the per-agent bookkeeping block (labelled by

@@ -1,7 +1,7 @@
 {
+  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.research.web@0.1.0",
-  "skillPackageId": null,
   "skillName": "research.web",
   "skillVersion": "0.1.0",
   "description": "Lightweight web research capability",
@@ -15,66 +15,51 @@
       "BING_API_KEY"
     ]
   },
-  "skillDirectives": "Follow queries precisely.\nExtract key facts from search results.\nProvide citations with source URLs.\nWhen fetching pages, focus on relevant content sections.",
-  "requiredTools": [
+  "skillDirectives": "Follow queries precisely.\nExtract key facts from search results.\nProvide citations with source URLs.\nWhen fetching pages, focus on relevant content sections.\n",
+  "tools": [
     {
-      "toolName": "search_query",
-      "description": "Core search tool for web queries",
-      "json_schema": {
-        "name": "search_query",
-        "description": "Mock web search query tool",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "q": {
-              "type": "string",
-              "description": "Search query"
-            }
-          },
-          "required": [
-            "q"
-          ]
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "search",
         "toolName": "search_query"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search query"
+          }
+        },
+        "required": [
+          "q"
+        ]
+      }
     },
     {
-      "toolName": "web_fetch",
-      "description": "Fetch full page content when needed",
-      "json_schema": {
-        "name": "web_fetch",
-        "description": "Mock HTTP fetcher",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "URL to fetch"
-            }
-          },
-          "required": [
-            "url"
-          ]
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "web",
         "toolName": "web_fetch"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to fetch"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
     }
   ],
-  "requiredDataSources": [
+  "dataSources": [
     {
-      "dataSourceId": "aboutness",
+      "id": "aboutness",
       "description": "Skill context for the agent",
-      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "This skill extracts key facts with citations.\nAlways include source URLs when reporting findings.\n"

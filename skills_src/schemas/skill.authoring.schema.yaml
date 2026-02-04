@@ -1,0 +1,204 @@
+# =============================================================================
+# JSON Schema for DCF Skill Authoring Files
+# =============================================================================
+# This is a JSON Schema written in YAML format for human readability.
+# It validates skill YAML files in the DCF authoring format.
+#
+# Generated JSON: generated/schemas/skill.authoring.schema.json
+# Used by: skill_cli validate command
+# =============================================================================
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://dcf.letta.ai/schemas/skill.authoring.schema.json"
+title: "DCF Skill Authoring Schema"
+description: "JSON Schema for validating skill YAML files in the DCF authoring format"
+
+type: object
+required:
+  - apiVersion
+  - kind
+  - metadata
+  - spec
+additionalProperties: false
+
+properties:
+  apiVersion:
+    type: string
+    const: "skill/v1"
+    description: "Schema version identifier. Must be 'skill/v1'."
+
+  kind:
+    type: string
+    const: "Skill"
+    description: "Resource type identifier. Must be 'Skill'."
+
+  metadata:
+    type: object
+    description: "Skill identification and discovery metadata"
+    required:
+      - manifestId
+      - name
+      - version
+    additionalProperties: false
+    properties:
+      manifestId:
+        type: string
+        pattern: "^skill\\.[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+@\\d+\\.\\d+\\.\\d+$"
+        description: "Unique identifier in format: skill.<domain>.<name>@<semver>"
+        examples:
+          - "skill.research.web@0.1.0"
+          - "skill.mycompany.analytics@1.0.0"
+
+      name:
+        type: string
+        pattern: "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+        description: "Dot-separated skill name"
+        examples:
+          - "research.web"
+          - "mycompany.analytics"
+
+      version:
+        type: string
+        pattern: "^\\d+\\.\\d+\\.\\d+$"
+        description: "Semantic version (X.Y.Z)"
+        examples:
+          - "0.1.0"
+          - "1.0.0"
+
+      description:
+        type: string
+        description: "Human-readable skill description"
+        maxLength: 500
+
+      tags:
+        type: array
+        items:
+          type: string
+          pattern: "^[a-z][a-z0-9_-]*$"
+          maxLength: 50
+        uniqueItems: true
+        description: "Categorization tags for skill discovery"
+
+  spec:
+    type: object
+    description: "Skill specification including directives, tools, and data sources"
+    required:
+      - directives
+    additionalProperties: false
+    properties:
+      permissions:
+        type: object
+        description: "Security and access permissions"
+        additionalProperties: false
+        properties:
+          egress:
+            type: string
+            enum:
+              - "none"
+              - "intranet"
+              - "internet"
+            default: "none"
+            description: "Network access level required"
+
+          secrets:
+            type: array
+            items:
+              type: string
+              pattern: "^[A-Z][A-Z0-9_]*$"
+            uniqueItems: true
+            description: "Names of required secrets/API keys"
+
+          riskLevel:
+            type: string
+            enum:
+              - "low"
+              - "medium"
+              - "high"
+            default: "low"
+            description: "Risk classification for governance"
+
+      directives:
+        type: string
+        minLength: 1
+        description: "Behavioral instructions for the agent when this skill is loaded"
+
+      tools:
+        type: array
+        items:
+          $ref: "#/$defs/toolRef"
+        description: "MCP tools required by this skill"
+
+      dataSources:
+        type: array
+        items:
+          $ref: "#/$defs/dataSource"
+        description: "Context data injected into agent memory"
+
+      dependencies:
+        type: array
+        items:
+          type: string
+          pattern: "^skill\\.[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+@\\d+\\.\\d+\\.\\d+$"
+        uniqueItems: true
+        description: "Skill manifest IDs this skill depends on (future feature)"
+
+$defs:
+  toolRef:
+    type: object
+    required:
+      - ref
+    additionalProperties: false
+    properties:
+      ref:
+        type: string
+        pattern: "^[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*$"
+        description: "Tool reference in format: serverId:toolName"
+        examples:
+          - "search:search_query"
+          - "llm:llm_summarize"
+
+      required:
+        type: boolean
+        default: true
+        description: "Whether this tool is mandatory for the skill"
+
+      description:
+        type: string
+        description: "Notes about how this tool is used within the skill"
+
+  dataSource:
+    type: object
+    required:
+      - id
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-z0-9_-]*$"
+        description: "Unique identifier within this skill"
+
+      description:
+        type: string
+        description: "Purpose of this data source"
+
+      destination:
+        type: string
+        enum:
+          - "archival_memory"
+          - "working_memory"
+        default: "archival_memory"
+        description: "Where to inject the content in agent memory"
+
+      text:
+        type: string
+        description: "Inline text content"
+
+      file:
+        type: string
+        description: "Path to external file (relative to skill file)"
+
+    oneOf:
+      - required:
+          - text
+      - required:
+          - file

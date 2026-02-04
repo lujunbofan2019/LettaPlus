@@ -345,10 +345,12 @@ def yaml_to_manifests(
             with out_path.open("w", encoding="utf-8") as mf:
                 json.dump(manifest, mf, indent=2, ensure_ascii=False)
 
-            try:
-                manifest_path_for_catalog = out_path.relative_to(Path.cwd()).as_posix()
-            except ValueError:
-                manifest_path_for_catalog = out_path.as_posix()
+            # Calculate path relative to catalog directory for proper resolution
+            # Use os.path.relpath to handle sibling directories (../manifests/...)
+            import os
+            manifest_path_for_catalog = os.path.relpath(
+                out_path.resolve(), catalog_p.parent.resolve()
+            ).replace(os.sep, "/")
 
             out["written_files"].append(str(out_path))
             out["manifests"].append({

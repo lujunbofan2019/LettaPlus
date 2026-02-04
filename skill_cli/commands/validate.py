@@ -71,11 +71,20 @@ class ValidationResult:
 
 
 def load_json_schema(skills_dir: Path) -> Tuple[Optional[Dict], Optional[str]]:
-    """Load the JSON schema for skill validation."""
-    schema_path = skills_dir / "schemas" / "skill.schema.json"
+    """Load the JSON schema for skill validation.
+
+    Looks for the schema at: generated/schemas/skill.authoring.schema.json
+    This schema is generated from skills_src/schemas/skill.authoring.schema.yaml
+    """
+    # Primary location: generated directory (sibling to skills_src)
+    generated_dir = skills_dir.parent / "generated"
+    schema_path = generated_dir / "schemas" / "skill.authoring.schema.json"
 
     if not schema_path.exists():
-        return None, f"Schema not found: {schema_path}"
+        return None, (
+            f"Schema not found at {schema_path}. "
+            f"Run 'generate_all()' to generate schemas from YAML sources."
+        )
 
     try:
         with schema_path.open("r", encoding="utf-8") as f:

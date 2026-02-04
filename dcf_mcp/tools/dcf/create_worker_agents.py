@@ -293,8 +293,9 @@ def create_worker_agents(workflow_json: str,
             "warnings": warnings
         }
 
-    # Build global tool index by name -> id (to avoid duplicate creation when templates include `tools`)
+    # Build global tool index by name -> id and by id (to avoid duplicate creation when templates include `tools`)
     tools_by_name = {}
+    tools_by_id = set()
     try:
         platform_tools = client.tools.list()
         for t in platform_tools:
@@ -302,12 +303,20 @@ def create_worker_agents(workflow_json: str,
             tid = getattr(t, "id", None) or getattr(t, "tool_id", None)
             if nm and tid:
                 tools_by_name[nm] = tid
+            if tid:
+                tools_by_id.add(tid)
     except Exception:
         # Non-fatal: if we can't list tools, we simply won't map template tools to ids
         pass
 
     # Default runtime agent name prefix
-    base_prefix = agent_name_prefix or ("wf-%s-" % workflow_id)
+    # Avoid double "wf-" if workflow_id already starts with "wf-"
+    if agent_name_prefix:
+        base_prefix = agent_name_prefix
+    elif workflow_id.startswith("wf-"):
+        base_prefix = "%s-" % workflow_id
+    else:
+        base_prefix = "wf-%s-" % workflow_id
 
     # --- For each Task state, resolve a template and create an agent ---
     for s_name in task_states:
@@ -387,23 +396,33 @@ def create_worker_agents(workflow_json: str,
         creation_payload = {}
         template_obj = template_payload if isinstance(template_payload, dict) else {}
 
-        # Common pass-through keys
+        # Common pass-through keys (note: 'messages' not supported in newer Letta API - use initial_message_sequence instead)
         for k in ["name", "description", "system", "agent_type", "tags", "llm_config",
-                  "embedding_config", "message_buffer_autoclear", "messages",
+                  "embedding_config", "message_buffer_autoclear", "initial_message_sequence",
                   "core_memory", "tool_exec_environment_variables", "tool_rules",
-                  "tool_ids", "tools"]:
+                  "tool_ids", "tools", "include_base_tools", "include_multi_agent_tools",
+                  "include_base_tool_rules"]:
             if k in template_obj:
                 creation_payload[k] = template_obj[k]
 
         # De-duplicate tools: prefer attaching tool_ids resolved by tool name; avoid creating new ones from source
         resolved_tool_ids = []
-        # If template already provides tool_ids, we keep them
+        # If template already provides tool_ids, validate they exist in the platform
         if isinstance(creation_payload.get("tool_ids"), list) and creation_payload["tool_ids"]:
             for tid in creation_payload["tool_ids"]:
                 if isinstance(tid, str):
-                    resolved_tool_ids.append(tid)
+                    # Skip placeholder tool IDs (tool-0, tool-1, etc.) - these are export artifacts
+                    import re
+                    if re.match(r"^tool-\d+$", tid):
+                        warnings.append("State '%s': skipping placeholder tool_id '%s' from template." % (s_name, tid))
+                        continue
+                    # Only keep tool_ids that exist in the platform
+                    if tid in tools_by_id:
+                        resolved_tool_ids.append(tid)
+                    else:
+                        warnings.append("State '%s': tool_id '%s' not found in platform; skipping." % (s_name, tid))
         # If template provides inline tools, try to map by name
-        elif isinstance(creation_payload.get("tools"), list):
+        if isinstance(creation_payload.get("tools"), list):
             for tool_spec in creation_payload["tools"]:
                 if not isinstance(tool_spec, dict):
                     continue
@@ -420,13 +439,19 @@ def create_worker_agents(workflow_json: str,
         # Replace with deduped ids if any; remove inline tools to avoid re-creation
         if resolved_tool_ids:
             creation_payload["tool_ids"] = list(dict.fromkeys(resolved_tool_ids))  # unique, preserve order
+        else:
+            # No valid tool_ids - remove the key entirely to avoid API errors
+            creation_payload.pop("tool_ids", None)
         creation_payload.pop("tools", None)
 
-        # Ensure a unique, informative runtime name
-        base_name = creation_payload.get("name") if isinstance(creation_payload.get("name"), str) else s_name
-        runtime_name = "%s%s" % (agent_name_prefix or ("wf-%s-" % workflow_id), base_name)
-        # Avoid extremely long names; append short UUID suffix to reduce collision risk
-        runtime_name = (runtime_name[:48] + "-" + str(uuid.uuid4())[:8]) if len(runtime_name) > 56 else runtime_name
+        # Ensure a unique, informative runtime name that includes the state name
+        # Format: {workflow_id}-{state_name} (uses base_prefix computed earlier to avoid double "wf-")
+        template_name = creation_payload.get("name") if isinstance(creation_payload.get("name"), str) else "worker"
+        # Include state name to ensure uniqueness across states
+        runtime_name = "%s%s" % (base_prefix, s_name)
+        # Avoid extremely long names; append short UUID suffix only if truncated
+        if len(runtime_name) > 56:
+            runtime_name = runtime_name[:48] + "-" + str(uuid.uuid4())[:8]
 
         # Tags: workflow + state + any extras (ensure strings)
         tags = creation_payload.get("tags") or []
@@ -473,7 +498,41 @@ def create_worker_agents(workflow_json: str,
         agents_map[s_name] = agent_id
         created.append({"state": s_name, "agent_id": agent_id, "agent_name": agent_name})
 
+    # --- Persist agents_map to control plane meta document ---
+    # This enables finalize_workflow to find and delete workers
+    control_plane_updated = False
+    try:
+        import redis as redis_lib
+        r_url = os.getenv("REDIS_URL") or "redis://redis:6379/0"
+        r = redis_lib.Redis.from_url(r_url, decode_responses=True)
+        r.ping()
+
+        if hasattr(r, "json"):
+            meta_key = "cp:wf:%s:meta" % workflow_id
+            # Check if meta document exists
+            try:
+                meta = r.json().get(meta_key, '$')
+                if isinstance(meta, list) and len(meta) == 1:
+                    meta = meta[0]
+                if isinstance(meta, dict):
+                    # Update the agents field in the meta document
+                    meta["agents"] = agents_map
+                    r.json().set(meta_key, '$', meta)
+                    control_plane_updated = True
+                else:
+                    warnings.append("Control plane meta not found at %s; agents_map not persisted." % meta_key)
+            except Exception as e:
+                warnings.append("Could not update control plane meta: %s: %s" % (e.__class__.__name__, e))
+        else:
+            warnings.append("RedisJSON not available; agents_map not persisted to control plane.")
+    except ImportError:
+        warnings.append("redis package not available; agents_map not persisted to control plane.")
+    except Exception as e:
+        warnings.append("Redis connection failed; agents_map not persisted: %s: %s" % (e.__class__.__name__, e))
+
     status = "Created %d worker agents for workflow '%s'." % (len(created), workflow_id)
+    if control_plane_updated:
+        status += " agents_map persisted to control plane."
     return {
         "status": status,
         "error": None,

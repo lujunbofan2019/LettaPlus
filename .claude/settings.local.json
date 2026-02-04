@@ -49,7 +49,18 @@
       "Bash(cat:*)",
       "Bash(head:*)",
       "WebFetch(domain:openrouter.ai)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(xargs:*)",
+      "Bash(for state in ValidateOrder CalculatePricing GenerateInvoice)",
+      "Bash(do echo -n \"$state: \" docker exec lettaplus-redis-1 redis-cli JSON.GET \"cp:wf:wf-order-proc-001:state:$state\" '$.status')",
+      "Bash(docker ps:*)",
+      "Bash(while read key)",
+      "Bash(do docker exec lettaplus-redis-1 redis-cli DEL \"$key\")",
+      "Bash(while read id)",
+      "Bash(do)",
+      "Bash(done docker exec lettaplus-redis-1 redis-cli --scan --pattern \"dp:wf:*\")",
+      "Bash(done echo \"Cleanup done\")",
+      "Bash(pip3 install:*)"
     ]
   }
 }

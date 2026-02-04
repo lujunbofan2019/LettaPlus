@@ -1,7 +1,7 @@
 {
+  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.write.briefing@0.1.0",
-  "skillPackageId": null,
   "skillName": "write.briefing",
   "skillVersion": "0.1.0",
   "description": "Produces executive-ready strategic briefings",
@@ -13,42 +13,34 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Write in crisp executive tone.\nStructure with clear sections for Opportunities and Risks.\nLead with the most impactful insights.\nInclude actionable recommendations.",
-  "requiredTools": [
+  "skillDirectives": "Write in crisp executive tone.\nStructure with clear sections for Opportunities and Risks.\nLead with the most impactful insights.\nInclude actionable recommendations.\n",
+  "tools": [
     {
-      "toolName": "llm_briefing",
-      "description": "Draft executive briefing from themes",
-      "json_schema": {
-        "name": "llm_briefing",
-        "description": "Mock briefing writer",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "themes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "audience": {
-              "type": "string"
-            }
-          }
-        }
-      },
       "definition": {
         "type": "mcp_server",
         "serverId": "llm",
         "toolName": "llm_briefing"
       },
-      "required": true
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audience": {
+            "type": "string"
+          }
+        }
+      }
     }
   ],
-  "requiredDataSources": [
+  "dataSources": [
     {
-      "dataSourceId": "tone",
+      "id": "tone",
       "description": "Writing style guidance",
-      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "Tone: executive concise.\nUse bullet points for key findings.\nQuantify claims where possible.\n"
