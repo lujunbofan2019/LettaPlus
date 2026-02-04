@@ -97,6 +97,26 @@ search_nodes(
 - What user intent patterns are emerging?
 - Are there capability gaps that need addressing?
 
+### AMSP Model Selection Analysis
+
+**Read AMSP audit record**:
+```
+read_workflow_control_plane(workflow_id=<id>, include_meta=True)
+```
+Check `meta.cost_summary` for aggregated AMSP metrics.
+
+**Query AMSP audit**:
+```bash
+# Redis key pattern for model selection audit
+dp:wf:{workflow_id}:audit:amsp
+```
+
+**Key AMSP Questions**:
+- What was the escalation rate? (>10% suggests recalibration needed)
+- Did actual cost match estimated cost? (>20% deviation triggers recalibration)
+- Which skills had tier mismatches? (success at wrong tier = complexity profile error)
+- What was the tier distribution for this workflow type?
+
 ---
 
 ## Phase 3: Synthesize (Derive Insights)
@@ -122,6 +142,13 @@ search_nodes(
 - Which workflows are taking too long?
 - Are there bottleneck states?
 - Can parallelism be better utilized?
+
+**5. Model Selection Optimization (AMSP)**
+- Are tier selections appropriate for actual task complexity?
+- Which skills have high escalation rates? (suggests underestimated FCS)
+- Which skills consistently succeed at lower tiers? (suggests overestimated FCS)
+- What is the cost efficiency (actual vs estimated)?
+- Are there tier distribution patterns per workflow type?
 
 ### Insight Schema
 ```json
@@ -176,6 +203,49 @@ add_episode(
 )
 ```
 
+### Record AMSP Model Selection Events
+```
+add_episode(
+  name="ModelSelectionEvent:<workflow_id>",
+  content=<amsp_audit_json>,
+  source="json",
+  source_description="AMSP model selection audit from workflow execution",
+  group_id="amsp_events"
+)
+```
+
+**AMSP Audit Schema**:
+```json
+{
+  "workflow_id": "uuid",
+  "workflow_type": "research|synthesis|processing|...",
+  "total_states": N,
+  "tier_distribution": {"0": N, "1": N, "2": N, "3": N},
+  "escalation_rate": 0.0-1.0,
+  "cost_accuracy": actual/estimated,
+  "recalibration_needed": ["skill_id_1", "skill_id_2"],
+  "recommendations": [
+    {
+      "skill": "skill://...",
+      "current_fcs": N,
+      "suggested_fcs": N,
+      "evidence": "string"
+    }
+  ]
+}
+```
+
+### Record Complexity Recalibration Recommendations
+```
+add_episode(
+  name="ComplexityRecalibration:<skill_id>",
+  content=<recalibration_json>,
+  source="json",
+  source_description="Skill complexity profile recalibration recommendation",
+  group_id="amsp_recalibration"
+)
+```
+
 ---
 
 ## Phase 5: Publish (Update Guidelines for Planner)
@@ -214,6 +284,21 @@ The `reflector_guidelines` block should contain actionable guidance:
         "warning": "skill://data.parse@0.1.0 failing on JSON with nested arrays",
         "severity": "high",
         "workaround": "Pre-flatten arrays or use skill://data.parse@0.1.1"
+      }
+    ],
+    "model_selection": [
+      {
+        "skill": "skill://analyze.synthesis@0.1.0",
+        "current_tier": 1,
+        "recommended_action": "recalibrate",
+        "reason": "30% escalation rate suggests FCS underestimated",
+        "suggested_fcs_adjustment": "+3"
+      },
+      {
+        "skill": "skill://write.summary@0.1.0",
+        "current_tier": 0,
+        "recommended_action": "maintain",
+        "reason": "100% success rate at Tier 0 over 10 executions"
       }
     ]
   },

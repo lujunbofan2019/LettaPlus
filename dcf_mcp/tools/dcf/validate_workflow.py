@@ -373,6 +373,66 @@ def validate_workflow(
         out["exit_code"] = 3
         return out
 
+    # ---------- 7) AMSP Complexity Profile Validation ----------
+    complexity_warnings = []
+    skills_without_profiles = []
+    skills_with_profiles = []
+
+    for sname, skill_list in state_skill_map.items():
+        for skill_info in skill_list:
+            manifest_id = skill_info.get("manifestId")
+            manifest = skills_index.get(manifest_id)
+            if manifest:
+                complexity_profile = manifest.get("complexityProfile")
+                if complexity_profile:
+                    skills_with_profiles.append({
+                        "state": sname,
+                        "skill": manifest_id,
+                        "fcs": complexity_profile.get("finalFCS"),
+                        "tier": complexity_profile.get("recommendedTier"),
+                        "maturity": complexity_profile.get("maturityLevel")
+                    })
+                else:
+                    skills_without_profiles.append({
+                        "state": sname,
+                        "skill": manifest_id
+                    })
+
+    if skills_without_profiles:
+        complexity_warnings.append(
+            f"AMSP: {len(skills_without_profiles)} skill(s) missing complexity profiles. "
+            f"Model selection will use default Tier 1 for these: "
+            f"{', '.join(s['skill'] for s in skills_without_profiles[:3])}"
+            + (f" and {len(skills_without_profiles) - 3} more" if len(skills_without_profiles) > 3 else "")
+        )
+
+    # Check for provisional profiles (may need recalibration)
+    provisional_skills = [s for s in skills_with_profiles if s.get("maturity") == "provisional"]
+    if provisional_skills:
+        complexity_warnings.append(
+            f"AMSP: {len(provisional_skills)} skill(s) have provisional complexity profiles. "
+            f"Consider gathering execution data for recalibration."
+        )
+
+    # Add complexity summary to resolution
+    out["resolution"]["complexity"] = {
+        "skills_with_profiles": len(skills_with_profiles),
+        "skills_without_profiles": len(skills_without_profiles),
+        "provisional_profiles": len(provisional_skills),
+        "profile_coverage": round(len(skills_with_profiles) / max(1, len(skills_with_profiles) + len(skills_without_profiles)) * 100, 1),
+        "tier_distribution": {}
+    }
+
+    # Calculate tier distribution
+    tier_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    for skill in skills_with_profiles:
+        tier = skill.get("tier", 0)
+        if tier in tier_counts:
+            tier_counts[tier] += 1
+    out["resolution"]["complexity"]["tier_distribution"] = tier_counts
+
+    out["warnings"].extend(complexity_warnings)
+
     # ---------- Success ----------
     out["ok"] = True
     out["exit_code"] = 0

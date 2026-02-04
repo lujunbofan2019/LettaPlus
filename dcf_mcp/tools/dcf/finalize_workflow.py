@@ -116,10 +116,27 @@ def finalize_workflow(
     planner_agent_id = meta.get("planner_agent_id")
     states = meta.get("states") or []
 
-    # --- Gather state statuses ---
+    # --- Gather state statuses and AMSP metrics ---
     # Note: "succeeded" is the canonical status used by update_workflow_control_plane, counts as "done"
     counts = {"pending": 0, "running": 0, "done": 0, "failed": 0, "cancelled": 0, "succeeded": 0}
     state_docs = {}
+
+    # AMSP cost aggregation (v1.1.0)
+    cost_summary = {
+        "total_tokens": 0,
+        "total_prompt_tokens": 0,
+        "total_completion_tokens": 0,
+        "total_llm_calls": 0,
+        "total_tool_calls": 0,
+        "total_cost_usd": 0.0,
+        "cost_per_tier": {"0": 0.0, "1": 0.0, "2": 0.0, "3": 0.0},
+        "total_duration_ms": 0,
+        "escalation_count": 0,
+        "states_with_metrics": 0,
+        "states_with_model_selection": 0
+    }
+    model_selection_audit = []
+
     for s in states:
         s_key = f"cp:wf:{workflow_id}:state:{s}"
         try:
@@ -135,6 +152,39 @@ def finalize_workflow(
                 counts[st] += 1
             else:
                 counts["pending"] += 1
+
+            # Aggregate AMSP metrics (v1.1.0)
+            model_selection = sdoc.get("model_selection")
+            if model_selection:
+                cost_summary["states_with_model_selection"] += 1
+                tier = str(model_selection.get("tier", 0))
+                model_selection_audit.append({
+                    "state": s,
+                    "tier": model_selection.get("tier"),
+                    "model": model_selection.get("model"),
+                    "fcs": model_selection.get("fcs")
+                })
+
+            execution_metrics = sdoc.get("execution_metrics")
+            if execution_metrics:
+                cost_summary["states_with_metrics"] += 1
+                cost_summary["total_tokens"] += execution_metrics.get("total_tokens", 0)
+                cost_summary["total_prompt_tokens"] += execution_metrics.get("prompt_tokens", 0)
+                cost_summary["total_completion_tokens"] += execution_metrics.get("completion_tokens", 0)
+                cost_summary["total_llm_calls"] += execution_metrics.get("llm_calls", 0)
+                cost_summary["total_tool_calls"] += execution_metrics.get("tool_calls", 0)
+                cost_summary["total_duration_ms"] += execution_metrics.get("duration_ms", 0)
+
+                state_cost = execution_metrics.get("estimated_cost_usd", 0.0)
+                cost_summary["total_cost_usd"] += state_cost
+
+                # Attribute cost to tier
+                if model_selection:
+                    tier = str(model_selection.get("tier", 0))
+                    cost_summary["cost_per_tier"][tier] = cost_summary["cost_per_tier"].get(tier, 0.0) + state_cost
+
+                if execution_metrics.get("tier_escalated"):
+                    cost_summary["escalation_count"] += 1
         else:
             state_docs[s] = None
             counts["pending"] += 1
@@ -248,6 +298,10 @@ def finalize_workflow(
     if finalize_note:
         meta_updates["finalize_note"] = finalize_note
 
+    # Add AMSP cost summary to meta (v1.1.0)
+    if cost_summary["states_with_metrics"] > 0 or cost_summary["states_with_model_selection"] > 0:
+        meta_updates["cost_summary"] = cost_summary
+
     try:
         r.json().set(meta_key, '$', meta_updates)
     except Exception:
@@ -265,7 +319,8 @@ def finalize_workflow(
             "deleted": deleted,
             "delete_errors": delete_errors
         },
-        "note": finalize_note or None
+        "note": finalize_note or None,
+        "cost_summary": cost_summary if cost_summary["states_with_metrics"] > 0 else None
     }
     try:
         audit_key = f"dp:wf:{workflow_id}:audit:finalize"
@@ -273,6 +328,23 @@ def finalize_workflow(
     except Exception:
         # non-fatal
         pass
+
+    # Write AMSP model selection audit record (v1.1.0)
+    if model_selection_audit:
+        amsp_audit = {
+            "type": "model_selection_audit",
+            "workflow_id": workflow_id,
+            "ts": now_iso,
+            "selections": model_selection_audit,
+            "cost_summary": cost_summary,
+            "escalation_rate": round(cost_summary["escalation_count"] / max(1, len(model_selection_audit)) * 100, 1)
+        }
+        try:
+            amsp_audit_key = f"dp:wf:{workflow_id}:audit:amsp"
+            r.json().set(amsp_audit_key, '$', amsp_audit)
+        except Exception:
+            # non-fatal
+            pass
 
     # Combine "done" and "succeeded" counts since "succeeded" is the canonical status
     done_count = counts["done"] + counts.get("succeeded", 0)
@@ -290,7 +362,14 @@ def finalize_workflow(
             "deleted": deleted,
             "delete_errors": delete_errors
         },
-        "final_status": final_status
+        "final_status": final_status,
+        "amsp": {
+            "states_with_model_selection": cost_summary["states_with_model_selection"],
+            "states_with_metrics": cost_summary["states_with_metrics"],
+            "total_cost_usd": round(cost_summary["total_cost_usd"], 4),
+            "total_tokens": cost_summary["total_tokens"],
+            "escalation_count": cost_summary["escalation_count"]
+        } if cost_summary["states_with_model_selection"] > 0 else None
     }
 
     return {

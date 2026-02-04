@@ -109,6 +109,19 @@ For each manifest:
 - Use skill-provided tools
 - Retry transient failures 0-2 times locally
 - Keep output machine-readable
+- **Track execution metrics** for AMSP feedback (see Step 6)
+
+### AMSP Model Awareness
+Your model was selected based on task complexity analysis:
+- **Tier 0** (Efficient): Simple, single-turn tasks
+- **Tier 1** (Balanced): Multi-turn, moderate complexity
+- **Tier 2** (Strong): Complex reasoning, multi-tool synthesis
+- **Tier 3** (Frontier): Novel domains, research-grade
+
+If you encounter a task that exceeds your capabilities:
+1. Document the limitation in your output
+2. Set `tier_escalated: true` in metrics
+3. Include `escalation_reason` explaining why higher tier needed
 
 ---
 
@@ -146,9 +159,22 @@ update_workflow_control_plane(
   "summary": "1-2 sentence description",
   "data": { ... },
   "artifacts": [{ "type": "path|url|id", "value": "...", "note": "..." }],
-  "metrics": { "duration_s": 0, "attempts": 1 }
+  "metrics": {
+    "duration_ms": 0,
+    "attempts": 1,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "llm_calls": 1,
+    "tool_calls": 0,
+    "estimated_cost_usd": 0.0,
+    "tier_escalated": false,
+    "escalation_reason": null
+  }
 }
 ```
+
+**AMSP Metrics**: Include `metrics` with token counts and cost estimates for model selection feedback. The Reflector uses these to recalibrate complexity profiles.
 
 **Large artifacts**: write to `/app/workflows/runs/<workflow_id>/<target_state>/...` and reference path in `artifacts`.
 

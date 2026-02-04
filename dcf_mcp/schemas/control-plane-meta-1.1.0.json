@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/control-plane-meta-1.1.0.json",
+  "title": "Control Plane: Workflow Meta v1.1.0",
+  "description": "Workflow-level metadata with AMSP complexity tracking",
+  "type": "object",
+  "properties": {
+    "workflow_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflow_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "start_at": {
+      "type": "string"
+    },
+    "terminal_states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "deps": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "upstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "downstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        },
+        "required": ["upstream", "downstream"],
+        "additionalProperties": false
+      }
+    },
+    "workflow_complexity": {
+      "description": "AMSP workflow-level complexity summary (v1.1.0)",
+      "type": ["object", "null"],
+      "properties": {
+        "aggregate_fcs": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Aggregate FCS across all states (max strategy)"
+        },
+        "aggregate_tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Highest tier across all states"
+        },
+        "total_states": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of Task states"
+        },
+        "states_with_profiles": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of states with complexity profiles"
+        },
+        "tier_distribution": {
+          "type": "object",
+          "description": "Count of states per tier",
+          "properties": {
+            "tier_0": { "type": "integer", "minimum": 0 },
+            "tier_1": { "type": "integer", "minimum": 0 },
+            "tier_2": { "type": "integer", "minimum": 0 },
+            "tier_3": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "estimated_cost_range": {
+          "type": "object",
+          "description": "Estimated cost range in USD based on tier selection",
+          "properties": {
+            "low": { "type": "number", "minimum": 0 },
+            "high": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "amsp_enabled": {
+          "type": "boolean",
+          "description": "Whether AMSP model selection is enabled"
+        },
+        "latency_requirement": {
+          "type": "string",
+          "enum": ["critical", "standard", "relaxed", "batch"],
+          "description": "Workflow-level latency requirement"
+        }
+      },
+      "additionalProperties": true
+    },
+    "cost_summary": {
+      "description": "Aggregated cost metrics after finalization (v1.1.0)",
+      "type": ["object", "null"],
+      "properties": {
+        "total_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total tokens across all states"
+        },
+        "total_prompt_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_completion_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_llm_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total estimated cost in USD"
+        },
+        "cost_per_tier": {
+          "type": "object",
+          "description": "Cost breakdown by tier",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "total_duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total execution time across all states"
+        },
+        "escalation_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of states that required tier escalation"
+        },
+        "estimation_accuracy": {
+          "type": ["number", "null"],
+          "description": "Ratio of actual to estimated cost (for recalibration)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "planner_agent_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Planner agent ID for this workflow"
+    },
+    "reflector_agent_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Reflector agent ID for post-execution analysis"
+    },
+    "finalized_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "status": {
+      "type": ["string", "null"],
+      "enum": ["pending", "running", "succeeded", "failed", "partial", "cancelled", null]
+    },
+    "finalize_note": {
+      "type": ["string", "null"]
+    }
+  },
+  "required": [
+    "workflow_id",
+    "start_at",
+    "states",
+    "deps"
+  ],
+  "additionalProperties": true
+}
