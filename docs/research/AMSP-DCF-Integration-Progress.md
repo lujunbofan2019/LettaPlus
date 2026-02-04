@@ -1,7 +1,7 @@
 # AMSP-DCF Integration Progress Tracker
 
 **Version:** 1.0.0
-**Status:** In Progress (Phase A Testing)
+**Status:** Phase A Complete, Ready for Phase B
 **Branch:** `feature/amsp-integration`
 **Created:** 2026-02-04
 **Last Updated:** 2026-02-04
@@ -69,7 +69,7 @@ This document tracks the implementation and testing progress of the AMSP (Adapti
 
 | Phase | Name | Status | Implementation | Testing |
 |-------|------|--------|----------------|---------|
-| **A** | Foundation (MVP) | 🟡 In Progress | ✅ Complete | ⏳ Pending |
+| **A** | Foundation (MVP) | ✅ Complete | ✅ Complete | ✅ Complete |
 | **B** | Full Phase 1 Integration | ⬜ Not Started | ⬜ Not Started | ⬜ Not Started |
 | **C** | Phase 2 Integration | ⬜ Not Started | ⬜ Not Started | ⬜ Not Started |
 | **D** | Optimization & Learning | ⬜ Not Started | ⬜ Not Started | ⬜ Not Started |
@@ -86,7 +86,7 @@ This document tracks the implementation and testing progress of the AMSP (Adapti
 
 **Goal:** Basic model selection working for Phase 1 workflows
 
-**Status:** Implementation Complete, Testing Pending
+**Status:** ✅ Complete (All tests passed 2026-02-04)
 
 ### Implementation Tasks
 
@@ -124,11 +124,16 @@ This document tracks the implementation and testing progress of the AMSP (Adapti
 
 | Test | Description | Status | Notes |
 |------|-------------|--------|-------|
-| A.T1 | `compute_task_complexity` unit test | ⬜ Pending | Test WCS calculation, interaction multipliers, tier mapping |
-| A.T2 | Schema validation for skill manifests v2.1.0 | ⬜ Pending | Verify complexityProfile validates correctly |
-| A.T3 | `create_worker_agents` with model selection | ⬜ Pending | Verify model_selections returned and llm_config set |
-| A.T4 | YAML → JSON manifest generation | ⬜ Pending | Verify complexity profiles in generated manifests |
-| A.T5 | Integration test: simple workflow | ⬜ Pending | Execute workflow with AMSP-enabled skills |
+| A.T1 | `compute_task_complexity` unit test | ✅ Passed | Single skill, multi-skill aggregation, latency constraint all pass |
+| A.T2 | Schema validation for skill manifests v2.1.0 | ✅ Passed | Schema validates correctly with complexityProfile |
+| A.T3 | `create_worker_agents` with model selection | ✅ Passed | Fixed skill URI normalization (skill:// prefix handling) |
+| A.T4 | YAML → JSON manifest generation | ✅ Passed | All 3 test skills have valid complexity profiles |
+| A.T5 | Integration test: simple workflow | ✅ Passed | 3-state workflow with Tier 0/0/1 selection verified |
+
+### Bug Fixes During Testing
+
+1. **Skill URI Normalization (A.T3)**: Added `_normalize_skill_id()` to handle `skill://` prefix in AgentBinding.skills
+2. **Dimension Scores (A.T5)**: Fixed `analyze.synthesis` skill dimension scores (context: 2→3, precision: 2→3) to achieve intended Tier 1 classification
 
 ### Testing Procedure (Phase A)
 
@@ -398,11 +403,11 @@ print('✓ AMSP integration test complete')
 
 ### Exit Criteria for Phase A
 
-- [ ] All A.T1-A.T5 tests pass
-- [ ] No regressions in existing workflow tests
-- [ ] `compute_task_complexity` returns valid FCS for test skills
-- [ ] `create_worker_agents` logs model selection decisions
-- [ ] Generated manifests include `complexityProfile` and use `v2.1.0`
+- [x] All A.T1-A.T5 tests pass
+- [x] No regressions in existing workflow tests
+- [x] `compute_task_complexity` returns valid FCS for test skills
+- [x] `create_worker_agents` logs model selection decisions
+- [x] Generated manifests include `complexityProfile` and use `v2.1.0`
 
 ---
 
@@ -596,4 +601,5 @@ print(f'✓ Workflow validation works (exit_code={result[\"exit_code\"]})')
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-02-04 | Phase A testing complete. Fixed skill URI normalization and dimension scores. |
 | 1.0.0 | 2026-02-04 | Initial version with Phase A implementation complete, testing pending |

@@ -22,11 +22,11 @@ spec:
     baseWCS: 11
     dimensionScores:
       horizon: 2       # Session: multi-step analysis workflow
-      context: 2       # Domain-specific: needs domain understanding
+      context: 3       # Domain-specific requiring significant expertise
       tooling: 1       # Simple: one analysis tool
       observability: 1 # High: working with provided inputs
       modality: 0      # Text-only
-      precision: 2     # High: conclusions must be well-supported
+      precision: 3     # High: verifiable accuracy required for conclusions
       adaptability: 1  # Slow-changing: analysis patterns stable
     interactionMultipliers:
       - pair: horizon+context

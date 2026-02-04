@@ -86,11 +86,34 @@ DIMENSION_WEIGHTS = {
 DIMENSION_ORDER = ["horizon", "context", "tooling", "observability", "modality", "precision", "adaptability"]
 
 
+def _normalize_skill_id(skill_id: str) -> str:
+    """Normalize skill ID to standard format for manifest lookup.
+
+    Handles various input formats:
+    - skill://research.web@0.1.0 → skill.research.web@0.1.0
+    - research.web@0.1.0 → skill.research.web@0.1.0
+    - skill.research.web@0.1.0 → skill.research.web@0.1.0 (unchanged)
+    """
+    # Strip skill:// prefix
+    if skill_id.startswith("skill://"):
+        skill_id = skill_id[8:]  # Remove "skill://"
+
+    # Add "skill." prefix if not present
+    if not skill_id.startswith("skill."):
+        skill_id = f"skill.{skill_id}"
+
+    return skill_id
+
+
 def _load_skill_manifest(skill_id: str) -> Optional[Dict[str, Any]]:
     """Load a skill manifest by ID from the manifests directory or catalog."""
+    # Normalize the skill ID
+    original_id = skill_id
+    skill_id = _normalize_skill_id(skill_id)
+
     # Try direct file path first
-    if skill_id.startswith("file://") or skill_id.endswith(".json"):
-        path = Path(skill_id.replace("file://", ""))
+    if original_id.startswith("file://") or original_id.endswith(".json"):
+        path = Path(original_id.replace("file://", ""))
         if path.exists():
             try:
                 return json.loads(path.read_text(encoding="utf-8"))
@@ -100,8 +123,16 @@ def _load_skill_manifest(skill_id: str) -> Optional[Dict[str, Any]]:
     # Try manifests directory
     manifests_dir = Path(MANIFESTS_DIR)
     if manifests_dir.exists():
-        # Try exact filename
-        for pattern in [f"{skill_id}", f"skill.{skill_id}.json", f"{skill_id}.json"]:
+        # Generate filename variants (manifests use - instead of @ for version)
+        filename_base = skill_id.replace("@", "-")
+        patterns = [
+            f"{skill_id}",           # skill.research.web@0.1.0
+            f"{filename_base}",       # skill.research.web-0.1.0
+            f"{skill_id}.json",       # skill.research.web@0.1.0.json
+            f"{filename_base}.json",  # skill.research.web-0.1.0.json
+        ]
+
+        for pattern in patterns:
             candidate = manifests_dir / pattern
             if candidate.exists():
                 try:
@@ -109,11 +140,14 @@ def _load_skill_manifest(skill_id: str) -> Optional[Dict[str, Any]]:
                 except Exception:
                     pass
 
-        # Search by skillPackageId or manifestId
+        # Search by skillPackageId or manifestId (try both original and normalized)
+        search_ids = {skill_id, original_id, _normalize_skill_id(original_id)}
         for manifest_file in manifests_dir.glob("*.json"):
             try:
                 manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
-                if manifest.get("skillPackageId") == skill_id or manifest.get("manifestId") == skill_id:
+                manifest_id = manifest.get("manifestId", "")
+                pkg_id = manifest.get("skillPackageId", "")
+                if manifest_id in search_ids or pkg_id in search_ids:
                     return manifest
             except Exception:
                 continue

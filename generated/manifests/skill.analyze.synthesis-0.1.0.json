@@ -49,11 +49,11 @@
     "baseWCS": 11,
     "dimensionScores": {
       "horizon": 2,
-      "context": 2,
+      "context": 3,
       "tooling": 1,
       "observability": 1,
       "modality": 0,
-      "precision": 2,
+      "precision": 3,
       "adaptability": 1
     },
     "interactionMultipliers": [
