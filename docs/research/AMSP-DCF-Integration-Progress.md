@@ -573,20 +573,113 @@ print('✓ AMSP integration test complete')
 
 **Goal:** Continuous improvement based on execution outcomes
 
-**Status:** Not Started
+**Status:** Not Started (Future Enhancement)
 
-**Prerequisites:** Phase C complete and tested
+**Prerequisites:** Phase C complete and tested ✅
+
+### Phase D Roadmap & Design Notes
+
+Phase D represents **optimization and learning enhancements** to the foundational AMSP-DCF integration completed in Phases A-C. The core integration is now functionally complete:
+
+- ✅ Agents select model tiers based on skill complexity profiles
+- ✅ Selections are tracked in control plane (Phase 1) and delegation logs (Phase 2)
+- ✅ Advisors (Reflector/Strategist) can analyze and publish optimization guidelines
+- ✅ Metrics are recorded for cost and performance analysis
+
+Phase D focuses on **closing the feedback loop** so the system can automatically improve complexity profiles based on observed outcomes.
+
+### Complexity Assessment
+
+| Task | Complexity | Priority | Rationale |
+|------|------------|----------|-----------|
+| D.1 | Medium | **High** | Core recalibration tool - enables automatic profile updates |
+| D.2 | Medium | **High** | Connects Reflector insights to profile updates |
+| D.3 | Low | Medium | Partially implemented - Strategist → Conductor flow exists |
+| D.4 | High | Low | Graphiti views are optimization, not required for function |
+| D.5 | Medium | Low | Caching is performance optimization |
+| D.6 | Medium | Medium | Statistical rigor for confidence in recommendations |
+
+### Recommended Implementation Order
+
+1. **D.1 + D.2** (High Priority): Implement `recalibrate_complexity_profile` tool and Reflector feedback loop
+2. **D.6** (Medium Priority): Add confidence intervals so recalibration decisions are statistically grounded
+3. **D.3** (Medium Priority): Enhance Strategist → Conductor flow with model selection focus
+4. **D.5** (Low Priority): Add caching when profile lookups become a bottleneck
+5. **D.4** (Low Priority): Graphiti materialized views for advanced analytics
+
+### D.1: Recalibrate Complexity Profile Tool
+
+**Proposed Interface:**
+```python
+def recalibrate_complexity_profile(
+    skill_id: str,
+    execution_data_json: str,  # List of {tier_used, success, escalated, duration_ms, tokens}
+    recalibration_mode: str = "conservative",  # "conservative" | "aggressive" | "statistical"
+    min_samples: int = 10,
+) -> Dict[str, Any]:
+    """Recalibrate a skill's complexity profile based on execution outcomes.
+
+    Returns:
+        - current_profile: Current complexity profile
+        - recommended_profile: Suggested updates
+        - confidence: Statistical confidence in recommendation
+        - rationale: Human-readable explanation
+    """
+```
+
+**Recalibration Logic:**
+- If escalation_rate > 15%: Increase FCS (underestimated complexity)
+- If success_rate > 95% at lower tier: Decrease FCS (overestimated complexity)
+- If cost_deviation > 20%: Adjust cost estimates
+- Apply dampening factor to prevent oscillation
+
+### D.2: Reflector Feedback Loop
+
+**Flow:**
+```
+Workflow Execution
+       │
+       ▼
+Reflector analyzes outcomes
+       │
+       ▼
+Detects recalibration signal (escalation, cost deviation)
+       │
+       ▼
+Calls recalibrate_complexity_profile()
+       │
+       ▼
+Updates skill manifest YAML (or flags for human review)
+       │
+       ▼
+Regenerates manifests via generate_all()
+```
+
+### D.6: Confidence Interval Tracking
+
+**Schema Addition to Complexity Profile:**
+```yaml
+complexityProfile:
+  baseWCS: 14
+  finalFCS: 16.1
+  recommendedTier: 1
+  confidence:
+    sample_size: 25
+    fcs_95_ci: [14.8, 17.4]
+    tier_stability: 0.92  # % of executions at recommended tier
+    last_recalibrated: "2026-02-05T12:00:00Z"
+```
 
 ### Implementation Tasks
 
 | Task | Description | Status | File(s) |
 |------|-------------|--------|---------|
-| D.1 | Implement complexity profile recalibration | ⬜ Pending | New tool |
-| D.2 | Add Reflector → skill profile feedback loop | ⬜ Pending | Integration |
-| D.3 | Add Strategist → Conductor guideline updates | ⬜ Pending | Integration |
-| D.4 | Build Graphiti materialized views | ⬜ Pending | Graphiti |
+| D.1 | Implement complexity profile recalibration | ⬜ Pending | `dcf_mcp/tools/dcf/recalibrate_complexity_profile.py` |
+| D.2 | Add Reflector → skill profile feedback loop | ⬜ Pending | `prompts/dcf/Reflector_final.txt`, integration |
+| D.3 | Enhance Strategist → Conductor model selection | ⬜ Pending | Already partially done |
+| D.4 | Build Graphiti materialized views | ⬜ Pending | `graphiti/` |
 | D.5 | Implement caching layer for profiles | ⬜ Pending | New component |
-| D.6 | Add confidence interval tracking | ⬜ Pending | Tools |
+| D.6 | Add confidence interval tracking | ⬜ Pending | Schema + tools |
 
 ### Testing Tasks
 
@@ -600,8 +693,9 @@ print('✓ AMSP integration test complete')
 ### Exit Criteria for Phase D
 
 - [ ] Skill profiles auto-recalibrate based on outcomes
-- [ ] Graphiti queries meet latency budget
-- [ ] Confidence intervals reflect actual uncertainty
+- [ ] Recalibration has statistical confidence requirements
+- [ ] Graphiti queries meet latency budget (if implemented)
+- [ ] System prevents oscillation via dampening
 
 ---
 
