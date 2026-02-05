@@ -1,0 +1,210 @@
+# Search Tools Registry
+# Web and news search capabilities
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  search:
+    description: Search and discovery tools for web content and news
+
+    tools:
+      search_query:
+        version: 0.1.0
+        description: Mock web search query tool
+        params:
+          type: object
+          properties:
+            q:
+              type: string
+              description: Search query
+          required: [q]
+        result:
+          type: object
+          properties:
+            hits:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  url: { type: string }
+                required: [title, url]
+            total: { type: integer }
+            generated_at: { type: string }
+          required: [hits]
+        defaults:
+          response: { hits: [] }
+          latencyMs: 150
+          rateLimit: { rps: 2 }
+        cases:
+          - id: case_python
+            match: { strategy: exact, path: q, value: python }
+            response:
+              hits:
+                - title: Python Software Foundation - Official Site
+                  url: https://www.python.org
+                - title: PyPI - the Python Package Index
+                  url: https://pypi.org
+                - title: Real Python Tutorials
+                  url: https://realpython.com
+              total: 3
+
+          - id: case_market_scan
+            match: { strategy: regex, path: q, value: ".*sustainable robotics market.*" }
+            response:
+              hits:
+                - title: "CB Insights: Sustainable Robotics Market Forecast 2025"
+                  url: https://cbinsights.example/reports/sustainable-robotics-2025
+                - title: "Gartner: Warehouse Automation Leaders"
+                  url: https://gartner.example/automation-leaders
+                - title: "MIT Tech Review: Green Robotics Innovation"
+                  url: https://mittr.example/green-robotics
+                - title: "Logistics Today Podcast: Decarbonising Fulfilment"
+                  url: https://logistics.example/decarbonising-fulfilment
+              total: 4
+              generated_at: "{{ now_iso }}"
+
+          - id: case_competitor_signal
+            match: { strategy: regex, path: q, value: ".*Acme Robotics competitor.*" }
+            response:
+              hits:
+                - title: "Bloomberg: Rivals Accelerate in Modular Automation"
+                  url: https://bloomberg.example/rivals-modular-automation
+                - title: "PitchBook: Funding Round - SwiftLift Robotics"
+                  url: https://pitchbook.example/swiftlift-series-b
+              total: 2
+              notes: Sorted by recency
+
+          - id: case_agentic_sales
+            match: { strategy: regex, path: q, value: ".*agentic sales enablement.*" }
+            response:
+              hits:
+                - title: "Forrester: Agentic Sales Assistants 2025"
+                  url: https://forrester.example/agentic-sales-2025
+                - title: "IDC: AI Agents for B2B Pipelines"
+                  url: https://idc.example/ai-agents-b2b
+                - title: "Case Study: DealVelocity virtual reps"
+                  url: https://casehub.example/dealvelocity-virtual-rep
+              total: 3
+              generated_at: "{{ now_iso }}"
+
+          - id: case_ev_infrastructure
+            match: { strategy: regex, path: q, value: ".*EV charging network.*" }
+            response:
+              hits:
+                - title: "IEA: Rapid buildout of urban charging"
+                  url: https://iea.example/urban-charging
+                - title: "BloombergNEF: Grid impacts of fast charging"
+                  url: https://bnef.example/grid-fast-charging
+                - title: "UtilityDive: Policy incentives in 2025"
+                  url: https://utilitydive.example/ev-policy-2025
+              total: 3
+
+          - id: case_data_privacy
+            match: { strategy: regex, path: q, value: ".*data privacy compliance.*" }
+            response:
+              hits:
+                - title: "Gartner: Top privacy automation platforms"
+                  url: https://gartner.example/privacy-automation
+                - title: "IAPP: CPRA enforcement trends"
+                  url: https://iapp.example/cpra-trends
+              total: 2
+              notes: Weighted toward enterprise readiness
+
+      news_headlines:
+        version: 0.1.0
+        description: Mock top headlines search
+        params:
+          type: object
+          properties:
+            topic:
+              type: string
+              description: Topic to fetch headlines for
+          required: [topic]
+        result:
+          type: object
+          properties:
+            headlines:
+              type: array
+              items:
+                type: object
+                properties:
+                  title: { type: string }
+                  url: { type: string }
+                  source: { type: string }
+                  publishedAt: { type: string }
+                required: [title, url]
+          required: [headlines]
+        defaults:
+          response: { headlines: [] }
+          latencyMs: 200
+          rateLimit: { rps: 1 }
+        cases:
+          - id: case_market_news
+            match: { strategy: regex, path: topic, value: ".*market.*" }
+            response:
+              headlines:
+                - title: Market shifts toward sustainable tech
+                  url: https://news.example/sustainable-tech
+                  source: TechWire
+                  publishedAt: "{{ now_iso }}"
+                - title: Analysts predict growth in AI tooling
+                  url: https://news.example/ai-tools
+                  source: MarketBeat
+                  publishedAt: "{{ now_iso }}"
+                - title: Supply chains prioritise carbon accounting
+                  url: https://news.example/carbon-ledgers
+                  source: GlobalSupply
+                  publishedAt: "{{ now_iso }}"
+
+          - id: case_robotics_news
+            match: { strategy: regex, path: topic, value: ".*robotics.*" }
+            response:
+              headlines:
+                - title: Retailers pilot modular warehouse robots
+                  url: https://retailnews.example/pilot-modular-robots
+                  source: RetailNews
+                  publishedAt: "{{ now_iso }}"
+                - title: Venture funding accelerates robotics startups
+                  url: https://vcwatch.example/robotics-funding
+                  source: VCWatch
+                  publishedAt: "{{ now_iso }}"
+                - title: Analysts flag interoperability as adoption hurdle
+                  url: https://industryinsight.example/interoperability
+                  source: IndustryInsight
+                  publishedAt: "{{ now_iso }}"
+
+          - id: case_ai_agents
+            match: { strategy: regex, path: topic, value: ".*agent.*" }
+            response:
+              headlines:
+                - title: Enterprise pilots AI agents for revenue ops
+                  url: https://techpulse.example/agent-rev-ops
+                  source: TechPulse
+                  publishedAt: "{{ now_iso }}"
+                - title: Procurement teams test AI co-pilots
+                  url: https://procurement.example/ai-copilot
+                  source: ProcurementDaily
+                  publishedAt: "{{ now_iso }}"
+                - title: Analysts flag governance as adoption hurdle
+                  url: https://analystdesk.example/agent-governance
+                  source: AnalystDesk
+                  publishedAt: "{{ now_iso }}"
+
+          - id: case_ev_market
+            match: { strategy: regex, path: topic, value: ".*EV charging.*" }
+            response:
+              headlines:
+                - title: Municipalities accelerate fast-charger RFPs
+                  url: https://cities.example/fast-charger-rfp
+                  source: CityWatch
+                  publishedAt: "{{ now_iso }}"
+                - title: Utilities test vehicle-to-grid pilots
+                  url: https://utilities.example/v2g-pilot
+                  source: GridToday
+                  publishedAt: "{{ now_iso }}"
+                - title: Charging networks consolidate via M&A
+                  url: https://finance.example/charging-mna
+                  source: FinanceWire
+                  publishedAt: "{{ now_iso }}"

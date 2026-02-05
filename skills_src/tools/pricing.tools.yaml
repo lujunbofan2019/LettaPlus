@@ -1,0 +1,189 @@
+# Pricing Tools Registry
+# Order pricing tools (Phase 1 Testing)
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  pricing:
+    description: Pricing calculation tools for subtotals, discounts, taxes, and shipping
+
+    tools:
+      calculate_subtotal:
+        version: 0.1.0
+        description: Calculates subtotal from order items
+        params:
+          type: object
+          properties:
+            items:
+              type: array
+              description: Order items with quantity and unit_price
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                required: [sku, quantity, unit_price]
+          required: [items]
+        result:
+          type: object
+          properties:
+            subtotal: { type: number }
+            item_count: { type: integer }
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  line_total: { type: number }
+        defaults:
+          response: { subtotal: 0, item_count: 0, line_items: [] }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: standard_order
+            match: { strategy: regex, path: "items[0].sku", value: ".*" }
+            response:
+              subtotal: 239.96
+              item_count: 4
+              line_items:
+                - sku: "WIDGET-A"
+                  quantity: 3
+                  unit_price: 29.99
+                  line_total: 89.97
+                - sku: "GADGET-B"
+                  quantity: 1
+                  unit_price: 149.99
+                  line_total: 149.99
+
+      apply_discount:
+        version: 0.1.0
+        description: Applies discount code and returns discount amount
+        params:
+          type: object
+          properties:
+            subtotal: { type: number }
+            discount_code: { type: string }
+          required: [subtotal]
+        result:
+          type: object
+          properties:
+            discount_applied: { type: boolean }
+            discount_code: { type: string }
+            discount_type: { type: string }
+            discount_percent: { type: number }
+            discount_amount: { type: number }
+            subtotal_after_discount: { type: number }
+        defaults:
+          response: { discount_applied: false, discount_amount: 0 }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: save10_discount
+            match: { strategy: exact, path: discount_code, value: "SAVE10" }
+            response:
+              discount_applied: true
+              discount_code: "SAVE10"
+              discount_type: "percentage"
+              discount_percent: 10
+              discount_amount: 24.00
+              subtotal_after_discount: 215.96
+
+          - id: save20_discount
+            match: { strategy: exact, path: discount_code, value: "SAVE20" }
+            response:
+              discount_applied: true
+              discount_code: "SAVE20"
+              discount_type: "percentage"
+              discount_percent: 20
+              discount_amount: 48.00
+              subtotal_after_discount: 191.96
+
+          - id: no_discount
+            match: { strategy: exact, path: discount_code, value: "" }
+            response:
+              discount_applied: false
+              discount_amount: 0
+              subtotal_after_discount: 239.96
+
+      calculate_tax:
+        version: 0.1.0
+        description: Calculates tax based on address and subtotal
+        params:
+          type: object
+          properties:
+            subtotal: { type: number }
+            state: { type: string }
+          required: [subtotal, state]
+        result:
+          type: object
+          properties:
+            tax_rate: { type: number }
+            tax_amount: { type: number }
+            jurisdiction: { type: string }
+        defaults:
+          response: { tax_rate: 0, tax_amount: 0, jurisdiction: "Unknown" }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: texas_tax
+            match: { strategy: exact, path: state, value: "TX" }
+            response:
+              tax_rate: 0.0825
+              tax_amount: 17.82
+              jurisdiction: "Texas State + Austin Local"
+
+          - id: california_tax
+            match: { strategy: exact, path: state, value: "CA" }
+            response:
+              tax_rate: 0.0875
+              tax_amount: 18.90
+              jurisdiction: "California State + San Francisco Local"
+
+          - id: oregon_no_tax
+            match: { strategy: exact, path: state, value: "OR" }
+            response:
+              tax_rate: 0.0
+              tax_amount: 0.0
+              jurisdiction: "Oregon (No Sales Tax)"
+
+      calculate_shipping:
+        version: 0.1.0
+        description: Calculates shipping cost based on items and address
+        params:
+          type: object
+          properties:
+            item_count: { type: integer }
+            delivery_zone: { type: string }
+          required: [item_count, delivery_zone]
+        result:
+          type: object
+          properties:
+            shipping_method: { type: string }
+            shipping_amount: { type: number }
+            estimated_days: { type: integer }
+            carrier: { type: string }
+        defaults:
+          response: { shipping_method: "Standard", shipping_amount: 9.99, estimated_days: 7, carrier: "USPS" }
+          latencyMs: 25
+          rateLimit: { rps: 10 }
+        cases:
+          - id: zone_a_shipping
+            match: { strategy: exact, path: delivery_zone, value: "ZONE-A" }
+            response:
+              shipping_method: "Ground"
+              shipping_amount: 8.99
+              estimated_days: 3
+              carrier: "FastShip"
+
+          - id: zone_b_shipping
+            match: { strategy: exact, path: delivery_zone, value: "ZONE-B" }
+            response:
+              shipping_method: "Ground"
+              shipping_amount: 12.99
+              estimated_days: 5
+              carrier: "FastShip"

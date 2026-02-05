@@ -25,15 +25,8 @@
         "description": "Verifies customer exists and is in good standing",
         "parameters": {
           "type": "object",
-          "properties": {
-            "customer_id": {
-              "type": "string",
-              "description": "Customer identifier"
-            }
-          },
-          "required": [
-            "customer_id"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -51,30 +44,8 @@
         "description": "Checks inventory availability for order items",
         "parameters": {
           "type": "object",
-          "properties": {
-            "items": {
-              "type": "array",
-              "description": "Array of items with sku and quantity",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "sku": {
-                    "type": "string"
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "sku",
-                  "quantity"
-                ]
-              }
-            }
-          },
-          "required": [
-            "items"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -92,35 +63,8 @@
         "description": "Validates shipping address is deliverable",
         "parameters": {
           "type": "object",
-          "properties": {
-            "address": {
-              "type": "object",
-              "description": "Shipping address object",
-              "properties": {
-                "street": {
-                  "type": "string"
-                },
-                "city": {
-                  "type": "string"
-                },
-                "state": {
-                  "type": "string"
-                },
-                "zip": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "street",
-                "city",
-                "state",
-                "zip"
-              ]
-            }
-          },
-          "required": [
-            "address"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

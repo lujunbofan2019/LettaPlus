@@ -22,18 +22,11 @@
       "description": "Core search tool for web queries",
       "json_schema": {
         "name": "search_query",
-        "description": "Mock web search query tool",
+        "description": "Core search tool for web queries",
         "parameters": {
           "type": "object",
-          "properties": {
-            "q": {
-              "type": "string",
-              "description": "Search query"
-            }
-          },
-          "required": [
-            "q"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -48,18 +41,11 @@
       "description": "Fetch full page content when needed",
       "json_schema": {
         "name": "web_fetch",
-        "description": "Mock HTTP fetcher",
+        "description": "Fetch full page content when needed",
         "parameters": {
           "type": "object",
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "URL to fetch"
-            }
-          },
-          "required": [
-            "url"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

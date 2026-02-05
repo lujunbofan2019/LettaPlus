@@ -1,0 +1,137 @@
+# Datasets Tools Registry
+# Structured data lookups
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  datasets:
+    description: Structured dataset access tools
+
+    tools:
+      company_profile:
+        version: 0.1.0
+        description: Mock company intelligence lookup
+        params:
+          type: object
+          properties:
+            company:
+              type: string
+              description: Company name
+          required: [company]
+        result:
+          type: object
+          properties:
+            profile:
+              type: object
+              properties:
+                overview: { type: string }
+                metrics:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label: { type: string }
+                      value: { type: string }
+                    required: [label, value]
+                customerSegments:
+                  type: array
+                  items: { type: string }
+                productLines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      description: { type: string }
+                    required: [name]
+                recentMilestones:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date: { type: string }
+                      detail: { type: string }
+                    required: [date, detail]
+              required: [overview]
+          required: [profile]
+        defaults:
+          response:
+            profile:
+              overview: stub overview
+              metrics: []
+          latencyMs: 120
+          rateLimit: { rps: 1 }
+        cases:
+          - id: case_acme
+            match: { strategy: exact, path: company, value: Acme Robotics }
+            response:
+              profile:
+                overview: Acme Robotics builds modular warehouse automation systems with sustainability telemetry.
+                metrics:
+                  - { label: Employees, value: "240" }
+                  - { label: HQ, value: "Austin, TX" }
+                  - { label: Funding, value: "$85M Series C (2024)" }
+                  - { label: ARR, value: "$62M" }
+                customerSegments: [Mid-market eCommerce, 3PLs]
+                productLines:
+                  - name: Atlas Grid
+                    description: Modular picking and storage robotics
+                  - name: Helios Insight
+                    description: Energy optimisation and carbon tracking software
+                recentMilestones:
+                  - { date: "2025-02-18", detail: Signed national rollout with OmniShop }
+                  - { date: "2024-12-04", detail: ISO 14001 certification achieved }
+
+          - id: case_swiftlift
+            match: { strategy: regex, path: company, value: ".*SwiftLift.*" }
+            response:
+              profile:
+                overview: SwiftLift Robotics provides plug-and-play autonomous lift modules for high-throughput warehouses.
+                metrics:
+                  - { label: Employees, value: "120" }
+                  - { label: HQ, value: "Seattle, WA" }
+                  - { label: Funding, value: "$55M Series B (2025)" }
+                customerSegments: [Enterprise retailers, Grocery fulfillment]
+                productLines:
+                  - name: SwiftLift Core
+                    description: Autonomous pallet movement system
+                recentMilestones:
+                  - { date: "2025-01-29", detail: Announced partnership with FreshCart }
+
+          - id: case_ecocharge
+            match: { strategy: exact, path: company, value: EcoCharge Networks }
+            response:
+              profile:
+                overview: EcoCharge Networks designs modular EV charging hubs with integrated grid services.
+                metrics:
+                  - { label: Employees, value: "180" }
+                  - { label: HQ, value: "Denver, CO" }
+                  - { label: Funding, value: "$95M Series C (2025)" }
+                customerSegments: [Municipal fleets, Retail parking operators]
+                productLines:
+                  - name: PulseHub
+                    description: Level 3 fast-charging with battery buffering
+                  - name: GridSync
+                    description: Demand-response and V2G orchestration
+                recentMilestones:
+                  - { date: "2025-02-12", detail: Won Austin downtown charging tender }
+                  - { date: "2024-11-03", detail: Launched GridSync 2.0 analytics }
+
+          - id: case_northwind
+            match: { strategy: regex, path: company, value: ".*Northwind Analytics.*" }
+            response:
+              profile:
+                overview: Northwind Analytics provides privacy-aware customer intelligence for regulated industries.
+                metrics:
+                  - { label: Employees, value: "320" }
+                  - { label: HQ, value: "Toronto, CA" }
+                  - { label: ARR, value: "$88M" }
+                customerSegments: [Banks, Insurers, Health systems]
+                productLines:
+                  - name: ComplyIQ
+                    description: Privacy automation for data teams
+                  - name: SignalRoom
+                    description: Consent-aware customer analytics
+                recentMilestones:
+                  - { date: "2025-01-18", detail: Expanded to EU with Schrems II compliance }

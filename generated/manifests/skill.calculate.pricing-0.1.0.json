@@ -25,34 +25,8 @@
         "description": "Calculates subtotal from order items",
         "parameters": {
           "type": "object",
-          "properties": {
-            "items": {
-              "type": "array",
-              "description": "Order items with quantity and unit_price",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "sku": {
-                    "type": "string"
-                  },
-                  "quantity": {
-                    "type": "integer"
-                  },
-                  "unit_price": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "sku",
-                  "quantity",
-                  "unit_price"
-                ]
-              }
-            }
-          },
-          "required": [
-            "items"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -70,17 +44,8 @@
         "description": "Applies discount code and returns discount amount",
         "parameters": {
           "type": "object",
-          "properties": {
-            "subtotal": {
-              "type": "number"
-            },
-            "discount_code": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "subtotal"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -98,18 +63,8 @@
         "description": "Calculates tax based on address and subtotal",
         "parameters": {
           "type": "object",
-          "properties": {
-            "subtotal": {
-              "type": "number"
-            },
-            "state": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "subtotal",
-            "state"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -127,18 +82,8 @@
         "description": "Calculates shipping cost based on items and address",
         "parameters": {
           "type": "object",
-          "properties": {
-            "item_count": {
-              "type": "integer"
-            },
-            "delivery_zone": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "item_count",
-            "delivery_zone"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

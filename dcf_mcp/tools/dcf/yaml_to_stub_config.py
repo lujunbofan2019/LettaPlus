@@ -1,18 +1,23 @@
 """
 Generate Stub MCP Server Configuration from YAML
 
-This module processes the tools.yaml file and generates a stub_config.json
-file that the stub MCP server can use for deterministic testing.
+This module processes the tools.yaml file (or tools/_index.yaml for split files)
+and generates a stub_config.json file that the stub MCP server can use for
+deterministic testing.
 
 YAML files are expected to follow the tools/v1 schema defined in:
   skills_src/schemas/tools.schema.yaml
+
+The module supports two loading modes:
+1. Legacy: Direct tools.yaml file
+2. Index: tools/_index.yaml referencing multiple .tools.yaml files
 """
 
 import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 try:
     import yaml
@@ -20,6 +25,7 @@ except ImportError:
     yaml = None  # type: ignore
 
 DEFAULT_STUB_CONFIG_FILENAME = "stub_config.json"
+DEFAULT_TOOLS_INDEX_FILENAME = "_index.yaml"
 
 _VALID_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -35,6 +41,104 @@ def _sanitize_tool_name(name: str) -> str:
     if not sanitized:
         sanitized = "tool"
     return sanitized
+
+
+def _load_tools_from_index(index_path: Path, warnings: List[str]) -> Dict[str, Any]:
+    """
+    Load tools from an index file that references multiple tool files.
+
+    Args:
+        index_path: Path to _index.yaml file
+        warnings: List to append warnings to
+
+    Returns:
+        Merged ToolsRegistry data with all servers/tools combined
+    """
+    with index_path.open("r", encoding="utf-8") as f:
+        index_data = yaml.safe_load(f) or {}
+
+    # Validate index structure
+    api_version = index_data.get("apiVersion", "")
+    kind = index_data.get("kind", "")
+    if api_version != "tools-index/v1" or kind != "ToolsIndex":
+        raise ValueError(
+            f"Invalid index file: expected apiVersion=tools-index/v1, kind=ToolsIndex; "
+            f"got apiVersion={api_version}, kind={kind}"
+        )
+
+    files = index_data.get("files", [])
+    if not files:
+        warnings.append("Index file contains no files to load")
+        return {"apiVersion": "tools/v1", "kind": "ToolsRegistry", "servers": {}}
+
+    # Merge all referenced files
+    merged: Dict[str, Any] = {
+        "apiVersion": "tools/v1",
+        "kind": "ToolsRegistry",
+        "servers": {}
+    }
+
+    for file_ref in files:
+        file_path = (index_path.parent / file_ref).resolve()
+        if not file_path.exists():
+            warnings.append(f"Referenced file not found: {file_ref}")
+            continue
+
+        with file_path.open("r", encoding="utf-8") as f:
+            file_data = yaml.safe_load(f) or {}
+
+        # Validate file structure
+        file_api = file_data.get("apiVersion", "")
+        file_kind = file_data.get("kind", "")
+        if file_api != "tools/v1" or file_kind != "ToolsRegistry":
+            warnings.append(
+                f"Skipping {file_ref}: invalid apiVersion/kind "
+                f"(got {file_api}/{file_kind}, expected tools/v1/ToolsRegistry)"
+            )
+            continue
+
+        # Merge servers
+        for server_id, server_spec in file_data.get("servers", {}).items():
+            if server_id in merged["servers"]:
+                # Merge tools into existing server
+                existing = merged["servers"][server_id]
+                existing_tools = existing.get("tools", {})
+                new_tools = server_spec.get("tools", {})
+                existing_tools.update(new_tools)
+                existing["tools"] = existing_tools
+            else:
+                merged["servers"][server_id] = server_spec
+
+    return merged
+
+
+def _load_tools_yaml_data(tools_yaml_path: Path, warnings: List[str]) -> Dict[str, Any]:
+    """
+    Load tools data from either a direct tools.yaml or via index file.
+
+    Checks for tools/_index.yaml first (if tools_yaml_path points to tools.yaml),
+    falls back to direct loading if no index exists.
+
+    Args:
+        tools_yaml_path: Path to tools.yaml file
+        warnings: List to append warnings to
+
+    Returns:
+        ToolsRegistry data
+    """
+    # Check if there's an index file in a tools/ subdirectory
+    tools_dir = tools_yaml_path.parent / "tools"
+    index_path = tools_dir / DEFAULT_TOOLS_INDEX_FILENAME
+
+    if index_path.exists():
+        return _load_tools_from_index(index_path, warnings)
+
+    # Fall back to direct loading (only if file exists)
+    if tools_yaml_path.exists():
+        with tools_yaml_path.open("r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    return {}
 
 
 def yaml_to_stub_config(
@@ -126,13 +230,16 @@ def yaml_to_stub_config(
 
         out_p.parent.mkdir(parents=True, exist_ok=True)
 
-        if not tools_yaml_p.exists():
-            out["error"] = f"tools.yaml not found: {tools_yaml_p}"
+        # Check for index file first, then fall back to tools.yaml
+        tools_dir = tools_yaml_p.parent / "tools"
+        index_path = tools_dir / DEFAULT_TOOLS_INDEX_FILENAME
+
+        if not tools_yaml_p.exists() and not index_path.exists():
+            out["error"] = f"Neither tools.yaml nor tools/_index.yaml found in: {tools_yaml_p.parent}"
             return out
 
-        # Load YAML
-        with tools_yaml_p.open("r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
+        # Load YAML (supports index-based loading)
+        data = _load_tools_yaml_data(tools_yaml_p, out["warnings"])
 
         # Validate structure
         api_version = data.get("apiVersion", "")

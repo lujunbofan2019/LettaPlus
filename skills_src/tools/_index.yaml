@@ -1,0 +1,24 @@
+# Tools Index File
+# Lists all tool definition files to be loaded
+# This enables splitting the monolithic tools.yaml into smaller domain-specific files
+
+apiVersion: tools-index/v1
+kind: ToolsIndex
+
+# Files to load (processed in order)
+# Paths are relative to this _index.yaml file
+files:
+  # Core research/analysis tools
+  - search.tools.yaml
+  - web.tools.yaml
+  - datasets.tools.yaml
+  - analysis.tools.yaml
+  - llm.tools.yaml
+
+  # Phase 1 testing - Order processing workflow
+  - orders.tools.yaml
+  - pricing.tools.yaml
+  - documents.tools.yaml
+
+  # Phase 2 testing - Customer support
+  - support.tools.yaml

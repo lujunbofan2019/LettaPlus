@@ -20,20 +20,11 @@
       "description": "Generate prioritized actions from objectives",
       "json_schema": {
         "name": "llm_action_plan",
-        "description": "Mock action plan generator",
+        "description": "Generate prioritized actions from objectives",
         "parameters": {
           "type": "object",
-          "properties": {
-            "objectives": {
-              "type": "string"
-            },
-            "insights": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

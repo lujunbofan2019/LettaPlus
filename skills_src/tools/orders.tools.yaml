@@ -1,0 +1,172 @@
+# Orders Tools Registry
+# Order validation tools (Phase 1 Testing)
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  orders:
+    description: Order validation tools for customer, inventory, and address verification
+
+    tools:
+      verify_customer:
+        version: 0.1.0
+        description: Verifies customer exists and is in good standing
+        params:
+          type: object
+          properties:
+            customer_id:
+              type: string
+              description: Customer identifier
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            valid: { type: boolean }
+            customer_name: { type: string }
+            account_status: { type: string }
+            credit_limit: { type: number }
+            current_balance: { type: number }
+        defaults:
+          response: { valid: false, error: "Customer not found" }
+          latencyMs: 50
+          rateLimit: { rps: 5 }
+        cases:
+          - id: customer_valid
+            match: { strategy: exact, path: customer_id, value: "CUST-1234" }
+            response:
+              valid: true
+              customer_name: "Jane Smith"
+              account_status: "active"
+              credit_limit: 5000.00
+              current_balance: 250.00
+
+          - id: customer_inactive
+            match: { strategy: exact, path: customer_id, value: "CUST-5678" }
+            response:
+              valid: false
+              customer_name: "Bob Jones"
+              account_status: "suspended"
+              error: "Account suspended - payment overdue"
+
+      check_inventory:
+        version: 0.1.0
+        description: Checks inventory availability for order items
+        params:
+          type: object
+          properties:
+            items:
+              type: array
+              description: Array of items with sku and quantity
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  quantity: { type: integer }
+                required: [sku, quantity]
+          required: [items]
+        result:
+          type: object
+          properties:
+            all_available: { type: boolean }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  requested: { type: integer }
+                  available: { type: integer }
+                  status: { type: string }
+        defaults:
+          response: { all_available: false, items: [] }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: items_in_stock
+            match: { strategy: regex, path: "items[0].sku", value: "WIDGET.*" }
+            response:
+              all_available: true
+              items:
+                - sku: "WIDGET-A"
+                  requested: 3
+                  available: 150
+                  status: "in_stock"
+                - sku: "GADGET-B"
+                  requested: 1
+                  available: 25
+                  status: "in_stock"
+
+          - id: items_out_of_stock
+            match: { strategy: exact, path: "items[0].sku", value: "RARE-ITEM" }
+            response:
+              all_available: false
+              items:
+                - sku: "RARE-ITEM"
+                  requested: 1
+                  available: 0
+                  status: "out_of_stock"
+
+      validate_address:
+        version: 0.1.0
+        description: Validates shipping address is deliverable
+        params:
+          type: object
+          properties:
+            address:
+              type: object
+              description: Shipping address object
+              properties:
+                street: { type: string }
+                city: { type: string }
+                state: { type: string }
+                zip: { type: string }
+              required: [street, city, state, zip]
+          required: [address]
+        result:
+          type: object
+          properties:
+            valid: { type: boolean }
+            normalized_address:
+              type: object
+              properties:
+                street: { type: string }
+                city: { type: string }
+                state: { type: string }
+                zip: { type: string }
+            delivery_zone: { type: string }
+            estimated_delivery_days: { type: integer }
+        defaults:
+          response: { valid: false, error: "Invalid address" }
+          latencyMs: 100
+          rateLimit: { rps: 5 }
+        cases:
+          - id: texas_address
+            match: { strategy: exact, path: "address.state", value: "TX" }
+            response:
+              valid: true
+              normalized_address:
+                street: "123 Main Street"
+                city: "Austin"
+                state: "TX"
+                zip: "78701-1234"
+              delivery_zone: "ZONE-A"
+              estimated_delivery_days: 3
+
+          - id: california_address
+            match: { strategy: exact, path: "address.state", value: "CA" }
+            response:
+              valid: true
+              normalized_address:
+                street: "456 Oak Avenue"
+                city: "San Francisco"
+                state: "CA"
+                zip: "94102-5678"
+              delivery_zone: "ZONE-B"
+              estimated_delivery_days: 5
+
+          - id: invalid_zip
+            match: { strategy: exact, path: "address.zip", value: "00000" }
+            response:
+              valid: false
+              error: "Invalid ZIP code"

@@ -1,0 +1,423 @@
+# Support Tools Registry
+# Customer support tools (Phase 2 Testing)
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  support:
+    description: Customer support tools for profile lookup, issue diagnosis, and response composition
+
+    tools:
+      get_customer_profile:
+        version: 0.1.0
+        description: Retrieves customer profile and account details
+        params:
+          type: object
+          properties:
+            customer_id:
+              type: string
+              description: Customer account identifier
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            name: { type: string }
+            email: { type: string }
+            phone: { type: string }
+            account_type: { type: string }
+            account_status: { type: string }
+            created_date: { type: string }
+            subscription_tier: { type: string }
+            payment_status: { type: string }
+            flags: { type: array, items: { type: string } }
+        defaults:
+          response: { error: "Customer not found", customer_id: null }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: premium_customer
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              name: "Michael Chen"
+              email: "m.chen@example.com"
+              phone: "+1-555-0142"
+              account_type: "Premium"
+              account_status: "active"
+              created_date: "2023-06-15"
+              subscription_tier: "Business Plus"
+              payment_status: "current"
+              flags:
+                - "VIP_CUSTOMER"
+                - "BETA_FEATURES_ENABLED"
+
+          - id: standard_customer
+            match: { strategy: exact, path: customer_id, value: "ACCT-1234" }
+            response:
+              customer_id: "ACCT-1234"
+              name: "Sarah Johnson"
+              email: "s.johnson@example.com"
+              phone: "+1-555-0198"
+              account_type: "Standard"
+              account_status: "active"
+              created_date: "2024-01-10"
+              subscription_tier: "Starter"
+              payment_status: "current"
+              flags: []
+
+      get_interaction_history:
+        version: 0.1.0
+        description: Retrieves recent customer interactions
+        params:
+          type: object
+          properties:
+            customer_id: { type: string }
+            limit: { type: integer, default: 5 }
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            interactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  date: { type: string }
+                  channel: { type: string }
+                  type: { type: string }
+                  status: { type: string }
+                  agent: { type: string }
+                  summary: { type: string }
+            total_interactions: { type: integer }
+            avg_resolution_time_hours: { type: number }
+        defaults:
+          response: { customer_id: null, interactions: [], total_interactions: 0 }
+          latencyMs: 100
+          rateLimit: { rps: 5 }
+        cases:
+          - id: recent_interactions
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              interactions:
+                - id: "INT-4521"
+                  date: "2025-01-28"
+                  channel: "email"
+                  type: "password_reset_request"
+                  status: "completed"
+                  agent: "auto"
+                  summary: "Customer requested password reset"
+                - id: "INT-4498"
+                  date: "2025-01-15"
+                  channel: "chat"
+                  type: "billing_inquiry"
+                  status: "resolved"
+                  agent: "Sarah K."
+                  summary: "Question about invoice charges"
+                - id: "INT-4312"
+                  date: "2024-12-20"
+                  channel: "phone"
+                  type: "feature_request"
+                  status: "logged"
+                  agent: "David M."
+                  summary: "Request for API access"
+              total_interactions: 12
+              avg_resolution_time_hours: 4.2
+
+      search_known_issues:
+        version: 0.1.0
+        description: Searches knowledge base for known issues
+        params:
+          type: object
+          properties:
+            symptoms:
+              type: string
+              description: Issue symptoms to search for
+            category: { type: string }
+          required: [symptoms]
+        result:
+          type: object
+          properties:
+            matches_found: { type: integer }
+            known_issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  category: { type: string }
+                  severity: { type: string }
+                  root_cause: { type: string }
+                  resolution: { type: string }
+                  workaround: { type: string }
+                  status: { type: string }
+                  fix_version: { type: string }
+        defaults:
+          response: { matches_found: 0, known_issues: [] }
+          latencyMs: 150
+          rateLimit: { rps: 3 }
+        cases:
+          - id: password_reset_issue
+            match: { strategy: regex, path: symptoms, value: ".*password.*reset.*" }
+            response:
+              matches_found: 2
+              known_issues:
+                - id: "KB-2024-1847"
+                  title: "Dashboard access blocked after password reset"
+                  category: "authentication"
+                  severity: "medium"
+                  root_cause: "Session cache not cleared after password change"
+                  resolution: "Clear browser cache and cookies, then log in again"
+                  workaround: "Use incognito/private browsing window"
+                  status: "fix_deployed"
+                  fix_version: "2.5.1"
+                - id: "KB-2024-1652"
+                  title: "MFA token sync delay after credential change"
+                  category: "authentication"
+                  severity: "low"
+                  root_cause: "MFA token propagation delay (up to 5 minutes)"
+                  resolution: "Wait 5 minutes after password reset before logging in"
+                  status: "known_limitation"
+
+          - id: login_issue
+            match: { strategy: regex, path: symptoms, value: ".*login.*fail.*" }
+            response:
+              matches_found: 1
+              known_issues:
+                - id: "KB-2024-1901"
+                  title: "Login failures during peak hours"
+                  category: "authentication"
+                  severity: "high"
+                  root_cause: "Rate limiting triggers during high traffic"
+                  resolution: "Wait 15 minutes and retry"
+                  status: "monitoring"
+
+      check_system_status:
+        version: 0.1.0
+        description: Checks current system status and outages
+        params:
+          type: object
+          properties:
+            service: { type: string, default: "all" }
+        result:
+          type: object
+          properties:
+            overall_status: { type: string }
+            last_updated: { type: string }
+            services:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  status: { type: string }
+                  uptime_30d: { type: string }
+            recent_incidents: { type: array }
+            scheduled_maintenance: { type: object }
+        defaults:
+          response:
+            overall_status: "operational"
+            services: []
+          latencyMs: 50
+          rateLimit: { rps: 10 }
+        cases:
+          - id: all_systems_normal
+            match: { strategy: exact, path: service, value: "all" }
+            response:
+              overall_status: "operational"
+              last_updated: "2025-01-30T10:00:00Z"
+              services:
+                - name: "Authentication Service"
+                  status: "operational"
+                  uptime_30d: "99.98%"
+                - name: "Dashboard"
+                  status: "operational"
+                  uptime_30d: "99.95%"
+                - name: "API Gateway"
+                  status: "operational"
+                  uptime_30d: "99.99%"
+                - name: "Database Cluster"
+                  status: "operational"
+                  uptime_30d: "99.99%"
+              recent_incidents: []
+              scheduled_maintenance: null
+
+          - id: auth_degraded
+            match: { strategy: exact, path: service, value: "auth" }
+            response:
+              overall_status: "degraded"
+              last_updated: "2025-01-30T10:00:00Z"
+              services:
+                - name: "Authentication Service"
+                  status: "degraded"
+                  uptime_30d: "99.85%"
+              recent_incidents:
+                - id: "INC-2025-0142"
+                  start: "2025-01-30T09:45:00Z"
+                  summary: "Elevated login latency"
+                  status: "investigating"
+
+      analyze_account_logs:
+        version: 0.1.0
+        description: Analyzes account activity logs for anomalies
+        params:
+          type: object
+          properties:
+            customer_id: { type: string }
+            hours_back: { type: integer, default: 24 }
+          required: [customer_id]
+        result:
+          type: object
+          properties:
+            customer_id: { type: string }
+            analysis_period: { type: string }
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  timestamp: { type: string }
+                  event: { type: string }
+                  source: { type: string }
+                  ip: { type: string }
+                  status: { type: string }
+                  error_code: { type: string }
+            anomalies:
+              type: array
+              items:
+                type: object
+                properties:
+                  type: { type: string }
+                  description: { type: string }
+                  error_code: { type: string }
+                  recommendation: { type: string }
+        defaults:
+          response: { customer_id: null, events: [], anomalies: [] }
+          latencyMs: 200
+          rateLimit: { rps: 3 }
+        cases:
+          - id: password_reset_logs
+            match: { strategy: exact, path: customer_id, value: "ACCT-7890" }
+            response:
+              customer_id: "ACCT-7890"
+              analysis_period: "24 hours"
+              events:
+                - timestamp: "2025-01-30T08:15:22Z"
+                  event: "PASSWORD_RESET_INITIATED"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:16:45Z"
+                  event: "PASSWORD_RESET_COMPLETED"
+                  source: "email_link"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:17:30Z"
+                  event: "LOGIN_ATTEMPT"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "success"
+                - timestamp: "2025-01-30T08:17:35Z"
+                  event: "DASHBOARD_ACCESS"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "failed"
+                  error_code: "SESSION_CACHE_STALE"
+                - timestamp: "2025-01-30T08:18:00Z"
+                  event: "DASHBOARD_ACCESS"
+                  source: "web_portal"
+                  ip: "192.168.1.105"
+                  status: "failed"
+                  error_code: "SESSION_CACHE_STALE"
+              anomalies:
+                - type: "repeated_failure"
+                  description: "Multiple dashboard access failures after successful login"
+                  error_code: "SESSION_CACHE_STALE"
+                  recommendation: "Clear session cache or use private browsing"
+
+      get_response_templates:
+        version: 0.1.0
+        description: Retrieves response templates for issue category
+        params:
+          type: object
+          properties:
+            category: { type: string }
+            tone: { type: string, default: "professional" }
+          required: [category]
+        result:
+          type: object
+          properties:
+            templates:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  subject_template: { type: string }
+                  body_template: { type: string }
+                  tone: { type: string }
+                  tags: { type: array, items: { type: string } }
+        defaults:
+          response: { templates: [] }
+          latencyMs: 75
+          rateLimit: { rps: 5 }
+        cases:
+          - id: auth_templates
+            match: { strategy: exact, path: category, value: "authentication" }
+            response:
+              templates:
+                - id: "TPL-AUTH-001"
+                  name: "Password Reset Follow-up"
+                  subject_template: "Re: Access Issue After Password Reset - [TICKET_ID]"
+                  body_template: |
+                    Hi [CUSTOMER_NAME],
+
+                    Thank you for reaching out about the dashboard access issue you're experiencing after your recent password reset.
+
+                    We've identified this as a known issue (KB-2024-1847) related to session caching. Here's how to resolve it:
+
+                    **Quick Fix:**
+                    1. Clear your browser cache and cookies
+                    2. Close all browser windows
+                    3. Open a new browser window and log in again
+
+                    **Alternative:**
+                    - Try accessing the dashboard in an incognito/private browsing window
+
+                    This issue has been fixed in our latest release (v2.5.1), which will be automatically applied to your account within the next 24 hours.
+
+                    If you continue experiencing issues after trying these steps, please reply to this email and we'll investigate further.
+
+                    Best regards,
+                    [AGENT_NAME]
+                    Customer Support Team
+                  tone: "professional"
+                  tags: ["password", "access", "cache"]
+
+          - id: billing_templates
+            match: { strategy: exact, path: category, value: "billing" }
+            response:
+              templates:
+                - id: "TPL-BILL-001"
+                  name: "Billing Inquiry Response"
+                  subject_template: "Re: Billing Question - [TICKET_ID]"
+                  body_template: |
+                    Hi [CUSTOMER_NAME],
+
+                    Thank you for contacting us about your billing question.
+
+                    [BILLING_DETAILS]
+
+                    If you have any additional questions, please don't hesitate to reach out.
+
+                    Best regards,
+                    [AGENT_NAME]
+                    Customer Support Team
+                  tone: "professional"
+                  tags: ["billing", "invoice", "payment"]

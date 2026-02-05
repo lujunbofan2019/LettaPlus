@@ -21,17 +21,11 @@
       "description": "Generate structured research outline",
       "json_schema": {
         "name": "llm_outline",
-        "description": "Mock planning LLM for research outlines",
+        "description": "Generate structured research outline",
         "parameters": {
           "type": "object",
-          "properties": {
-            "topic": {
-              "type": "string"
-            },
-            "constraints": {
-              "type": "string"
-            }
-          }
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

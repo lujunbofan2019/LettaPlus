@@ -26,18 +26,8 @@
         "description": "Searches knowledge base for known issues",
         "parameters": {
           "type": "object",
-          "properties": {
-            "symptoms": {
-              "type": "string",
-              "description": "Issue symptoms to search for"
-            },
-            "category": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "symptoms"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -55,12 +45,8 @@
         "description": "Checks current system status and outages",
         "parameters": {
           "type": "object",
-          "properties": {
-            "service": {
-              "type": "string",
-              "default": "all"
-            }
-          }
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -78,18 +64,8 @@
         "description": "Analyzes account activity logs for anomalies",
         "parameters": {
           "type": "object",
-          "properties": {
-            "customer_id": {
-              "type": "string"
-            },
-            "hours_back": {
-              "type": "integer",
-              "default": 24
-            }
-          },
-          "required": [
-            "customer_id"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

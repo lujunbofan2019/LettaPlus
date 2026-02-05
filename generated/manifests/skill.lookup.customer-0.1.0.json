@@ -26,15 +26,8 @@
         "description": "Retrieves customer profile and account details",
         "parameters": {
           "type": "object",
-          "properties": {
-            "customer_id": {
-              "type": "string",
-              "description": "Customer account identifier"
-            }
-          },
-          "required": [
-            "customer_id"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -52,18 +45,8 @@
         "description": "Retrieves recent customer interactions",
         "parameters": {
           "type": "object",
-          "properties": {
-            "customer_id": {
-              "type": "string"
-            },
-            "limit": {
-              "type": "integer",
-              "default": 5
-            }
-          },
-          "required": [
-            "customer_id"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

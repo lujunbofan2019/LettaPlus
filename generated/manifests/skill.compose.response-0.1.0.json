@@ -26,18 +26,8 @@
         "description": "Retrieves response templates for issue category",
         "parameters": {
           "type": "object",
-          "properties": {
-            "category": {
-              "type": "string"
-            },
-            "tone": {
-              "type": "string",
-              "default": "professional"
-            }
-          },
-          "required": [
-            "category"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

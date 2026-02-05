@@ -19,7 +19,7 @@ The DCF skill system operates as a **two-layer architecture**:
 │  • skills_src/registry.yaml                                     │
 │  • skills_src/schemas/*.schema.yaml                             │
 │                                                                 │
-│  ✓ CAN CHANGE: file layout, directory structure, YAML format   │
+│  ✓ CAN CHANGE: file layout, directory structure, YAML format    │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
                      [ GENERATORS ]
@@ -36,7 +36,7 @@ The DCF skill system operates as a **two-layer architecture**:
 │  • generated/stub/stub_config.json                              │
 │  • generated/registry.json                                      │
 │                                                                 │
-│  ✗ MUST NOT CHANGE: JSON schema, field names, data structure   │
+│  ✗ MUST NOT CHANGE: JSON schema, field names, data structure    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

@@ -20,18 +20,11 @@
       "description": "Pull relevant headlines for a topic",
       "json_schema": {
         "name": "news_headlines",
-        "description": "Mock top headlines search",
+        "description": "Pull relevant headlines for a topic",
         "parameters": {
           "type": "object",
-          "properties": {
-            "topic": {
-              "type": "string",
-              "description": "Topic to fetch headlines for"
-            }
-          },
-          "required": [
-            "topic"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {
@@ -46,18 +39,11 @@
       "description": "Optional deep-dive on selected headlines",
       "json_schema": {
         "name": "web_fetch",
-        "description": "Mock HTTP fetcher",
+        "description": "Optional deep-dive on selected headlines",
         "parameters": {
           "type": "object",
-          "properties": {
-            "url": {
-              "type": "string",
-              "description": "URL to fetch"
-            }
-          },
-          "required": [
-            "url"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

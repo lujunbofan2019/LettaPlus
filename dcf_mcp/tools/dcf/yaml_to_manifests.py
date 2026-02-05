@@ -6,6 +6,10 @@ compatible with the DCF skill loading system.
 
 YAML files are expected to follow the skill/v1 schema defined in:
   skills_src/schemas/skill.schema.yaml
+
+The module supports two modes for tools loading:
+1. Legacy: Direct tools.yaml file
+2. Index: tools/_index.yaml referencing multiple .tools.yaml files
 """
 
 import json
@@ -21,6 +25,7 @@ except ImportError:
 DEFAULT_MANIFEST_API_VERSION = "v2.0.0"
 MANIFEST_API_VERSION_WITH_AMSP = "v2.1.0"
 DEFAULT_CATALOG_FILENAME = "skills_catalog.json"
+DEFAULT_TOOLS_INDEX_FILENAME = "_index.yaml"
 
 _VALID_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -64,16 +69,115 @@ def _parse_tool_ref(ref: str) -> tuple[str, str]:
     return parts[0].strip(), parts[1].strip()
 
 
-def _load_tools_yaml(tools_path: Path) -> Dict[str, Dict[str, Any]]:
+def _load_tools_from_index(index_path: Path, warnings: List[str]) -> Dict[str, Any]:
+    """
+    Load tools from an index file that references multiple tool files.
+
+    Args:
+        index_path: Path to _index.yaml file
+        warnings: List to append warnings to
+
+    Returns:
+        Merged ToolsRegistry data with all servers/tools combined
+    """
+    with index_path.open("r", encoding="utf-8") as f:
+        index_data = yaml.safe_load(f) or {}
+
+    # Validate index structure
+    api_version = index_data.get("apiVersion", "")
+    kind = index_data.get("kind", "")
+    if api_version != "tools-index/v1" or kind != "ToolsIndex":
+        raise ValueError(
+            f"Invalid index file: expected apiVersion=tools-index/v1, kind=ToolsIndex; "
+            f"got apiVersion={api_version}, kind={kind}"
+        )
+
+    files = index_data.get("files", [])
+    if not files:
+        warnings.append("Index file contains no files to load")
+        return {"apiVersion": "tools/v1", "kind": "ToolsRegistry", "servers": {}}
+
+    # Merge all referenced files
+    merged: Dict[str, Any] = {
+        "apiVersion": "tools/v1",
+        "kind": "ToolsRegistry",
+        "servers": {}
+    }
+
+    for file_ref in files:
+        file_path = (index_path.parent / file_ref).resolve()
+        if not file_path.exists():
+            warnings.append(f"Referenced file not found: {file_ref}")
+            continue
+
+        with file_path.open("r", encoding="utf-8") as f:
+            file_data = yaml.safe_load(f) or {}
+
+        # Validate file structure
+        file_api = file_data.get("apiVersion", "")
+        file_kind = file_data.get("kind", "")
+        if file_api != "tools/v1" or file_kind != "ToolsRegistry":
+            warnings.append(
+                f"Skipping {file_ref}: invalid apiVersion/kind "
+                f"(got {file_api}/{file_kind}, expected tools/v1/ToolsRegistry)"
+            )
+            continue
+
+        # Merge servers
+        for server_id, server_spec in file_data.get("servers", {}).items():
+            if server_id in merged["servers"]:
+                # Merge tools into existing server
+                existing = merged["servers"][server_id]
+                existing_tools = existing.get("tools", {})
+                new_tools = server_spec.get("tools", {})
+                existing_tools.update(new_tools)
+                existing["tools"] = existing_tools
+            else:
+                merged["servers"][server_id] = server_spec
+
+    return merged
+
+
+def _load_tools_yaml_data(tools_path: Path, warnings: List[str]) -> Dict[str, Any]:
+    """
+    Load tools data from either a direct tools.yaml or via index file.
+
+    Checks for tools/_index.yaml first (if tools_path points to tools.yaml),
+    falls back to direct loading if no index exists.
+
+    Args:
+        tools_path: Path to tools.yaml file
+        warnings: List to append warnings to
+
+    Returns:
+        ToolsRegistry data
+    """
+    # Check if there's an index file in a tools/ subdirectory
+    tools_dir = tools_path.parent / "tools"
+    index_path = tools_dir / DEFAULT_TOOLS_INDEX_FILENAME
+
+    if index_path.exists():
+        return _load_tools_from_index(index_path, warnings)
+
+    # Fall back to direct loading (only if file exists)
+    if tools_path.exists():
+        with tools_path.open("r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    return {}
+
+
+def _load_tools_yaml(tools_path: Path, warnings: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
     """
     Load tools.yaml and build an index of tool schemas.
     Returns: {(serverId, toolName): tool_spec}
-    """
-    if not tools_path.exists():
-        return {}
 
-    with tools_path.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    Supports both direct tools.yaml and index-based loading.
+    """
+    if warnings is None:
+        warnings = []
+
+    data = _load_tools_yaml_data(tools_path, warnings)
 
     index: Dict[tuple, Dict[str, Any]] = {}
     servers = data.get("servers", {})
@@ -169,11 +273,11 @@ def yaml_to_manifests(
         out_dir_p.mkdir(parents=True, exist_ok=True)
         catalog_p.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load tool schemas for enrichment
-        tool_schemas = _load_tools_yaml(tools_yaml_p) if tools_yaml_p.exists() else {}
+        # Load tool schemas for enrichment (supports index-based loading)
+        tool_schemas = _load_tools_yaml(tools_yaml_p, out["warnings"]) if tools_yaml_p.exists() else {}
 
-        # Find all skill YAML files
-        skill_files = list(skills_dir_p.glob("*.skill.yaml"))
+        # Find all skill YAML files (recursive search to support subdirectories)
+        skill_files = list(skills_dir_p.glob("**/*.skill.yaml"))
         if not skill_files:
             out["warnings"].append(f"No *.skill.yaml files found in {skills_dir_p}")
 

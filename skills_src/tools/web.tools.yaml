@@ -1,0 +1,30 @@
+# Web Tools Registry
+# HTTP fetching capabilities
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  web:
+    description: Web content fetching tools
+
+    tools:
+      web_fetch:
+        version: 0.1.0
+        description: Mock HTTP fetcher
+        params:
+          type: object
+          properties:
+            url:
+              type: string
+              description: URL to fetch
+          required: [url]
+        result:
+          type: object
+          properties:
+            status: { type: integer }
+            body: { type: string }
+        defaults:
+          response: { status: 200, body: stub }
+          latencyMs: 200
+          rateLimit: { rps: 0 }  # unlimited

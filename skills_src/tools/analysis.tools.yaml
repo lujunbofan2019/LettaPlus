@@ -1,0 +1,71 @@
+# Analysis Tools Registry
+# Research synthesis and comparison tools
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  analysis:
+    description: Research synthesis and analysis tools
+
+    tools:
+      insight_compare:
+        version: 0.1.0
+        description: Mock synthesis tool combining research insights
+        params:
+          type: object
+          properties:
+            insights:
+              type: array
+              items: { type: object }
+          required: [insights]
+        result:
+          type: object
+          properties:
+            themes:
+              type: array
+              items: { type: string }
+            risks:
+              type: array
+              items: { type: string }
+            confidence: { type: string }
+          required: [themes, risks]
+        defaults:
+          response: { themes: [], risks: [] }
+          latencyMs: 180
+          rateLimit: { rps: 1 }
+        cases:
+          - id: case_themes
+            match: { strategy: always }
+            response:
+              themes:
+                - Sustainability positioning
+                - AI-enabled optimisation
+                - Partnership momentum
+              risks:
+                - High capital expenditure
+                - Crowded vendor landscape
+                - Integration complexity
+              confidence: medium
+
+          - id: case_supply_chain
+            match: { strategy: contains, path: insights, value: supply chain }
+            response:
+              themes:
+                - Supply chain resilience
+                - Vendor consolidation
+              risks:
+                - Regional capacity shortages
+                - Integration friction across legacy WMS
+              confidence: high
+
+          - id: case_ai_agent
+            match: { strategy: contains, path: insights, value: agentic }
+            response:
+              themes:
+                - Operational co-pilots reduce manual load
+                - Governance and access control requirements
+              risks:
+                - Shadow IT deployments
+                - Model drift without audit
+              confidence: medium

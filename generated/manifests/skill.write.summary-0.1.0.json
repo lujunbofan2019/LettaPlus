@@ -20,18 +20,11 @@
       "description": "Generate concise summaries from input text",
       "json_schema": {
         "name": "llm_summarize",
-        "description": "Mock summarisation endpoint",
+        "description": "Generate concise summaries from input text",
         "parameters": {
           "type": "object",
-          "properties": {
-            "text": {
-              "type": "string",
-              "description": "Text to summarise"
-            }
-          },
-          "required": [
-            "text"
-          ]
+          "properties": {},
+          "required": []
         }
       },
       "definition": {

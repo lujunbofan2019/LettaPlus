@@ -1,0 +1,119 @@
+# Documents Tools Registry
+# Document generation tools (Phase 1 Testing)
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  documents:
+    description: Document generation tools for invoices and business documents
+
+    tools:
+      create_invoice:
+        version: 0.1.0
+        description: Creates formatted invoice document from order data
+        params:
+          type: object
+          properties:
+            order_id: { type: string }
+            customer_info:
+              type: object
+              properties:
+                customer_id: { type: string }
+                name: { type: string }
+                email: { type: string }
+              required: [customer_id, name]
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  sku: { type: string }
+                  item_description: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  amount: { type: number }
+                required: [sku, quantity, unit_price]
+            totals:
+              type: object
+              properties:
+                subtotal: { type: number }
+                discount: { type: number }
+                tax: { type: number }
+                shipping: { type: number }
+                total: { type: number }
+              required: [total]
+          required: [order_id, totals]
+        result:
+          type: object
+          properties:
+            invoice_id: { type: string }
+            invoice_date: { type: string }
+            order_id: { type: string }
+            status: { type: string }
+            customer_info:
+              type: object
+              properties:
+                customer_id: { type: string }
+                name: { type: string }
+                billing_address: { type: string }
+              required: [customer_id, name]
+            line_items:
+              type: array
+              items:
+                type: object
+                properties:
+                  item_description: { type: string }
+                  quantity: { type: integer }
+                  unit_price: { type: number }
+                  amount: { type: number }
+                required: [quantity, amount]
+            totals:
+              type: object
+              properties:
+                subtotal: { type: number }
+                discount: { type: number }
+                tax: { type: number }
+                shipping: { type: number }
+                total: { type: number }
+              required: [total]
+            payment_terms: { type: string }
+            due_date: { type: string }
+            document_url: { type: string }
+        defaults:
+          response:
+            invoice_id: "INV-DEFAULT"
+            status: "generated"
+            payment_terms: "NET-30"
+          latencyMs: 150
+          rateLimit: { rps: 3 }
+        cases:
+          - id: standard_invoice
+            match: { strategy: regex, path: order_id, value: "ORD-.*" }
+            response:
+              invoice_id: "INV-2025-0042"
+              invoice_date: "2025-01-30T10:30:00Z"
+              order_id: "ORD-2025-0042"
+              status: "generated"
+              customer_info:
+                customer_id: "CUST-1234"
+                name: "Jane Smith"
+                billing_address: "123 Main Street, Austin, TX 78701"
+              line_items:
+                - item_description: "WIDGET-A"
+                  quantity: 3
+                  unit_price: 29.99
+                  amount: 89.97
+                - item_description: "GADGET-B"
+                  quantity: 1
+                  unit_price: 149.99
+                  amount: 149.99
+              totals:
+                subtotal: 239.96
+                discount: -24.00
+                tax: 17.82
+                shipping: 8.99
+                total: 242.77
+              payment_terms: "NET-30"
+              due_date: "2025-03-01"
+              document_url: "https://docs.example.com/invoices/INV-2025-0042.pdf"

@@ -1,0 +1,228 @@
+# LLM Tools Registry
+# Language model tools for generation and analysis
+
+apiVersion: tools/v1
+kind: ToolsRegistry
+
+servers:
+  llm:
+    description: Language model tools for generation and analysis
+
+    tools:
+      llm_outline:
+        version: 0.1.0
+        description: Mock planning LLM for research outlines
+        params:
+          type: object
+          properties:
+            topic: { type: string }
+            constraints: { type: string }
+        result:
+          type: object
+          properties:
+            outline:
+              type: array
+              items: { type: string }
+        defaults:
+          response: { outline: [] }
+          latencyMs: 80
+          rateLimit: { rps: 0 }
+        cases:
+          - id: case_outline
+            match: { strategy: always }
+            response:
+              outline:
+                - Clarify stakeholder questions
+                - Prioritise research focus areas
+                - Define success metrics
+                - List required deliverables
+                - Identify data and tooling needs
+
+          - id: case_outline_ev
+            match: { strategy: contains, path: topic, value: EV charging }
+            response:
+              outline:
+                - Clarify grid interconnect constraints
+                - Map policy incentives by region
+                - Benchmark charger utilisation and uptime
+                - Identify target partners (utilities, parking operators)
+                - Define ROI model for municipalities
+
+      llm_briefing:
+        version: 0.1.0
+        description: Mock briefing writer
+        params:
+          type: object
+          properties:
+            themes:
+              type: array
+              items: { type: string }
+            audience: { type: string }
+        result:
+          type: object
+          properties:
+            briefing: { type: string }
+        defaults:
+          response: { briefing: stub briefing }
+          latencyMs: 100
+          rateLimit: { rps: 0 }
+        cases:
+          - id: case_briefing
+            match: { strategy: always }
+            response:
+              briefing: |
+                Executive Briefing
+                ===================
+                Opportunities:
+                - Sustainability positioning resonates with enterprise RFP criteria.
+                - AI-enabled optimisation reduces fulfilment cost by 18% in pilots.
+                Risks:
+                - Capital expenditure remains a barrier for mid-market prospects.
+                - Integration complexity demands stronger SI partnerships.
+                Recommended watch-outs: monitor interoperability roadmap and quantify carbon savings.
+
+          - id: case_briefing_agents
+            match: { strategy: contains, path: themes, value: agentic }
+            response:
+              briefing: |
+                Executive Briefing
+                ===================
+                Opportunities:
+                - Agentic co-pilots automate 25-40% of revenue ops tasks.
+                - Early movers show pipeline hygiene uplift and faster renewal cycles.
+                Risks:
+                - Access control and audit trails must satisfy compliance.
+                - Change management is needed to avoid user backlash.
+
+      llm_action_plan:
+        version: 0.1.0
+        description: Mock action plan generator
+        params:
+          type: object
+          properties:
+            objectives: { type: string }
+            insights:
+              type: array
+              items: { type: string }
+        result:
+          type: object
+          properties:
+            actions:
+              type: array
+              items: { type: string }
+            ownerRecommendations:
+              type: object
+              additionalProperties: { type: string }
+          required: [actions]
+        defaults:
+          response: { actions: [] }
+          latencyMs: 90
+          rateLimit: { rps: 0 }
+        cases:
+          - id: case_actions
+            match: { strategy: always }
+            response:
+              actions:
+                - Schedule briefing with product leadership to align on sustainability messaging
+                - Commission deeper cost benchmarking study across top 5 target segments
+                - Initiate pilot with sustainability-focused client to gather quantified carbon reduction data
+                - Engage systems integrator partners to develop integration playbooks
+              ownerRecommendations:
+                product: Own interoperability roadmap update
+                marketing: Publish sustainability proof-points
+
+          - id: case_actions_ev
+            match: { strategy: contains, path: objectives, value: charging }
+            response:
+              actions:
+                - Prioritise fast-charger deployments near logistics hubs
+                - Co-develop grid services bundle with utility partners
+                - Launch pilot measuring dwell-time uplift for retail hosts
+                - Publish reliability SLA benchmarks
+              ownerRecommendations:
+                operations: Own site-readiness checklist
+                product: Finalize V2G pricing
+
+      llm_quality_review:
+        version: 0.1.0
+        description: Mock quality assurance reviewer
+        params:
+          type: object
+          properties:
+            draft: { type: string }
+            criteria:
+              type: array
+              items: { type: string }
+          required: [draft]
+        result:
+          type: object
+          properties:
+            issues:
+              type: array
+              items: { type: string }
+            status: { type: string }
+            suggestedFixes:
+              type: array
+              items: { type: string }
+          required: [issues, status]
+        defaults:
+          response: { issues: [], status: pass }
+          latencyMs: 60
+          rateLimit: { rps: 0 }
+        cases:
+          - id: case_review
+            match: { strategy: always }
+            response:
+              issues:
+                - Add quantitative metric for market size
+                - Clarify responsible team for integration risk mitigation
+              status: revise
+              suggestedFixes:
+                - Reference 2025 market TAM estimate from CB Insights
+                - Assign partner management lead to SI playbook development
+
+          - id: case_review_privacy
+            match: { strategy: contains, path: draft, value: privacy }
+            response:
+              issues:
+                - Add regulatory citations for CPRA/GDPR
+                - Clarify data retention policy and DPIA owner
+              status: revise
+              suggestedFixes:
+                - Reference latest enforcement actions
+                - Name responsible data protection officer
+
+      llm_summarize:
+        version: 0.1.0
+        description: Mock summarisation endpoint
+        params:
+          type: object
+          properties:
+            text:
+              type: string
+              description: Text to summarise
+          required: [text]
+        result:
+          type: object
+          properties:
+            summary: { type: string }
+        defaults:
+          response: { summary: stub summary }
+          latencyMs: 50
+          rateLimit: { rps: 0 }
+        cases:
+          - id: short_text
+            match: { strategy: always }
+            response:
+              summary: >-
+                Executive digest: Market momentum is accelerating for sustainable modular automation;
+                top opportunities lie in enterprise retail pilots while capital intensity and
+                integration remain key risks. Next steps focus on quantifying ROI and formalising
+                partner enablement.
+
+          - id: case_summary_finance
+            match: { strategy: contains, path: text, value: finance }
+            response:
+              summary: >-
+                Finance-focused digest: strong capital efficiency but dependence on regulatory
+                clarity; continue tracking incentive timelines.

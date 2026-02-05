@@ -7,12 +7,6 @@
       "path": "../manifests/skill.analyze.synthesis-0.1.0.json"
     },
     {
-      "manifestId": "skill.calculate.pricing@0.1.0",
-      "skillName": "calculate.pricing",
-      "skillVersion": "0.1.0",
-      "path": "../manifests/skill.calculate.pricing-0.1.0.json"
-    },
-    {
       "manifestId": "skill.compose.response@0.1.0",
       "skillName": "compose.response",
       "skillVersion": "0.1.0",
@@ -25,16 +19,28 @@
       "path": "../manifests/skill.diagnose.issue-0.1.0.json"
     },
     {
+      "manifestId": "skill.lookup.customer@0.1.0",
+      "skillName": "lookup.customer",
+      "skillVersion": "0.1.0",
+      "path": "../manifests/skill.lookup.customer-0.1.0.json"
+    },
+    {
+      "manifestId": "skill.calculate.pricing@0.1.0",
+      "skillName": "calculate.pricing",
+      "skillVersion": "0.1.0",
+      "path": "../manifests/skill.calculate.pricing-0.1.0.json"
+    },
+    {
       "manifestId": "skill.generate.invoice@0.1.0",
       "skillName": "generate.invoice",
       "skillVersion": "0.1.0",
       "path": "../manifests/skill.generate.invoice-0.1.0.json"
     },
     {
-      "manifestId": "skill.lookup.customer@0.1.0",
-      "skillName": "lookup.customer",
+      "manifestId": "skill.validate.order@0.1.0",
+      "skillName": "validate.order",
       "skillVersion": "0.1.0",
-      "path": "../manifests/skill.lookup.customer-0.1.0.json"
+      "path": "../manifests/skill.validate.order-0.1.0.json"
     },
     {
       "manifestId": "skill.plan.actions@0.1.0",
@@ -71,12 +77,6 @@
       "skillName": "research.web",
       "skillVersion": "0.1.0",
       "path": "../manifests/skill.research.web-0.1.0.json"
-    },
-    {
-      "manifestId": "skill.validate.order@0.1.0",
-      "skillName": "validate.order",
-      "skillVersion": "0.1.0",
-      "path": "../manifests/skill.validate.order-0.1.0.json"
     },
     {
       "manifestId": "skill.write.briefing@0.1.0",

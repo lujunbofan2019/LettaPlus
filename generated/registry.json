@@ -1,7 +1,4 @@
 {
-  "apiVersion": "registry/v1",
-  "kind": "ServerRegistry",
-  "env": "test",
   "servers": {
     "search": {
       "transport": "streamable_http",
