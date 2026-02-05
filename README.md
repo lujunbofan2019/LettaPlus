@@ -392,144 +392,187 @@ The audit trail directory structure:
 
 ---
 
-## Update Oct-2025: CSV-first prototyping & stub MCP server
+## YAML-Based Skill Authoring & Stub MCP Server
 
-**CSV-first rapid skill prototyping**
-- Author many skills and their MCP tools in simple CSV files
-- Generate validated skill manifests plus a registry for discovery
-- Stand up a stub MCP server that exposes deterministic tools for BDD-style tests
+**YAML-first skill development** (Updated Feb-2026)
+- Author skills and tools in human-readable YAML files
+- Generate validated JSON manifests and stub server configuration
+- Stand up a stub MCP server for deterministic BDD-style testing
 
-### What each file is for
+### Source Files (YAML - Human-Editable)
 
-1. `skills.csv`
+| File | Purpose |
+|------|---------|
+| `skills_src/skills/*.skill.yaml` | Individual skill definitions (one per file) |
+| `skills_src/tools.yaml` | Tool specifications and BDD test cases |
+| `skills_src/registry.yaml` | MCP server resolver map (server ID → endpoint) |
 
-Purpose: the master list of **skills** (i.e., capabilities you want agents to load). Each row becomes one **skill manifest (v2.0.0)** when you run `csv_to_manifests.py`.
+### Generated Files (JSON - Machine-Readable)
 
-Typical columns (minimal core):
-- `manifestId` (stable UUID or slug)
-- `skillPackageId` (package/namespace)
-- `skillName` and `skillVersion`
-- `description`, `tags` (comma-sep)
-- Optional policy fields (e.g., `permissions.secrets`)
+| File | Generated From | Purpose |
+|------|----------------|---------|
+| `generated/manifests/skill.*.json` | `skills_src/skills/*.yaml` | Skill manifests for `load_skill` |
+| `generated/catalogs/skills_catalog.json` | All skill manifests | Fast skill discovery index |
+| `generated/stub/stub_config.json` | `skills_src/tools.yaml` | Stub MCP server configuration |
+| `generated/registry.json` | `skills_src/registry.yaml` | MCP server endpoint resolution |
 
-You **do not** list tools here in detail - just define the skill itself.
+### Skill File Structure (*.skill.yaml)
 
-2. `skill_tool_refs.csv`
+Each skill is defined in its own YAML file:
 
-Purpose: maps **skills → tools** (many-to-many). This is how you attach tools to a given skill without duplicating tool definitions. `csv_to_manifests.py` joins this file to `skills.csv` to populate each manifest’s `requiredTools`.
+```yaml
+# skills_src/skills/research.web.skill.yaml
+apiVersion: skill/v1
+kind: Skill
 
-Typical columns:
-- `manifestId` (or `skillName@skillVersion`)
-- `toolKey` (a stable logical reference to a tool defined in `mcp_tools.csv`)
-- Optional flags (e.g., “required”, “notes”, “alias”)
+metadata:
+  manifestId: skill.research.web@0.1.0
+  name: research.web
+  version: 0.1.0
+  description: Lightweight web research capability
+  tags: [research, web]
 
-3. `mcp_tools.csv`
+spec:
+  permissions:
+    egress: internet
+    secrets: [BING_API_KEY]
 
-Purpose: declares the **MCP tools** available from logical MCP servers. These are “real” tools in the sense of their **interfaces** (names + JSON schemas), but during testing they’ll be served by the stub server.
+  # AMSP v3.0 Complexity Profile (for model selection)
+  complexityProfile:
+    baseWCS: 8
+    dimensionScores:
+      horizon: 1       # Multi-turn: may need multiple searches
+      context: 1       # Local: search query context
+      tooling: 2       # Multi-tool: search + fetch
+      observability: 2 # Partial: web results are unpredictable
+      modality: 0      # Text-only
+      precision: 1     # Moderate: facts should be accurate
+      adaptability: 1  # Slow-changing: web content evolves
+    finalFCS: 9.2
+    recommendedTier: 0  # Efficient tier (FCS < 12)
 
-Typical columns:
-- `serverId` (logical, e.g., `pricing-tools`, `etl-tools`)
-- `toolName` (the function name the agent calls)
-- `description`
-- `json_schema` (OpenAI-style tool schema as JSON text; parameters + required)
-- Optional: `tags`, `return_char_limit`, `notes`
+  directives: |
+    Follow queries precisely.
+    Extract key facts from search results.
+    Provide citations with source URLs.
 
-This is the **source of truth** for tool signatures. Multiple skills can reference the same `toolKey`/`toolName` here.
-
-4. `mcp_cases.csv`
-
-Purpose: deterministic **stub/mocked I/O** for tools — lets you do BDD/end-to-end tests before real implementations exist. `csv_to_stub_config.py` reads this to build the stub server’s behavior.
-
-Typical columns:
-- `serverId`, `toolName` (join to `mcp_tools.csv`)
-- `caseId` or `scenario` (a label for the test)
-- `inputs_json` (exact args object the tool will be called with)
-- `output_json` (the canned return)
-- Optional: `delay_ms`, `error` (to simulate failures), `notes`
-
-The stub MCP server matches incoming calls to `(serverId, toolName, inputs_json)` and returns the pre-canned result.
-
-5. `registry.json`
-
-Purpose: **resolver map** from `serverId` → runtime endpoint info. Your **skill loader** uses this to decide where to call each MCP server (stub vs real), without changing manifests.
-
-Typical shape:
-
-```json
-{
-  "servers": {
-    "pricing-tools": { "transport": "ws", "endpoint": "ws://stub-mcp:8765" },
-    "etl-tools":     { "transport": "ws", "endpoint": "ws://stub-mcp:8765" }
-  },
-  "env": "dev"
-}
-
+  tools:
+    - ref: search:search_query
+      required: true
+      description: Core search tool for web queries
 ```
 
-Switch this file (or point it to prod URLs) to move from mocks to real backends.
+### Tools Configuration (tools.yaml)
 
-### How they work together (pipeline)
+All tool definitions and test cases in one file:
 
-1. Design skills & attach tools
-- Author skills in `skills.csv`.
-- Map which tools each skill needs in `skill_tool_refs.csv`.
-2. Define tool interfaces & test cases
-- Describe each tool’s **schema** in `mcp_tools.csv`.
-- Provide deterministic test cases in `mcp_cases.csv`.
-3. Generate artifacts
-- Run **`csv_to_manifests.py`** → emits JSON **skill manifests** (v2.0.0) under `skills/` using (`skills.csv` + `skill_tool_refs.csv` + `mcp_tools.csv`).
-- Run **`csv_to_stub_config.py`** → emits `generated/stub/stub_config.json` for the stub MCP server (using `mcp_tools.csv` + `mcp_cases.csv`).
-4. Wire endpoints
-- Set **`registry.json`** to point each `serverId` to either the **stub MCP server** (for BDD/testing) or a **real MCP server** (for live runs).
-5. Load & run
-- The **skill loader** reads `skills/` manifests and resolves `serverId` → endpoint via `registry.json`.
-- During tests, the loader hits the **stub server**, which returns the canned outputs from `mcp_cases.csv`.
-- When implementations are ready, you just update `registry.json` to point to the real MCP servers — no manifest changes required.
+```yaml
+# skills_src/tools.yaml
+apiVersion: tools/v1
+kind: ToolsConfig
 
-### Mental model
+tools:
+  - serverId: search
+    name: search_query
+    description: Search the web for information
+    inputSchema:
+      type: object
+      properties:
+        query: { type: string, description: "Search query" }
+        max_results: { type: integer, default: 10 }
+      required: [query]
+    cases:
+      - caseId: case_market_scan
+        match:
+          query: "AI market trends 2026"
+        output:
+          results:
+            - title: "AI Market Analysis"
+              url: "https://example.com/ai-trends"
+              snippet: "Key trends in AI adoption..."
+```
 
-- `skills.csv` = “What skills exist?”
-- `skill_tool_refs.csv` = “Which tools do those skills require?”
-- `mcp_tools.csv` = “What are the tools’ interfaces?”
-- `mcp_cases.csv` = “What should those tools return in test scenarios?”
-- `registry.json` = “Where do those tools live right now (stub or real)?”
+### Registry Configuration (registry.yaml)
 
-### Example workflow: Market Intelligence and Action Plan
+Maps logical server IDs to endpoints:
 
-The example workflow at `workflows/example/market_research_workflow.json` (schema v2.2.0) shows how the CSV artifacts wire together in practice:
+```yaml
+# skills_src/registry.yaml
+apiVersion: registry/v1
+kind: ServerRegistry
 
-- **Inputs**: `topic`, `company`, and `audience` are validated up front and threaded through each state.
-- **Skills per state**: Each Task state binds to a generated manifest under `generated/manifests/` (e.g., `skill.plan.research_scope`, `skill.research.news`, `skill.research.company`, `skill.analyze.synthesis`, `skill.write.briefing`, `skill.plan.actions`, `skill.qa.review`, `skill.write.summary`). These manifests are produced by `csv_to_manifests.py` using `skills.csv`, `skill_tool_refs.csv`, and `mcp_tools.csv`.
-- **Tool coverage**: The states exercise both search-style tools (`search_query`, `news_headlines`) and structured data lookups (`company_profile`) plus LLM-format tools (`llm_outline`, `llm_briefing`, `llm_action_plan`, `llm_quality_review`, `llm_summarize`). The stub server responds deterministically using the rows in `skills_src/mcp_cases.csv` so each call path has canned outputs for regression tests.
-- **End-to-end reuse**: The same workflow can run against real MCP servers by swapping endpoints in `skills_src/registry.json`; no workflow or manifest edits are required.
+servers:
+  search:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765/mcp  # Stub for testing
+  llm:
+    transport: streamable_http
+    endpoint: http://stub-mcp:8765/mcp
 
-### Testing data & scenarios in `skills_src/mcp_cases.csv`
+# Switch endpoints for production:
+# servers:
+#   search:
+#     transport: streamable_http
+#     endpoint: http://real-search-api:8080/mcp
+```
 
-The stub MCP server is driven by the cases in `skills_src/mcp_cases.csv`, which mirror the states in the example workflow. Highlights:
+### Generation Pipeline
 
-- **Market discovery**: `search_query` cases like `case_market_scan` and `case_competitor_signal` return multi-hit SERP payloads to validate pagination and recency handling.
-- **News intake**: `news_headlines` cases (`case_market_news`, `case_robotics_news`, `case_ai_agents`, `case_ev_market`) provide timestamped headlines so the Summarize and QA steps can reference sources.
-- **Company dossiers**: `company_profile` cases for “Acme Robotics”, “SwiftLift”, “EcoCharge Networks”, and “Northwind Analytics” inject metrics, segments, product lines, and milestones for the `research.company` skill.
-- **Synthesis and writing**: Analysis and LLM cases (`insight_compare`, `llm_outline`, `llm_briefing`, `llm_action_plan`, `llm_quality_review`, `llm_summarize`) include thematic coverage (sustainability, agentic tooling, EV charging, privacy) so the workflow can generate briefings, action plans, QA feedback, and executive digests without live models.
+Run generators to produce JSON artifacts:
 
-### Do you need to edit the workflow JSON to consume the stub cases?
+```bash
+# Generate all artifacts (manifests + stub config + registry)
+python -c 'from dcf_mcp.tools.dcf.generate import generate_all; print(generate_all())'
 
-Short answer: **no edits are required** for the provided scenarios—the workflow already sends the exact `inputs_json` payloads that the stub server matches on. Each Task’s `Parameters` block maps workflow inputs (`topic`, `company`, `audience`) into the tool calls, and those values line up with the sample `inputs_json` rows in `skills_src/mcp_cases.csv` (e.g., `topic` strings for search/news tools and `company` strings for company dossiers).
+# Or individual generators
+python -c 'from dcf_mcp.tools.dcf.yaml_to_manifests import yaml_to_manifests; yaml_to_manifests()'
+python -c 'from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config; yaml_to_stub_config()'
+python -c 'from dcf_mcp.tools.dcf.yaml_to_registry import yaml_to_registry; yaml_to_registry()'
+```
 
-If you want to target **additional scenarios**, the schema (v2.2.0) does support richer controls without leaving the declarative JSON:
+### Mental Model
 
-- You can change or augment the `Parameters` for any `Task` state to emit different tool arguments (these must still match the stub case’s `inputs_json` for deterministic responses).
-- You can add new `Task` states (or `Choice`/`Pass` states) to branch into new tools or alternate case IDs; the schema allows composing additional states as long as they follow ASL-compatible constructs.
-- You can include `States.Format` in `Parameters` to derive inputs from prior results (as shown in `QualityReview` and `SummarizePackage`), enabling scenario-specific prompts without code changes.
+- `skills_src/skills/*.skill.yaml` = "What skills exist and what do they do?"
+- `skills_src/tools.yaml` = "What tools exist and how do they behave in tests?"
+- `skills_src/registry.yaml` = "Where do those tools live (stub or real)?"
+- `generated/manifests/` = "Machine-readable skill definitions for agents"
+- `generated/stub/stub_config.json` = "Stub server behavior configuration"
 
-In other words, the current workflow schema already provides the knobs you need to steer which stub cases are exercised; only adjust the workflow JSON if you add brand-new scenarios that require different tool inputs than those already covered.
+### How to Run with the Stub Server
 
-**How to run the example with the stub server**
+1. **Generate artifacts**:
+   ```bash
+   python -c 'from dcf_mcp.tools.dcf.generate import generate_all; generate_all()'
+   ```
 
-1) Generate artifacts: run `python skills_src/csv_to_manifests.py` and `python skills_src/csv_to_stub_config.py` to refresh manifests and `generated/stub/stub_config.json`.
-2) Start the stub server: launch `stub_mcp/stub_mcp_server.py` (e.g., `python stub_mcp/stub_mcp_server.py --config generated/stub/stub_config.json`).
-3) Point the resolver: ensure `skills_src/registry.json` routes the relevant `serverId`s (e.g., `search`, `datasets`, `llm`) to the stub endpoint.
-4) Execute the workflow: run the `market_research_workflow.json` with your workflow runner; each Task will resolve skills/manifests from `generated/manifests/` and receive deterministic tool responses from the stub server.
+2. **Start services** (via Docker Compose):
+   ```bash
+   docker compose up --build
+   ```
+
+3. **Verify stub server**:
+   ```bash
+   curl -sf http://localhost:8765/healthz && echo "Stub MCP OK"
+   ```
+
+4. **Execute workflow**: The skill loader reads manifests from `generated/manifests/` and resolves endpoints via `generated/registry.json`. During tests, tools hit the stub server for deterministic responses.
+
+### Two-Layer Architecture
+
+The skill system operates as a **two-layer architecture**:
+
+```
+AUTHORING LAYER (Human-Editable YAML)
+         │
+    [ GENERATORS ]
+         │
+         ▼
+RUNTIME LAYER (Machine-Readable JSON)
+```
+
+**Key insight**: You can freely modify the YAML authoring layer (file structure, format, organization) as long as the generators produce the same JSON output format. The runtime layer (JSON manifests) is consumed by agents and must remain stable.
+
+For details on which fields are safe to modify vs. protected, see `skills_src/SKILL_RUNTIME_DEPENDENCIES.md`.
 
 ---
 

@@ -51,7 +51,7 @@ Used by tools that need semantic error categorization.
 }
 ```
 
-**Tools using this pattern**: `validate_workflow`, `validate_skill_manifest`, `load_skill`, `csv_to_manifests`, `csv_to_stub_config`
+**Tools using this pattern**: `validate_workflow`, `validate_skill_manifest`, `load_skill`, `yaml_to_manifests`, `yaml_to_stub_config`
 
 ### Pattern B: Control Plane/Action Tools
 Used by tools that perform actions with simple success/failure outcomes.

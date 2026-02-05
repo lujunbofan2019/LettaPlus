@@ -3,7 +3,7 @@
 The stub MCP server exposes deterministic tool behavior so that agents can
 exercise tool call flows without depending on live backends. It reads its
 configuration from `generated/stub/stub_config.json`, the file produced by
-`dcf_mcp.tools.dcf.csv_to_stub_config`.
+`dcf_mcp.tools.dcf.yaml_to_stub_config` from `skills_src/tools.yaml`.
 
 ## Protocol
 
@@ -32,7 +32,7 @@ while the file is being regenerated.
 
 1. Run the generator:
    ```bash
-   python -m dcf_mcp.tools.dcf.csv_to_stub_config
+   python -c 'from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config; yaml_to_stub_config()'
    ```
 2. Start the stub MCP server (e.g. via Docker Compose or directly with
    `uvicorn stub_mcp_server:app --host 0.0.0.0 --port 8765`).
