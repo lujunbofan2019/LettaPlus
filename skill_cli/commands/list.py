@@ -30,7 +30,7 @@ def discover_skills(skills_dir: Path) -> List[Dict[str, Any]]:
     if not skills_path.exists():
         return skills
 
-    for skill_file in sorted(skills_path.glob("*.skill.yaml")):
+    for skill_file in sorted(skills_path.glob("**/*.skill.yaml")):
         data, error = load_yaml_file(skill_file)
         if error:
             skills.append({

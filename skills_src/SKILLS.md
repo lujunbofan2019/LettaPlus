@@ -34,8 +34,19 @@ This approach enables:
 │                      AUTHORING LAYER                            │
 ├─────────────────────────────────────────────────────────────────┤
 │  skills_src/                                                    │
-│  ├── skills/*.skill.yaml    # Individual skill definitions      │
-│  ├── tools.yaml             # Tool specs + test cases           │
+│  ├── skills/                # Skill definitions in subdirectories│
+│  │   ├── research/          # Research skills                   │
+│  │   ├── analyze/           # Analysis skills                   │
+│  │   ├── plan/              # Planning skills                   │
+│  │   ├── write/             # Writing skills                    │
+│  │   ├── qa/                # Quality assurance skills          │
+│  │   ├── order-processing/  # Phase 1 test skills               │
+│  │   └── customer-support/  # Phase 2 test skills               │
+│  ├── tools/                 # Tool specs by server (split)      │
+│  │   ├── _index.yaml        # Index listing all tool files      │
+│  │   ├── search.tools.yaml  # Search tools + test cases         │
+│  │   ├── web.tools.yaml     # Web tools + test cases            │
+│  │   └── ...                # Other server tool files           │
 │  ├── registry.yaml          # Server endpoint mappings          │
 │  └── schemas/               # YAML schema documentation         │
 └─────────────────────────────────────────────────────────────────┘
@@ -253,10 +264,29 @@ spec:
       file: ./data/reference.txt  # Relative to skill file
 ```
 
-### Tools Registry (`tools.yaml`)
+### Tools Registry (`tools/_index.yaml` + `*.tools.yaml`)
 
-Defines tool specifications and test cases for simulation.
+Tool specifications are organized by server in the `tools/` directory. An index file lists all tool files to load.
 
+**Index File (`tools/_index.yaml`):**
+```yaml
+apiVersion: tools-index/v1
+kind: ToolsIndex
+
+# Files to load (processed in order)
+files:
+  - search.tools.yaml
+  - web.tools.yaml
+  - datasets.tools.yaml
+  - analysis.tools.yaml
+  - llm.tools.yaml
+  - orders.tools.yaml
+  - pricing.tools.yaml
+  - documents.tools.yaml
+  - support.tools.yaml
+```
+
+**Individual Tool File (`tools/search.tools.yaml`):**
 ```yaml
 apiVersion: tools/v1
 kind: ToolsRegistry
@@ -677,37 +707,47 @@ yaml_to_stub_config(
 ```
 skills_src/
 ├── SKILLS.md                   # This documentation
-├── tools.yaml                  # Tool specifications + test cases (24 tools)
+├── SKILL_RUNTIME_DEPENDENCIES.md  # Runtime dependency documentation
 ├── registry.yaml               # Server endpoint mappings (9 servers)
-├── skills/                     # Individual skill definitions (15 skills)
-│   │
-│   │ # Research & Analysis Skills
-│   ├── research.web.skill.yaml
-│   ├── research.news.skill.yaml
-│   ├── research.company.skill.yaml
-│   ├── analyze.synthesis.skill.yaml
-│   │
-│   │ # Planning & QA Skills
-│   ├── plan.actions.skill.yaml
-│   ├── plan.research_scope.skill.yaml
-│   ├── qa.review.skill.yaml
-│   │
-│   │ # Writing Skills
-│   ├── write.summary.skill.yaml
-│   ├── write.briefing.skill.yaml
-│   │
-│   │ # Phase 1 Testing: Order Processing Pipeline
-│   ├── validate.order.skill.yaml      # orders server tools
-│   ├── calculate.pricing.skill.yaml   # pricing server tools
-│   ├── generate.invoice.skill.yaml    # documents server tools
-│   │
-│   │ # Phase 2 Testing: Customer Support Session
-│   ├── lookup.customer.skill.yaml     # support server tools
-│   ├── diagnose.issue.skill.yaml      # support server tools
-│   └── compose.response.skill.yaml    # support server tools
+│
+├── tools/                      # Tool specifications by server (split)
+│   ├── _index.yaml             # Index listing all tool files
+│   ├── search.tools.yaml       # Search tools (search_query, news_headlines)
+│   ├── web.tools.yaml          # Web tools (web_fetch)
+│   ├── datasets.tools.yaml     # Dataset tools (company_profile)
+│   ├── analysis.tools.yaml     # Analysis tools (insight_compare)
+│   ├── llm.tools.yaml          # LLM tools (llm_outline, llm_briefing, etc.)
+│   ├── orders.tools.yaml       # Order validation (Phase 1)
+│   ├── pricing.tools.yaml      # Pricing calculation (Phase 1)
+│   ├── documents.tools.yaml    # Invoice generation (Phase 1)
+│   └── support.tools.yaml      # Customer support (Phase 2)
+│
+├── skills/                     # Skill definitions organized by category
+│   ├── research/               # Research skills
+│   │   ├── web.skill.yaml
+│   │   ├── news.skill.yaml
+│   │   └── company.skill.yaml
+│   ├── analyze/                # Analysis skills
+│   │   └── synthesis.skill.yaml
+│   ├── plan/                   # Planning skills
+│   │   ├── actions.skill.yaml
+│   │   └── research_scope.skill.yaml
+│   ├── write/                  # Writing skills
+│   │   ├── summary.skill.yaml
+│   │   └── briefing.skill.yaml
+│   ├── qa/                     # Quality assurance skills
+│   │   └── review.skill.yaml
+│   ├── order-processing/       # Phase 1 Testing: Order Processing Pipeline
+│   │   ├── validate.order.skill.yaml
+│   │   ├── calculate.pricing.skill.yaml
+│   │   └── generate.invoice.skill.yaml
+│   └── customer-support/       # Phase 2 Testing: Customer Support Session
+│       ├── lookup.customer.skill.yaml
+│       ├── diagnose.issue.skill.yaml
+│       └── compose.response.skill.yaml
 │
 └── schemas/                    # YAML schema documentation
-    ├── skill.schema.yaml
+    ├── skill.authoring.schema.yaml
     ├── tools.schema.yaml
     └── registry.schema.yaml
 
@@ -718,8 +758,11 @@ generated/
 │   └── ...
 ├── catalogs/
 │   └── skills_catalog.json     # Discovery index for get_skillset()
-└── stub/
-    └── stub_config.json        # Stub MCP server configuration
+├── stub/
+│   └── stub_config.json        # Stub MCP server configuration
+├── registry.json               # MCP server endpoint mapping
+└── schemas/
+    └── skill.authoring.schema.json  # JSON Schema for validation
 ```
 
 ---
@@ -1000,9 +1043,12 @@ spec:
 
 ### Step 2: Define Tools and Test Cases
 
-Add to `skills_src/tools.yaml`:
+Create `skills_src/tools/myserver.tools.yaml`:
 
 ```yaml
+apiVersion: tools/v1
+kind: ToolsRegistry
+
 servers:
   myserver:
     description: My custom server
@@ -1046,6 +1092,14 @@ servers:
               strategy: always
             response:
               data: []
+```
+
+Then add the file to `skills_src/tools/_index.yaml`:
+
+```yaml
+files:
+  # ... existing files ...
+  - myserver.tools.yaml
 ```
 
 ### Step 3: Register the Server

@@ -97,10 +97,40 @@ def load_json_schema(skills_dir: Path) -> Tuple[Optional[Dict], Optional[str]]:
 
 
 def load_tools_registry(skills_dir: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Load the tools registry from tools.yaml."""
+    """Load the tools registry from tools directory or legacy tools.yaml."""
+    # Check for index-based loading first
+    index_path = skills_dir / "tools" / "_index.yaml"
+    if index_path.exists():
+        try:
+            index_data, error = load_yaml_file(index_path)
+            if error:
+                return None, f"Error loading tools index: {error}"
+
+            # Merge all referenced files
+            merged = {"servers": {}}
+            for file_ref in index_data.get("files", []):
+                file_path = index_path.parent / file_ref
+                if file_path.exists():
+                    file_data, err = load_yaml_file(file_path)
+                    if err:
+                        continue
+                    for server_id, server_spec in file_data.get("servers", {}).items():
+                        if server_id in merged["servers"]:
+                            existing = merged["servers"][server_id]
+                            existing_tools = existing.get("tools", {})
+                            new_tools = server_spec.get("tools", {})
+                            existing_tools.update(new_tools)
+                            existing["tools"] = existing_tools
+                        else:
+                            merged["servers"][server_id] = server_spec
+            return merged, None
+        except Exception as e:
+            return None, f"Error loading tools from index: {e}"
+
+    # Fall back to legacy tools.yaml
     tools_path = skills_dir / "tools.yaml"
     if not tools_path.exists():
-        return None, f"tools.yaml not found at {tools_path}"
+        return None, f"Neither tools/_index.yaml nor tools.yaml found in {skills_dir}"
 
     return load_yaml_file(tools_path)
 
@@ -255,7 +285,7 @@ def discover_skill_files(skills_dir: Path, skill_names: Optional[List[str]] = No
     if not skills_path.exists():
         return []
 
-    all_files = list(skills_path.glob("*.skill.yaml"))
+    all_files = list(skills_path.glob("**/*.skill.yaml"))
 
     if not skill_names:
         return sorted(all_files)
@@ -263,13 +293,7 @@ def discover_skill_files(skills_dir: Path, skill_names: Optional[List[str]] = No
     # Filter to specified skills
     filtered = []
     for name in skill_names:
-        # Try exact match first
-        exact = skills_path / f"{name}.skill.yaml"
-        if exact.exists():
-            filtered.append(exact)
-            continue
-
-        # Try partial match
+        # Try partial match on filename stem (skill name)
         matches = [f for f in all_files if name in f.stem]
         filtered.extend(matches)
 
