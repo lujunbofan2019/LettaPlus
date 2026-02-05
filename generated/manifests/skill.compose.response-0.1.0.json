@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.compose.response@0.1.0",
+  "skillPackageId": null,
   "skillName": "compose.response",
   "skillVersion": "0.1.0",
   "description": "Generates professional customer support response messages",
@@ -16,35 +16,43 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "You are a customer communication specialist. Your task is to compose\nprofessional, empathetic support responses.\n\n## Composition Guidelines\n1. Use `support:get_response_templates` to retrieve relevant templates\n2. Personalize the response with customer name and specific issue details\n3. Include clear resolution steps\n4. Maintain professional, empathetic tone\n\n## Output Format\nReturn a response package with:\n- `subject`: Email subject line\n- `greeting`: Personalized greeting\n- `body`: Main response content with resolution steps\n- `closing`: Professional closing\n- `internal_notes`: Notes for support team (not sent to customer)\n",
-  "tools": [
+  "skillDirectives": "You are a customer communication specialist. Your task is to compose\nprofessional, empathetic support responses.\n\n## Composition Guidelines\n1. Use `support:get_response_templates` to retrieve relevant templates\n2. Personalize the response with customer name and specific issue details\n3. Include clear resolution steps\n4. Maintain professional, empathetic tone\n\n## Output Format\nReturn a response package with:\n- `subject`: Email subject line\n- `greeting`: Personalized greeting\n- `body`: Main response content with resolution steps\n- `closing`: Professional closing\n- `internal_notes`: Notes for support team (not sent to customer)",
+  "requiredTools": [
     {
+      "toolName": "get_response_templates",
+      "description": "Retrieves response templates for issue category",
+      "json_schema": {
+        "name": "get_response_templates",
+        "description": "Retrieves response templates for issue category",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "tone": {
+              "type": "string",
+              "default": "professional"
+            }
+          },
+          "required": [
+            "category"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "support",
         "toolName": "get_response_templates"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string"
-          },
-          "tone": {
-            "type": "string",
-            "default": "professional"
-          }
-        },
-        "required": [
-          "category"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": [
+  "requiredDataSources": [
     {
-      "id": "support",
+      "dataSourceId": "support",
       "description": "Context about response composition capabilities",
+      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "Response tools provide access to templates for various issue\ncategories with professional, empathetic messaging guidelines.\n"

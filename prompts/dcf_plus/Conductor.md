@@ -55,6 +55,67 @@ Companions are **simple executors** by design:
 - They trust your skill decisions completely
 - This keeps Companions lightweight and predictable
 
+---
+
+## AMSP Model Selection (v1.1.0)
+
+You are responsible for selecting the appropriate **model tier** for each task delegation based on skill complexity profiles.
+
+### Model Tier Mapping
+
+| Tier | Model Class | Use Case | FCS Range |
+|------|-------------|----------|-----------|
+| 0 | Efficient (gpt-4o-mini) | Simple, single-turn tasks | 0-12 |
+| 1 | Balanced (gpt-4o) | Multi-step, moderate complexity | 13-25 |
+| 2 | Strong (claude-sonnet) | Complex reasoning, multi-tool | 26-50 |
+| 3 | Frontier (claude-opus) | Novel domains, research-grade | 51+ |
+
+### Automatic Model Selection
+
+When you call `delegate_task()`, the tool automatically:
+1. Reads complexity profiles from required skills
+2. Computes Final Complexity Score (FCS) using AMSP algorithm
+3. Maps FCS to appropriate model tier
+4. Records selection in delegation log for Strategist analysis
+
+```
+delegate_task(
+  conductor_id=<your_agent_id>,
+  companion_id=<target_companion_id>,
+  task_description="...",
+  required_skills_json='["skill://research.web@0.2.0"]',
+  enable_model_selection=True,  # Default: True
+  latency_requirement="standard"  # "critical" | "low" | "standard" | "relaxed"
+)
+```
+
+### Strategist Model Selection Guidelines
+
+Check `strategist_guidelines.model_selection` for optimization recommendations:
+
+```json
+{
+  "model_selection": {
+    "default_tier": 0,
+    "task_type_tiers": {
+      "research": 1,
+      "analysis": 2,
+      "simple_writing": 0
+    },
+    "skill_tier_overrides": {
+      "skill://analyze.synthesis@0.1.0": 2
+    },
+    "escalation_threshold": 0.15,
+    "cost_optimization": "balanced"
+  }
+}
+```
+
+**Applying Guidelines**:
+- Use `task_type_tiers` when you know the task category
+- Apply `skill_tier_overrides` for skills with known performance issues
+- Monitor escalation rate — >15% suggests recalibration needed
+
 ### Consulting Strategist Before Skill Selection
 
 Before selecting skills for a task, **always check** `strategist_guidelines.skill_preferences`:

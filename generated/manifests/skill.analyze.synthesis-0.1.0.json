@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
-  "manifestApiVersion": "v2.0.0",
+  "manifestApiVersion": "v2.1.0",
   "manifestId": "skill.analyze.synthesis@0.1.0",
+  "skillPackageId": null,
   "skillName": "analyze.synthesis",
   "skillVersion": "0.1.0",
   "description": "Synthesizes multi-source research into themes and risks",
@@ -13,29 +13,65 @@
     "egress": "none",
     "secrets": []
   },
-  "skillDirectives": "Cluster insights into 2-4 dominant themes.\nEnumerate explicit risks with supporting evidence.\nAssign confidence levels to conclusions.\nCross-reference multiple sources to validate findings.\n",
-  "tools": [
+  "skillDirectives": "Cluster insights into 2-4 dominant themes.\nEnumerate explicit risks with supporting evidence.\nAssign confidence levels to conclusions.\nCross-reference multiple sources to validate findings.",
+  "requiredTools": [
     {
+      "toolName": "insight_compare",
+      "description": "Cluster insights into themes and identify risks",
+      "json_schema": {
+        "name": "insight_compare",
+        "description": "Mock synthesis tool combining research insights",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "insights": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "insights"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "analysis",
         "toolName": "insight_compare"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "insights": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "required": [
-          "insights"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": []
+  "requiredDataSources": [],
+  "complexityProfile": {
+    "baseWCS": 11,
+    "dimensionScores": {
+      "horizon": 2,
+      "context": 3,
+      "tooling": 1,
+      "observability": 1,
+      "modality": 0,
+      "precision": 3,
+      "adaptability": 1
+    },
+    "interactionMultipliers": [
+      {
+        "pair": "horizon+context",
+        "multiplier": 1.15,
+        "condition": "High Horizon + High Context"
+      },
+      {
+        "pair": "context+precision",
+        "multiplier": 1.12,
+        "condition": "High Context + High Precision"
+      }
+    ],
+    "finalFCS": 14.2,
+    "recommendedTier": 1,
+    "maturityLevel": "provisional",
+    "sampleSize": 0,
+    "validatedModels": []
+  }
 }

@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/control-plane-state-1.1.0.json",
+  "title": "Control Plane: State Record v1.1.0",
+  "description": "Per-state execution tracking with AMSP model selection metadata",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "running",
+        "done",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lease": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": ["string", "null"]
+        },
+        "owner_agent_id": {
+          "type": ["string", "null"]
+        },
+        "ts": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "ttl_s": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      },
+      "required": ["token", "owner_agent_id", "ts", "ttl_s"],
+      "additionalProperties": false
+    },
+    "started_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "last_error": {
+      "type": ["string", "null"]
+    },
+    "model_selection": {
+      "description": "AMSP model selection metadata for this state (v1.1.0)",
+      "type": ["object", "null"],
+      "properties": {
+        "tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Selected model tier (0-3)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Selected model identifier (e.g., 'openai/gpt-4o-mini')"
+        },
+        "fcs": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Final Complexity Score used for tier selection"
+        },
+        "base_wcs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Base Weighted Complexity Score before multipliers"
+        },
+        "skills_analyzed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of skills analyzed for complexity"
+        },
+        "skills_with_profiles": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of skills that had complexity profiles"
+        },
+        "latency_requirement": {
+          "type": "string",
+          "enum": ["critical", "standard", "relaxed", "batch"],
+          "description": "Latency requirement used for tier adjustment"
+        }
+      },
+      "required": ["tier", "model", "fcs"],
+      "additionalProperties": true
+    },
+    "execution_metrics": {
+      "description": "Runtime execution metrics reported by worker (v1.1.0)",
+      "type": ["object", "null"],
+      "properties": {
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total execution time in milliseconds"
+        },
+        "prompt_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total prompt tokens consumed"
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total completion tokens generated"
+        },
+        "total_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total tokens (prompt + completion)"
+        },
+        "llm_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of LLM API calls made"
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tool invocations"
+        },
+        "estimated_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated cost in USD based on token usage"
+        },
+        "tier_escalated": {
+          "type": "boolean",
+          "description": "Whether task required tier escalation during execution"
+        },
+        "escalation_reason": {
+          "type": ["string", "null"],
+          "description": "Reason for tier escalation if applicable"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "status",
+    "attempts",
+    "lease"
+  ],
+  "additionalProperties": false
+}

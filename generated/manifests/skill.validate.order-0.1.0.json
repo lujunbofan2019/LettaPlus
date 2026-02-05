@@ -1,7 +1,7 @@
 {
-  "$schema": "./skill_manifest_schema_v2.0.0.json",
   "manifestApiVersion": "v2.0.0",
   "manifestId": "skill.validate.order@0.1.0",
+  "skillPackageId": null,
   "skillName": "validate.order",
   "skillVersion": "0.1.0",
   "description": "Validates order data including customer, inventory, and address verification",
@@ -15,105 +15,127 @@
     "egress": "intranet",
     "secrets": []
   },
-  "skillDirectives": "You are an order validation specialist. Your task is to validate incoming orders.\n\n## Validation Steps\n1. Use `orders:verify_customer` to confirm the customer exists and is in good standing\n2. Use `orders:check_inventory` to verify all items are in stock\n3. Use `orders:validate_address` to confirm the shipping address is deliverable\n\n## Output Format\nReturn a validation result with:\n- `valid`: boolean indicating overall validity\n- `customer_status`: customer verification details\n- `inventory_status`: per-item availability\n- `address_status`: address validation result\n- `errors`: array of any validation errors (empty if valid)\n",
-  "tools": [
+  "skillDirectives": "You are an order validation specialist. Your task is to validate incoming orders.\n\n## Validation Steps\n1. Use `orders:verify_customer` to confirm the customer exists and is in good standing\n2. Use `orders:check_inventory` to verify all items are in stock\n3. Use `orders:validate_address` to confirm the shipping address is deliverable\n\n## Output Format\nReturn a validation result with:\n- `valid`: boolean indicating overall validity\n- `customer_status`: customer verification details\n- `inventory_status`: per-item availability\n- `address_status`: address validation result\n- `errors`: array of any validation errors (empty if valid)",
+  "requiredTools": [
     {
+      "toolName": "verify_customer",
+      "description": "Verifies customer exists and is in good standing",
+      "json_schema": {
+        "name": "verify_customer",
+        "description": "Verifies customer exists and is in good standing",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "customer_id": {
+              "type": "string",
+              "description": "Customer identifier"
+            }
+          },
+          "required": [
+            "customer_id"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "orders",
         "toolName": "verify_customer"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "customer_id": {
-            "type": "string",
-            "description": "Customer identifier"
-          }
-        },
-        "required": [
-          "customer_id"
-        ]
-      }
+      "required": true
     },
     {
+      "toolName": "check_inventory",
+      "description": "Checks inventory availability for order items",
+      "json_schema": {
+        "name": "check_inventory",
+        "description": "Checks inventory availability for order items",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "description": "Array of items with sku and quantity",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "quantity"
+                ]
+              }
+            }
+          },
+          "required": [
+            "items"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "orders",
         "toolName": "check_inventory"
       },
+      "required": true
+    },
+    {
+      "toolName": "validate_address",
+      "description": "Validates shipping address is deliverable",
       "json_schema": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "description": "Array of items with sku and quantity",
-            "items": {
+        "name": "validate_address",
+        "description": "Validates shipping address is deliverable",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "address": {
               "type": "object",
+              "description": "Shipping address object",
               "properties": {
-                "sku": {
+                "street": {
                   "type": "string"
                 },
-                "quantity": {
-                  "type": "integer"
+                "city": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "zip": {
+                  "type": "string"
                 }
               },
               "required": [
-                "sku",
-                "quantity"
+                "street",
+                "city",
+                "state",
+                "zip"
               ]
             }
-          }
-        },
-        "required": [
-          "items"
-        ]
-      }
-    },
-    {
+          },
+          "required": [
+            "address"
+          ]
+        }
+      },
       "definition": {
         "type": "mcp_server",
         "serverId": "orders",
         "toolName": "validate_address"
       },
-      "json_schema": {
-        "type": "object",
-        "properties": {
-          "address": {
-            "type": "object",
-            "description": "Shipping address object",
-            "properties": {
-              "street": {
-                "type": "string"
-              },
-              "city": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              },
-              "zip": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "street",
-              "city",
-              "state",
-              "zip"
-            ]
-          }
-        },
-        "required": [
-          "address"
-        ]
-      }
+      "required": true
     }
   ],
-  "dataSources": [
+  "requiredDataSources": [
     {
-      "id": "orders",
+      "dataSourceId": "orders",
       "description": "Context about order validation capabilities",
+      "destination": "archival_memory",
       "content": {
         "type": "text_content",
         "text": "Order validation tools verify customer accounts, inventory levels,\nand shipping address deliverability before order processing.\n"

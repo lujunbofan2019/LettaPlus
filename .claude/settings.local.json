@@ -59,7 +59,11 @@
       "Bash(while read id)",
       "Bash(do)",
       "Bash(done echo \"Cleanup done\")",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python -m json.tool:*)"
     ]
   }
 }

@@ -9,6 +9,14 @@ from datetime import datetime, timezone
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 DEFAULT_MODEL = os.getenv("DCF_DEFAULT_MODEL", "openai/gpt-4o-mini")
 
+# AMSP Tier to Model mapping (v1.1.0)
+TIER_MODEL_MAP = {
+    0: os.getenv("AMSP_TIER_0_MODEL", "openai/gpt-4o-mini"),
+    1: os.getenv("AMSP_TIER_1_MODEL", "openai/gpt-4o"),
+    2: os.getenv("AMSP_TIER_2_MODEL", "anthropic/claude-sonnet-4-20250514"),
+    3: os.getenv("AMSP_TIER_3_MODEL", "anthropic/claude-opus-4-20250514"),
+}
+
 
 def create_companion(
     session_id: str,
@@ -19,6 +27,7 @@ def create_companion(
     companion_name: Optional[str] = None,
     persona_override: Optional[str] = None,
     model: Optional[str] = None,
+    model_tier: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Create a session-scoped Companion agent with standard DCF+ configuration.
 
@@ -37,6 +46,7 @@ def create_companion(
         companion_name: Optional custom name. If not provided, auto-generated.
         persona_override: Optional custom persona text. If not provided, uses default.
         model: LLM model to use (e.g., "openai/gpt-4o-mini"). Defaults to DCF_DEFAULT_MODEL env var.
+        model_tier: AMSP model tier (0-3). If provided, overrides `model` parameter using AMSP tier mapping.
 
     Returns:
         dict: {
@@ -47,7 +57,8 @@ def create_companion(
             "tags": List[str],
             "shared_blocks_attached": List[str],
             "skills_loaded": List[str],
-            "warnings": List[str]
+            "warnings": List[str],
+            "model_config": dict | None (AMSP v1.1.0)
         }
     """
     # Lazy imports
@@ -63,6 +74,7 @@ def create_companion(
             "shared_blocks_attached": [],
             "skills_loaded": [],
             "warnings": [],
+            "model_config": None,
         }
 
     warnings: List[str] = []
@@ -155,6 +167,7 @@ When reporting results, use this format:
             "shared_blocks_attached": [],
             "skills_loaded": [],
             "warnings": warnings,
+            "model_config": None,
         }
 
     # Check if send_message_to_agent_async tool exists, find its ID
@@ -189,8 +202,36 @@ When reporting results, use this format:
 
     # Create the agent
     try:
-        # Use provided model or default
-        agent_model = model or DEFAULT_MODEL
+        # AMSP Model Selection (v1.1.0)
+        # Priority: model_tier > model > DEFAULT_MODEL
+        model_config = None
+        if model_tier is not None and model_tier in TIER_MODEL_MAP:
+            agent_model = TIER_MODEL_MAP[model_tier]
+            model_config = {
+                "tier": model_tier,
+                "model": agent_model,
+                "source": "tier_parameter",
+            }
+        elif model:
+            agent_model = model
+            # Try to determine tier from model name
+            tier = None
+            for t, m in TIER_MODEL_MAP.items():
+                if m == model:
+                    tier = t
+                    break
+            model_config = {
+                "tier": tier,
+                "model": agent_model,
+                "source": "model_parameter",
+            }
+        else:
+            agent_model = DEFAULT_MODEL
+            model_config = {
+                "tier": 0,  # Default tier
+                "model": agent_model,
+                "source": "default",
+            }
 
         create_kwargs = {
             "name": name,
@@ -261,4 +302,5 @@ When reporting results, use this format:
         "shared_blocks_attached": shared_blocks_attached,
         "skills_loaded": skills_loaded,
         "warnings": warnings,
+        "model_config": model_config,
     }

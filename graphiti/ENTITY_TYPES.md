@@ -74,6 +74,15 @@ These entity types are defined in [`config/config-docker-falkordb.yaml`](config/
 | `SkillMetric` | `dcf_plus_metrics` | Aggregated skill performance (daily/weekly) |
 | `StrategicInsight` | `dcf_plus_insights` | Optimization insights with evidence |
 
+### AMSP Entities (Model Selection)
+
+| Entity Type | Group ID | Purpose |
+|-------------|----------|---------|
+| `ModelSelectionEvent` | `amsp_events` | Per-workflow model selection audit trail |
+| `ComplexityRecalibration` | `amsp_recalibration` | Skill complexity profile recalibration records |
+| `TierPerformance` | `amsp_metrics` | Aggregated tier performance metrics |
+| `CostAccuracyMetric` | `amsp_metrics` | Estimated vs actual cost comparison |
+
 ### Supporting Entities
 
 | Entity Type | Purpose |
@@ -288,6 +297,137 @@ Optimization insights recorded by the **Strategist**.
 
 ---
 
+### ModelSelectionEvent (AMSP)
+
+Recorded by the **Reflector** after workflow completion with AMSP-enabled workers.
+
+```json
+{
+  "entity": "ModelSelectionEvent",
+  "workflow_id": "wf-abc123",
+  "workflow_name": "Research and Summarize",
+  "total_states": 5,
+  "tier_distribution": {"0": 3, "1": 2, "2": 0, "3": 0},
+  "escalation_count": 0,
+  "escalation_rate": 0.0,
+  "total_cost_usd": 0.0245,
+  "estimated_cost_usd": 0.0250,
+  "cost_accuracy": 0.98,
+  "cost_savings_vs_tier3": 0.85,
+  "selections": [
+    {
+      "state": "Summarize",
+      "skill": "skill://write.summary@0.1.0",
+      "tier": 0,
+      "model": "openai/gpt-4o-mini",
+      "fcs": 3.0,
+      "success": true,
+      "actual_cost_usd": 0.0012
+    }
+  ],
+  "recorded_at": "2026-01-30T10:15:00Z"
+}
+```
+
+**Episode Name**: `ModelSelectionEvent:<workflow_id>`
+**Group ID**: `amsp_events`
+
+---
+
+### ComplexityRecalibration (AMSP)
+
+Recorded by the **Reflector** when a skill's complexity profile needs adjustment.
+
+```json
+{
+  "entity": "ComplexityRecalibration",
+  "skill_id": "skill://analyze.synthesis@0.1.0",
+  "current_fcs": 14.2,
+  "suggested_fcs": 18.5,
+  "current_tier": 1,
+  "suggested_tier": 1,
+  "evidence": {
+    "sample_size": 25,
+    "escalation_rate": 0.32,
+    "cost_deviation": 0.28,
+    "workflow_ids": ["wf-abc123", "wf-def456", "wf-ghi789"]
+  },
+  "reason": "32% escalation rate exceeds 10% threshold",
+  "dimension_adjustments": {
+    "precision": {"from": 2, "to": 3},
+    "horizon": {"from": 2, "to": 2}
+  },
+  "confidence": 0.85,
+  "status": "pending",
+  "recorded_at": "2026-01-30T10:20:00Z"
+}
+```
+
+**Episode Name**: `ComplexityRecalibration:<skill_id>`
+**Group ID**: `amsp_recalibration`
+
+---
+
+### TierPerformance (AMSP)
+
+Aggregated tier performance metrics recorded by the **Reflector**.
+
+```json
+{
+  "entity": "TierPerformance",
+  "tier": 1,
+  "period": "2026-01-30",
+  "period_type": "daily",
+  "usage_count": 150,
+  "success_count": 142,
+  "failure_count": 8,
+  "success_rate": 0.947,
+  "escalation_count": 5,
+  "escalation_rate": 0.033,
+  "avg_cost_usd": 0.0085,
+  "avg_tokens": 1250,
+  "avg_duration_ms": 2500,
+  "model_distribution": {
+    "anthropic/claude-haiku-4-5": 120,
+    "openai/gpt-4.1": 30
+  },
+  "recorded_at": "2026-01-30T23:59:00Z"
+}
+```
+
+**Episode Name**: `TierPerformance:<tier>:<period>`
+**Group ID**: `amsp_metrics`
+
+---
+
+### CostAccuracyMetric (AMSP)
+
+Tracks estimation accuracy for recalibration triggers.
+
+```json
+{
+  "entity": "CostAccuracyMetric",
+  "period": "2026-01-30",
+  "period_type": "daily",
+  "total_estimated_usd": 1.25,
+  "total_actual_usd": 1.18,
+  "accuracy_ratio": 0.944,
+  "deviation_percentage": 5.6,
+  "underestimates": 12,
+  "overestimates": 8,
+  "skills_needing_recalibration": [
+    "skill://analyze.synthesis@0.1.0",
+    "skill://research.deep@0.1.0"
+  ],
+  "recorded_at": "2026-01-30T23:59:00Z"
+}
+```
+
+**Episode Name**: `CostAccuracyMetric:<period>`
+**Group ID**: `amsp_metrics`
+
+---
+
 ## Usage Examples
 
 ### Reflector: Recording Workflow Execution
@@ -359,6 +499,9 @@ search_facts(
 | `dcf_plus_companions` | 2 | Companion performance patterns |
 | `dcf_plus_metrics` | 2 | Aggregated skill metrics |
 | `dcf_plus_insights` | 2 | Strategist-derived insights |
+| `amsp_events` | AMSP | Per-workflow model selection events |
+| `amsp_recalibration` | AMSP | Skill complexity recalibration records |
+| `amsp_metrics` | AMSP | Tier performance and cost accuracy metrics |
 
 ---
 

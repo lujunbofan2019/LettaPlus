@@ -11,6 +11,14 @@ from tools.common.get_agent_tags import get_agent_tags as _get_agent_tags
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://letta:8283")
 DELEGATION_LOG_BLOCK_LABEL = "delegation_log"
 
+# AMSP Tier to Model mapping (v1.1.0)
+TIER_MODEL_MAP = {
+    0: os.getenv("AMSP_TIER_0_MODEL", "openai/gpt-4o-mini"),
+    1: os.getenv("AMSP_TIER_1_MODEL", "openai/gpt-4o"),
+    2: os.getenv("AMSP_TIER_2_MODEL", "anthropic/claude-sonnet-4-20250514"),
+    3: os.getenv("AMSP_TIER_3_MODEL", "anthropic/claude-opus-4-20250514"),
+}
+
 
 def delegate_task(
     conductor_id: str,
@@ -21,15 +29,18 @@ def delegate_task(
     priority: str = "normal",
     timeout_seconds: int = 300,
     session_id: Optional[str] = None,
+    enable_model_selection: bool = True,
+    latency_requirement: str = "standard",
 ) -> Dict[str, Any]:
     """Delegate a task to a specific Companion agent.
 
     This tool performs the complete delegation flow:
     1. Validates the Companion exists and is available
-    2. Updates Companion status to "busy"
-    3. Records the delegation in the `delegation_log` block (for Strategist)
-    4. Updates Companion's `task_context` block with the task
-    5. Sends a `task_delegation` message to the Companion via Letta messaging
+    2. Computes task complexity and selects model tier (AMSP v1.1.0)
+    3. Updates Companion status to "busy"
+    4. Records the delegation in the `delegation_log` block (for Strategist)
+    5. Updates Companion's `task_context` block with the task
+    6. Sends a `task_delegation` message to the Companion via Letta messaging
 
     The Companion will then:
     1. Load required skills
@@ -45,6 +56,8 @@ def delegate_task(
         priority: Task priority ("low" | "normal" | "high" | "urgent").
         timeout_seconds: Expected task timeout in seconds.
         session_id: Optional session ID for tracking (used if delegation_log lookup needed).
+        enable_model_selection: If True (default), compute complexity and select model tier.
+        latency_requirement: Latency constraint ("critical" | "low" | "standard" | "relaxed").
 
     Returns:
         dict: {
@@ -55,7 +68,8 @@ def delegate_task(
             "companion_id": str,
             "message_sent": bool,
             "delegation_logged": bool,
-            "run_id": str | None
+            "run_id": str | None,
+            "model_selection": dict | None (AMSP v1.1.0)
         }
     """
     # Lazy imports
@@ -71,6 +85,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": False,
             "run_id": None,
+            "model_selection": None,
         }
 
     # Parse required skills (handles both string and pre-parsed list from Letta)
@@ -123,6 +138,35 @@ def delegate_task(
     task_id = f"task-{str(uuid.uuid4())[:8]}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    # AMSP Model Selection (v1.1.0)
+    model_selection = None
+    if enable_model_selection and required_skills:
+        try:
+            from tools.dcf.compute_task_complexity import compute_task_complexity
+
+            complexity_result = compute_task_complexity(
+                skills_json=json.dumps(required_skills),
+                latency_requirement=latency_requirement
+            )
+
+            if complexity_result.get("error") is None:
+                tier = complexity_result.get("latency_adjusted_tier", complexity_result.get("recommended_tier", 0))
+                selected_model = TIER_MODEL_MAP.get(tier, TIER_MODEL_MAP[0])
+
+                model_selection = {
+                    "tier": tier,
+                    "model": selected_model,
+                    "fcs": complexity_result.get("final_fcs"),
+                    "base_wcs": complexity_result.get("base_wcs"),
+                    "skills_analyzed": len(required_skills),
+                    "latency_requirement": latency_requirement,
+                    "skills_with_profiles": complexity_result.get("skills_with_profiles", 0),
+                    "skills_without_profiles": complexity_result.get("skills_without_profiles", 0),
+                }
+        except Exception as e:
+            # Non-fatal: continue without model selection
+            pass
+
     # Build task delegation message
     delegation_message = {
         "type": "task_delegation",
@@ -142,6 +186,10 @@ def delegate_task(
         ),
     }
 
+    # Add AMSP model selection to delegation message (v1.1.0)
+    if model_selection:
+        delegation_message["model_selection"] = model_selection
+
     # Initialize Letta client
     try:
         client = Letta(base_url=LETTA_BASE_URL)
@@ -155,6 +203,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": False,
             "run_id": None,
+            "model_selection": None,
         }
 
     # Verify Companion exists and get its tags (use HTTP API for accurate tags)
@@ -171,6 +220,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": False,
             "run_id": None,
+            "model_selection": None,
         }
 
     # Get tags via HTTP API (letta_client doesn't parse tags correctly)
@@ -193,6 +243,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": False,
             "run_id": None,
+            "model_selection": None,
         }
 
     # Update Companion status to busy
@@ -214,6 +265,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": False,
             "run_id": None,
+            "model_selection": None,
         }
 
     delegation_logged = False
@@ -254,6 +306,14 @@ def delegate_task(
                 "duration_s": None,
                 "result_status": None,
             }
+
+            # Add AMSP model selection to delegation record (v1.1.0)
+            if model_selection:
+                delegation_record["model_selection"] = {
+                    "tier": model_selection.get("tier"),
+                    "model": model_selection.get("model"),
+                    "fcs": model_selection.get("fcs"),
+                }
 
             # Append to delegations list
             delegations = log_data.get("delegations", [])
@@ -344,6 +404,7 @@ def delegate_task(
             "message_sent": False,
             "delegation_logged": delegation_logged,
             "run_id": None,
+            "model_selection": None,
         }
 
     return {
@@ -355,4 +416,5 @@ def delegate_task(
         "message_sent": message_sent,
         "delegation_logged": delegation_logged,
         "run_id": run_id,
+        "model_selection": model_selection,
     }

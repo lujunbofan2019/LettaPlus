@@ -16,6 +16,30 @@ spec:
     egress: none
     secrets: []
 
+  # AMSP v3.0 Complexity Profile
+  # Complex reasoning task requiring synthesis across sources
+  complexityProfile:
+    baseWCS: 11
+    dimensionScores:
+      horizon: 2       # Session: multi-step analysis workflow
+      context: 3       # Domain-specific requiring significant expertise
+      tooling: 1       # Simple: one analysis tool
+      observability: 1 # High: working with provided inputs
+      modality: 0      # Text-only
+      precision: 3     # High: verifiable accuracy required for conclusions
+      adaptability: 1  # Slow-changing: analysis patterns stable
+    interactionMultipliers:
+      - pair: horizon+context
+        multiplier: 1.15
+        condition: High Horizon + High Context
+      - pair: context+precision
+        multiplier: 1.12
+        condition: High Context + High Precision
+    finalFCS: 14.2
+    recommendedTier: 1  # Balanced tier (FCS 13-25)
+    maturityLevel: provisional
+    sampleSize: 0
+
   directives: |
     Cluster insights into 2-4 dominant themes.
     Enumerate explicit risks with supporting evidence.

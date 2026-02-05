@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selinafinance.co.uk/schemas/data-plane-output-1.1.0.json",
+  "title": "Data Plane: Output Envelope v1.1.0",
+  "description": "Output envelope for workflow state execution results, including AMSP metrics for model selection feedback.",
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "Whether the state execution succeeded"
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "description": "Human-readable summary of the output"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Arbitrary structured output data from the state execution"
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Execution metrics including timing, tokens, and AMSP data",
+      "properties": {
+        "latency_ms": {
+          "type": ["number", "integer"],
+          "minimum": 0,
+          "description": "Total execution latency in milliseconds"
+        },
+        "tokens_prompt": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Number of prompt/input tokens used"
+        },
+        "tokens_completion": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Number of completion/output tokens generated"
+        },
+        "tokens_total": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Total tokens (prompt + completion)"
+        },
+        "cost_usd": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Estimated cost in USD for this execution"
+        },
+        "amsp": {
+          "type": ["object", "null"],
+          "description": "AMSP (Adaptive Model Selection Protocol) metrics",
+          "additionalProperties": false,
+          "properties": {
+            "model_used": {
+              "type": "string",
+              "description": "Model identifier actually used for execution (e.g., 'anthropic/claude-sonnet-4-5')"
+            },
+            "tier_selected": {
+              "type": "integer",
+              "enum": [0, 1, 2, 3],
+              "description": "Model tier selected by AMSP: 0=Efficient, 1=Balanced, 2=Strong, 3=Frontier"
+            },
+            "fcs_predicted": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Final Complexity Score predicted before execution"
+            },
+            "wcs_base": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 21,
+              "description": "Base Weighted Complexity Score (sum of 7 dimensions)"
+            },
+            "skills_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of skills analyzed for complexity"
+            },
+            "selection_source": {
+              "type": "string",
+              "enum": ["amsp_computed", "template_default", "manual_override", "fallback"],
+              "description": "How the model was selected"
+            },
+            "latency_constraint": {
+              "type": "string",
+              "enum": ["critical", "standard", "relaxed", "batch"],
+              "description": "Latency constraint applied during selection"
+            },
+            "tier_capped": {
+              "type": "boolean",
+              "description": "Whether tier was capped due to latency constraint"
+            },
+            "execution_success": {
+              "type": ["boolean", "null"],
+              "description": "Whether execution succeeded (for calibration feedback)"
+            },
+            "quality_score": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Optional quality/correctness score (0.0-1.0) for calibration"
+            }
+          },
+          "required": ["model_used", "tier_selected", "selection_source"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of artifact URIs produced by this state"
+    },
+    "error": {
+      "type": ["object", "null"],
+      "description": "Error details if ok=false",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Error code for programmatic handling"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Additional error context"
+        }
+      }
+    }
+  },
+  "required": ["ok"],
+  "additionalProperties": true,
+  "$defs": {
+    "TierDescriptions": {
+      "description": "Reference: AMSP tier descriptions",
+      "type": "object",
+      "properties": {
+        "tier0": { "const": "Efficient: single-turn, deterministic, no tools" },
+        "tier1": { "const": "Balanced: multi-turn, simple tools, moderate context" },
+        "tier2": { "const": "Strong: complex reasoning, multi-tool, synthesis" },
+        "tier3": { "const": "Frontier: novel domains, research-grade, maximum capability" }
+      }
+    }
+  }
+}

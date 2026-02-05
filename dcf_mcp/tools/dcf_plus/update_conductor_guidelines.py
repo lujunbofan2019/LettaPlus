@@ -15,6 +15,7 @@ def update_conductor_guidelines(
     recommendation: Optional[str] = None,
     skill_preferences_json: Any = None,  # Accepts str or dict (Letta auto-parses)
     companion_scaling_json: Any = None,  # Accepts str or dict (Letta auto-parses)
+    model_selection_json: Any = None,  # AMSP v1.1.0: Accepts str or dict
     clear_guidelines: bool = False,
 ) -> Dict[str, Any]:
     """Update Conductor guidelines based on Strategist analysis.
@@ -29,6 +30,14 @@ def update_conductor_guidelines(
         recommendation: Single recommendation to append to guidelines.
         skill_preferences_json: JSON object mapping task types to preferred skills.
         companion_scaling_json: JSON object with companion scaling recommendations.
+        model_selection_json: AMSP v1.1.0 - JSON object with model selection recommendations:
+            {
+                "default_tier": 0-3,
+                "task_type_tiers": {"research": 1, "analysis": 2, ...},
+                "skill_tier_overrides": {"skill://...": 2, ...},
+                "escalation_threshold": 0.15,
+                "cost_optimization": "balanced" | "performance" | "economy"
+            }
         clear_guidelines: If True, clear all existing guidelines.
 
     Returns:
@@ -107,6 +116,25 @@ def update_conductor_guidelines(
                     "updated_fields": [],
                 }
 
+    # AMSP v1.1.0: Parse model selection guidelines
+    model_selection: Optional[Dict[str, Any]] = None
+    if model_selection_json:
+        if isinstance(model_selection_json, dict):
+            model_selection = model_selection_json
+        elif isinstance(model_selection_json, str):
+            try:
+                parsed = json.loads(model_selection_json)
+                if isinstance(parsed, dict):
+                    model_selection = parsed
+            except Exception as e:
+                return {
+                    "status": None,
+                    "error": f"Failed to parse model_selection_json: {e}",
+                    "conductor_id": conductor_id,
+                    "guidelines_block_id": None,
+                    "updated_fields": [],
+                }
+
     # Initialize Letta client
     try:
         client = Letta(base_url=LETTA_BASE_URL)
@@ -129,6 +157,13 @@ def update_conductor_guidelines(
             "max_companions": 5,
             "scale_up_threshold": 3,  # pending tasks
             "scale_down_threshold": 0,  # idle companions
+        },
+        "model_selection": {  # AMSP v1.1.0
+            "default_tier": 0,
+            "task_type_tiers": {},
+            "skill_tier_overrides": {},
+            "escalation_threshold": 0.15,
+            "cost_optimization": "balanced",
         },
         "updated_at": None,
         "update_count": 0,
@@ -226,6 +261,13 @@ def update_conductor_guidelines(
             existing_scaling.update(companion_scaling)
             current_guidelines["companion_scaling"] = existing_scaling
             updated_fields.append("companion_scaling")
+
+        # AMSP v1.1.0: Update model selection guidelines
+        if model_selection:
+            existing_model_sel = current_guidelines.get("model_selection", {})
+            existing_model_sel.update(model_selection)
+            current_guidelines["model_selection"] = existing_model_sel
+            updated_fields.append("model_selection")
 
         current_guidelines["updated_at"] = datetime.now(timezone.utc).isoformat()
         current_guidelines["update_count"] = current_guidelines.get("update_count", 0) + 1

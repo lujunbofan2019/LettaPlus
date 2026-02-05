@@ -16,6 +16,27 @@ spec:
     egress: internet
     secrets: [BING_API_KEY]
 
+  # AMSP v3.0 Complexity Profile
+  # Multi-tool web research with external dependencies
+  complexityProfile:
+    baseWCS: 8
+    dimensionScores:
+      horizon: 1       # Multi-turn: may need multiple searches
+      context: 1       # Local: search query context
+      tooling: 2       # Multi-tool: search + fetch
+      observability: 2 # Partial: web results are unpredictable
+      modality: 0      # Text-only
+      precision: 1     # Moderate: facts should be accurate
+      adaptability: 1  # Slow-changing: web content evolves
+    interactionMultipliers:
+      - pair: tooling+observability
+        multiplier: 1.15
+        condition: High Tooling + Low Observability
+    finalFCS: 9.2
+    recommendedTier: 0  # Efficient tier (FCS < 12)
+    maturityLevel: provisional
+    sampleSize: 0
+
   directives: |
     Follow queries precisely.
     Extract key facts from search results.
