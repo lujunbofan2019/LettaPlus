@@ -2,6 +2,8 @@
 
 Command-line interface for authoring, validating, and managing DCF skills.
 
+> **Note**: For interactive skill authoring with a visual interface, see the **DCF Skill Studio** Electron app in `dcf-skill-studio/`. The CLI is retained for CI/CD pipelines, automation, and scripting. Both tools work with the same YAML source files and produce identical outputs.
+
 ## Overview
 
 A **skill** is a meaningful capability that a Planner agent can understand and assign to a Worker agent. Skills differ in how they are **fulfilled**:

@@ -1,260 +1,111 @@
-# Documentation Audit - Pre-Refactoring Review
+# Documentation Audit - Post-Refactoring Status
 
-This document identifies all documentation updates needed before and after the planned DCF skill authoring refactoring (Phase 1: DCF Cleanup, Phase 2: Electron App).
+This document tracks documentation updates for the DCF skill authoring refactoring (Phase 1: DCF Cleanup, Phase 2: Electron App).
 
 ## Audit Summary
 
 | Document | Priority | Status | Update Type |
 |----------|----------|--------|-------------|
-| `README.md` | HIGH | OUTDATED | Major rewrite - CSV references |
-| `stub_mcp/README.md` | HIGH | OUTDATED | Minor updates - CSV references |
-| `skills_src/SKILLS.md` | HIGH | CURRENT | Post-refactoring updates |
-| `skill_cli/README.md` | MEDIUM | CURRENT | Post-refactoring updates |
-| `dcf_mcp/tools/TOOLS.md` | LOW | MOSTLY CURRENT | Minor fix |
-| `CLAUDE.md` | LOW | CURRENT | Minor updates after refactoring |
+| `README.md` | HIGH | ✅ UPDATED | Major rewrite - YAML approach documented |
+| `stub_mcp/README.md` | HIGH | ✅ UPDATED | References yaml_to_stub_config |
+| `skills_src/SKILLS.md` | HIGH | ✅ UPDATED | New directory structure documented |
+| `skill_cli/README.md` | MEDIUM | ✅ UPDATED | Added note about Electron app coexistence |
+| `dcf_mcp/tools/TOOLS.md` | LOW | ✅ UPDATED | Tool names fixed |
+| `CLAUDE.md` | LOW | ✅ UPDATED | New directory structure and skill pipeline |
+| `dcf-skill-studio/README.md` | NEW | ✅ CREATED | Electron app documentation |
 
 ---
 
-## 1. `README.md` (Main Project README)
+## Phase 1: DCF Cleanup (Completed 2026-02-05)
 
-**Priority**: HIGH
-**Current Status**: OUTDATED
-**Lines affected**: 395-542 ("Update Oct-2025" section)
+### Changes Made
 
-### Issues Found
+1. **Skill Directory Reorganization**
+   - Skills moved from `skills_src/skills/*.skill.yaml` to `skills_src/skills/<category>/*.skill.yaml`
+   - Categories: `research/`, `analyze/`, `plan/`, `write/`, `qa/`, `order-processing/`, `customer-support/`
 
-The "CSV-first rapid skill prototyping" section (lines 395-542) is entirely outdated:
+2. **Tools File Split**
+   - Monolithic `tools.yaml` split into server-specific files
+   - New `skills_src/tools/_index.yaml` index file
+   - Tool files: `search.tools.yaml`, `web.tools.yaml`, `llm.tools.yaml`, `orders.tools.yaml`, etc.
 
-1. **References CSV files that no longer exist**:
-   - `skills.csv` → replaced by `skills_src/skills/*.skill.yaml`
-   - `skill_tool_refs.csv` → embedded in YAML files
-   - `mcp_tools.csv` → replaced by `skills_src/tools.yaml`
-   - `mcp_cases.csv` → replaced by `skills_src/tools.yaml`
+3. **Generator Updates**
+   - `yaml_to_manifests.py` - Added index-based loading, recursive skill discovery
+   - `yaml_to_stub_config.py` - Added index-based loading
+   - `skill_cli` now imports from `dcf_mcp` generators (removed duplication)
 
-2. **References old generator commands**:
-   - `csv_to_manifests.py` → replaced by `yaml_to_manifests()`
-   - `csv_to_stub_config.py` → replaced by `yaml_to_stub_config()`
+### Documentation Updated
 
-3. **Outdated mental model section** (lines 489-495):
-   - Still describes CSV-based workflow
-
-4. **Outdated example commands** (lines 529-533):
-   - References `python skills_src/csv_to_manifests.py`
-
-### Recommended Action
-
-**BEFORE refactoring**: Rewrite lines 395-542 to reflect current YAML-based approach:
-- Document the YAML skill authoring pipeline
-- Reference correct source files and generators
-- Update the mental model section
-- Update example commands
+- ✅ `skills_src/SKILLS.md` - Architecture diagram shows new structure
+- ✅ `CLAUDE.md` - YAML Skill Pipeline section updated with new paths
+- ✅ `README.md` - Already reflects YAML-based approach
 
 ---
 
-## 2. `stub_mcp/README.md`
+## Phase 2: DCF Skill Studio (Completed 2026-02-05)
 
-**Priority**: HIGH
-**Current Status**: OUTDATED
-**Lines affected**: 6, 34-36
+### What Was Built
 
-### Issues Found
+**DCF Skill Studio** - An Electron desktop application for visual skill authoring:
 
-1. **Line 6**: References `csv_to_stub_config`:
-   ```
-   configuration from `generated/stub/stub_config.json`, the file produced by
-   `dcf_mcp.tools.dcf.csv_to_stub_config`.
-   ```
-   Should reference `yaml_to_stub_config`
+- **Technology Stack**: Electron + React + TypeScript + Tailwind CSS + Radix UI
+- **Features**:
+  - Skill list view with search/filter by category and tags
+  - Form-based skill editor (Metadata, Permissions, Tools, Data Sources tabs)
+  - Tool picker with catalog grouped by server
+  - Real-time validation using Ajv + JSON Schema
+  - Python generator bridge for manifest generation
+  - Export skills as zip packages with documentation
+  - File watching for external changes
 
-2. **Lines 34-36**: Outdated generator command:
-   ```bash
-   python -m dcf_mcp.tools.dcf.csv_to_stub_config
-   ```
-   Should reference the YAML-based generator
+### Documentation Created
 
-### Recommended Action
+- ✅ `dcf-skill-studio/README.md` - Installation, usage, project structure
+- ✅ `skill_cli/README.md` - Added note about CLI vs Electron coexistence
 
-**BEFORE refactoring**: Update to reference YAML-based generation:
-```python
-python -c 'from dcf_mcp.tools.dcf.yaml_to_stub_config import yaml_to_stub_config; yaml_to_stub_config()'
-```
+### CLI/GUI Coexistence
 
----
+Both tools serve different use cases:
+- **CLI (`skill_cli`)**: Automation, CI/CD pipelines, scripting
+- **GUI (`dcf-skill-studio`)**: Interactive authoring, visual feedback
 
-## 3. `skills_src/SKILLS.md`
-
-**Priority**: HIGH (Post-refactoring)
-**Current Status**: CURRENT (for now)
-**Lines affected**: TBD after refactoring
-
-### Current Structure (1,550 lines)
-
-The document currently covers:
-- YAML Skill Authoring (lines 1-150)
-- Skill File Structure (lines 150-300)
-- Tools.yaml Format (lines 300-500)
-- Registry.yaml Format (lines 500-600)
-- Generation Pipeline (lines 600-800)
-- Real vs Simulated Skills (lines 800-1000)
-- BDD Test Cases (lines 1000-1200)
-- Examples (lines 1200-1550)
-
-### Expected Changes After Refactoring
-
-If Phase 1 reorganizes the authoring layer:
-1. Directory structure section will need updates
-2. File naming conventions may change
-3. Generation commands may change
-4. Package-based organization (if implemented)
-
-### Recommended Action
-
-**AFTER refactoring**: Update to reflect:
-- New directory structure
-- New file organization
-- Any new authoring patterns
-- Updated generation commands
+Both work with the same YAML source files in `skills_src/`.
 
 ---
 
-## 4. `skill_cli/README.md`
-
-**Priority**: MEDIUM (Post-refactoring)
-**Current Status**: CURRENT (for now)
-**Lines**: 425 lines
-
-### Current Content
-
-Documents the CLI tool for skill authoring:
-- Commands: `create`, `validate`, `generate`, `list`
-- Real vs Simulated skill modes
-- BDD test case creation
-
-### Expected Changes After Refactoring
-
-Depends on whether `skill_cli` is:
-1. **Kept**: May need updates to reflect new directory structure
-2. **Deprecated**: Document should be archived or removed
-3. **Replaced by Electron app**: Document should redirect to new tool
-
-### Recommended Action
-
-**AFTER Phase 2 (Electron App)**: Determine fate of CLI tool and update accordingly.
-
----
-
-## 5. `dcf_mcp/tools/TOOLS.md`
-
-**Priority**: LOW
-**Current Status**: MOSTLY CURRENT
-**Lines affected**: 54
-
-### Issues Found
-
-1. **Line 54**: Lists CSV-based tools in response format section:
-   ```
-   **Tools using this pattern**: `validate_workflow`, `validate_skill_manifest`,
-   `load_skill`, `csv_to_manifests`, `csv_to_stub_config`
-   ```
-   Should reference `yaml_to_manifests`, `yaml_to_stub_config`
-
-### Recommended Action
-
-**BEFORE refactoring**: Minor fix to line 54 - update tool names.
-
----
-
-## 6. `CLAUDE.md`
-
-**Priority**: LOW
-**Current Status**: CURRENT
-**Lines affected**: TBD after refactoring
-
-### Current Status
-
-The "YAML Skill Pipeline" section (lines ~240-300) is accurate and documents:
-- Source files (YAML)
-- Generated files (JSON)
-- Generation pipeline
-- Important note about not editing generated files
-
-### Expected Changes After Refactoring
-
-If Phase 1 changes directory structure:
-- Update source file paths
-- Update generated file paths
-- Update generation commands
-
-### Recommended Action
-
-**AFTER refactoring**: Review and update if directory structure changes.
-
----
-
-## 7. Other Documents (No Changes Needed)
-
-The following documents are either background/research docs or already up-to-date:
+## Remaining Documents (No Changes Needed)
 
 | Document | Reason |
 |----------|--------|
 | `docs/Architectural_Evolution_Opus.md` | Architectural overview, not affected |
-| `docs/research/AMSP-DCF-Integration-Progress.md` | Already updated with latest |
+| `docs/research/AMSP-DCF-Integration-Progress.md` | Already current |
 | `docs/background/*.md` | Historical/design documents |
-| `docs/testing/*.md` | Testing guides, may need minor updates |
-| `prompts/dcf_plus/*.md` | Agent prompts, already updated with AMSP |
+| `docs/testing/*.md` | Testing guides, independent of authoring layer |
+| `prompts/dcf_plus/*.md` | Agent prompts, independent |
 | `graphiti/ENTITY_TYPES.md` | Knowledge graph types, not affected |
 | `AGENTS.md` | Agent definitions, not affected |
 
 ---
 
-## Action Plan
+## Cross-Reference: Key Files
 
-### Immediate (Before Refactoring)
+### Authoring Layer
+- `skills_src/skills/<category>/*.skill.yaml` - Skill definitions
+- `skills_src/tools/_index.yaml` - Tools index
+- `skills_src/tools/*.tools.yaml` - Tool specs by server
+- `skills_src/registry.yaml` - Server endpoints
 
-1. **Fix `README.md`** (HIGH priority)
-   - Rewrite "Update Oct-2025" section for YAML-based approach
-   - Update all CSV references to YAML
-   - Update example commands
+### Generation Layer
+- `dcf_mcp/tools/dcf/generate.py` - Unified generator
+- `dcf_mcp/tools/dcf/yaml_to_manifests.py` - Skill generator
+- `dcf_mcp/tools/dcf/yaml_to_stub_config.py` - Stub config generator
 
-2. **Fix `stub_mcp/README.md`** (HIGH priority)
-   - Update generator reference on line 6
-   - Update command example on lines 34-36
-
-3. **Fix `dcf_mcp/tools/TOOLS.md`** (LOW priority)
-   - Update tool names on line 54
-
-### After Phase 1 Refactoring
-
-4. **Update `skills_src/SKILLS.md`**
-   - Reflect new directory structure
-   - Update file organization documentation
-
-5. **Review `CLAUDE.md`**
-   - Update paths if changed
-   - Update generation commands if changed
-
-### After Phase 2 (Electron App)
-
-6. **Decide fate of `skill_cli/README.md`**
-   - Keep and update, OR
-   - Archive/deprecate, OR
-   - Redirect to Electron app documentation
-
-7. **Create Electron app documentation**
-   - New user guide for GUI-based authoring
-   - Installation instructions
-   - Feature documentation
+### Authoring Tools
+- `skill_cli/` - Command-line interface
+- `dcf-skill-studio/` - Electron GUI app
 
 ---
 
-## Cross-Reference: Related Documentation
-
-For context, also review:
-- `skills_src/SKILL_RUNTIME_DEPENDENCIES.md` - NEW: Documents safe vs unsafe changes
-- `docs/research/TODO-AMSP-DCF-Integration.md` - AMSP integration TODO
-- `docs/research/AMSP-DCF-Integration-Progress.md` - AMSP integration progress
-
----
-
-*Audit performed: 2026-02-05*
-*Context: Pre-refactoring documentation review*
+*Audit completed: 2026-02-05*
+*Phase 1 (DCF Cleanup): ✅ Complete*
+*Phase 2 (Electron App): ✅ Complete*

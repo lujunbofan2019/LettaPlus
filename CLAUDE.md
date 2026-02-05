@@ -73,6 +73,8 @@ The system treats every engagement as an opportunity to refine institutional kno
 | `stub_mcp/` | Deterministic stub MCP server for BDD testing |
 | `graphiti/` | Knowledge graph memory layer (FalkorDB backend) |
 | `skills_src/` | YAML skill definitions and tool specifications |
+| `skill_cli/` | Command-line interface for skill authoring (CI/automation) |
+| `dcf-skill-studio/` | Electron GUI app for interactive skill authoring |
 | `generated/` | Generated artifacts: manifests, catalogs, stub config, registry, schemas |
 | `workflows/` | Example workflow JSON files |
 | `workflows/generated/` | Persisted workflow definitions |
@@ -211,17 +213,18 @@ Skills and tools are authored via YAML for clarity and maintainability. **YAML f
 
 | File | Purpose |
 |------|---------|
-| `skills_src/skills/*.skill.yaml` | Individual skill definitions (one per file) |
-| `skills_src/tools.yaml` | Tool specifications and test cases for simulation |
+| `skills_src/skills/<category>/*.skill.yaml` | Skill definitions organized by category (research, analyze, plan, write, qa, etc.) |
+| `skills_src/tools/_index.yaml` | Index file listing tool files to load |
+| `skills_src/tools/*.tools.yaml` | Tool specifications by server (search, web, llm, orders, etc.) |
 | `skills_src/registry.yaml` | MCP server resolver map (server ID → endpoint) |
 
 ### Generated Files (JSON - Machine-Readable)
 
 | File | Generated From | Purpose |
 |------|----------------|---------|
-| `generated/manifests/skill.*.json` | `skills_src/skills/*.yaml` | Skill manifests for load_skill |
+| `generated/manifests/skill.*.json` | `skills_src/skills/**/*.skill.yaml` | Skill manifests for load_skill |
 | `generated/catalogs/skills_catalog.json` | All skill manifests | Fast skill discovery index |
-| `generated/stub/stub_config.json` | `skills_src/tools.yaml` | Stub MCP server configuration |
+| `generated/stub/stub_config.json` | `skills_src/tools/_index.yaml` + tool files | Stub MCP server configuration |
 | `generated/registry.json` | `skills_src/registry.yaml` | MCP server endpoint resolution |
 | `generated/schemas/*.json` | `skills_src/schemas/*.schema.yaml` | JSON Schemas for validation tools |
 

@@ -1,0 +1,31 @@
+apiVersion: skill/v1
+kind: Skill
+metadata:
+  manifestId: skill.{{name}}@0.1.0
+  name: "{{name}}"
+  version: "0.1.0"
+  description: "Description for {{name}} skill"
+  tags: []
+
+permissions:
+  egress: false
+  secrets: false
+  riskLevel: low
+
+directives: |
+  # {{name}} Skill
+
+  Provide clear instructions for using this skill.
+
+  ## Purpose
+  Describe what this skill accomplishes.
+
+  ## Usage
+  Explain how the agent should use the available tools.
+
+  ## Output
+  Describe the expected output format.
+
+tools: []
+
+dataSources: []
